@@ -789,22 +789,45 @@ export function Community({ tag: tagProp }: CommunityProps) {
   };
 
   const visiblePosts = posts.filter(p => !isThreadHidden(p.uri));
-  const pinnedPosts = sortThreads(
-    visiblePosts.filter(p => isThreadPinned(tag, p.uri)),
-    sortMode,
-  );
-  const regularPosts = sortThreads(
-    visiblePosts.filter(p => !isThreadPinned(tag, p.uri)),
-    sortMode,
-  );
+  const searchNeedle = searchQuery.trim().toLowerCase();
+  const matchesSearchText = (p: PostView) => {
+    if (!searchNeedle) return true;
+    return (
+      p.record.text.toLowerCase().includes(searchNeedle) ||
+      (p.author.displayName || p.author.handle).toLowerCase().includes(searchNeedle)
+    );
+  };
 
-  const allSorted = [...pinnedPosts, ...regularPosts].filter(p => !isAuthorFiltered(p.author.did));
-  let displayPosts = searchQuery
-    ? allSorted.filter(p =>
-        p.record.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (p.author.displayName || p.author.handle).toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : allSorted;
+  /** Order in `posts` so “Search threads” + load more appends new hits after prior hits (avoids re-sort inserting rows above the fold). */
+  const postLoadOrder = new Map<string, number>();
+  posts.forEach((p, i) => {
+    if (!postLoadOrder.has(p.uri)) postLoadOrder.set(p.uri, i);
+  });
+
+  let displayPosts: PostView[];
+  if (!searchNeedle) {
+    const pinnedPosts = sortThreads(
+      visiblePosts.filter(p => isThreadPinned(tag, p.uri)),
+      sortMode,
+    );
+    const regularPosts = sortThreads(
+      visiblePosts.filter(p => !isThreadPinned(tag, p.uri)),
+      sortMode,
+    );
+    displayPosts = [...pinnedPosts, ...regularPosts].filter(p => !isAuthorFiltered(p.author.did));
+  } else {
+    const pinnedMatching = sortThreads(
+      visiblePosts.filter(p => isThreadPinned(tag, p.uri) && matchesSearchText(p)),
+      sortMode,
+    );
+    const unpinnedMatching = visiblePosts.filter(
+      p => !isThreadPinned(tag, p.uri) && matchesSearchText(p),
+    );
+    unpinnedMatching.sort(
+      (a, b) => (postLoadOrder.get(a.uri) ?? 0) - (postLoadOrder.get(b.uri) ?? 0),
+    );
+    displayPosts = [...pinnedMatching, ...unpinnedMatching].filter(p => !isAuthorFiltered(p.author.did));
+  }
 
   const displayPostsRef = useRef<PostView[]>([]);
   const kbRowRef = useRef(0);
@@ -969,39 +992,6 @@ export function Community({ tag: tagProp }: CommunityProps) {
         ? Math.max(1, page + (tagSearchHasMore ? 1 : 0))
         : Math.max(1, Math.ceil(totalHits / THREADS_PER_PAGE));
 
-  const blendSourcesForHelp = isFollowing ? activeBlendSources(getFollowingFeedBlend()) : [];
-  const followingUsesBlendRecent =
-    isFollowing &&
-    sortMode === 'recent' &&
-    !(blendSourcesForHelp.length === 1 && blendSourcesForHelp[0].kind === 'timeline');
-
-  const sortHelp =
-    sortMode === 'recent'
-      ? followingUsesBlendRecent
-        ? 'Weighted mix of enabled feeds (Following + any custom feeds). Adjust shares with Feed mix below.'
-        : 'Newest posts first (search “latest”; your Following feed uses timeline order).'
-      : sortMode === 'replies'
-        ? isFollowing
-          ? 'Threads from your enabled feeds, sorted by reply count (more pages load more posts).'
-          : 'Latest search results for the tag, sorted by reply count (next pages add more posts).'
-        : sortMode === 'author'
-          ? isFollowing
-            ? 'Threads from your enabled feeds, sorted by author handle (A–Z), then newest first within each name.'
-            : 'Threads sorted by root author handle (A–Z), then newest first within each name.'
-          : isFollowing
-            ? 'Threads from your enabled feeds, ranked by Bluesky “top” (engagement / likes).'
-            : 'Threads ranked by Bluesky “top” (engagement / likes).';
-
-  const sortHelpFollowingMerge =
-    isFollowing &&
-    sortMode !== 'recent' &&
-    !(blendSourcesForHelp.length === 1 && blendSourcesForHelp[0].kind === 'timeline');
-
-  const sortHelpResolved =
-    sortHelpFollowingMerge
-      ? `${sortHelp} Weights apply to Recent activity; other sorts merge all enabled feeds.`
-      : sortHelp;
-
   if (isFollowing && !user?.did) {
     return (
       <div>
@@ -1089,7 +1079,6 @@ export function Community({ tag: tagProp }: CommunityProps) {
           </select>
         </label>
       </div>
-      <p class="community-sort-hint">{sortHelpResolved}</p>
 
       {!isFollowing && composerOpen && (
         <div id="community-new-thread-anchor" class="community-new-thread-section">

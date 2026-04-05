@@ -104,7 +104,7 @@ export function Search() {
             value={scope}
             onChange={(e: Event) => setScope((e.target as HTMLSelectElement).value as Scope)}
           >
-            <option value="global">Network</option>
+            <option value="global">All</option>
             <option value="following" disabled={!user?.did}>
               From people you follow
             </option>
@@ -117,7 +117,7 @@ export function Search() {
           </button>
         </form>
         <p class="community-sort-hint" style="margin-top:8px">
-          Network uses Bluesky search. “Following” filters results to accounts you follow. “My posts” adds a{' '}
+          The All scope searches all of Bluesky. “Following” filters results to accounts you follow. “My posts” adds a{' '}
           <code>from:your.handle</code> prefix.
         </p>
       </div>

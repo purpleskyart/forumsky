@@ -6,6 +6,39 @@ import { navigate, communityUrl, searchUrl } from '@/lib/router';
 import { clearGraphPolicy, refreshGraphPolicy } from '@/lib/graph-policy';
 import type { ProfileView } from '@/api/types';
 
+const HEADER_SEARCH_DEST_KEY = 'forumsky.headerSearchDestination';
+
+type HeaderSearchDestination = 'community' | 'global' | 'following' | 'me';
+
+const SEARCH_DEST_LABELS: Record<HeaderSearchDestination, string> = {
+  community: 'Communities',
+  global: 'All',
+  following: 'Following',
+  me: 'My posts',
+};
+
+/** Menu order: All first, then Communities, then signed-in scopes. */
+const SEARCH_DEST_MENU_ORDER: HeaderSearchDestination[] = ['global', 'community', 'following', 'me'];
+
+function readStoredSearchDestination(): HeaderSearchDestination {
+  if (typeof window === 'undefined') return 'global';
+  try {
+    const v = localStorage.getItem(HEADER_SEARCH_DEST_KEY);
+    if (v === 'global' || v === 'following' || v === 'me' || v === 'community') return v;
+  } catch {
+    /* ignore */
+  }
+  return 'global';
+}
+
+function persistSearchDestination(d: HeaderSearchDestination) {
+  try {
+    localStorage.setItem(HEADER_SEARCH_DEST_KEY, d);
+  } catch {
+    /* ignore */
+  }
+}
+
 export function Header() {
   const [, setUiTick] = useState(0);
   const user = currentUser.value;
@@ -17,11 +50,14 @@ export function Header() {
   const [accountActionBusy, setAccountActionBusy] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const searchScopeRef = useRef<HTMLDivElement>(null);
+  const [searchScopeOpen, setSearchScopeOpen] = useState(false);
+  const [searchDestination, setSearchDestination] = useState<HeaderSearchDestination>(readStoredSearchDestination);
 
   const bumpUi = () => setUiTick(t => t + 1);
 
   useEffect(() => {
-    if (!mobileMenuOpen && !userMenuOpen) return;
+    if (!mobileMenuOpen && !userMenuOpen && !searchScopeOpen) return;
     const onDocPointer = (e: Event) => {
       const t = e.target as Node;
       if (mobileMenuOpen && mobileMenuRef.current && !mobileMenuRef.current.contains(t)) {
@@ -30,11 +66,15 @@ export function Header() {
       if (userMenuOpen && userMenuRef.current && !userMenuRef.current.contains(t)) {
         setUserMenuOpen(false);
       }
+      if (searchScopeOpen && searchScopeRef.current && !searchScopeRef.current.contains(t)) {
+        setSearchScopeOpen(false);
+      }
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setMobileMenuOpen(false);
         setUserMenuOpen(false);
+        setSearchScopeOpen(false);
       }
     };
     document.addEventListener('pointerdown', onDocPointer);
@@ -43,7 +83,7 @@ export function Header() {
       document.removeEventListener('pointerdown', onDocPointer);
       document.removeEventListener('keydown', onKey);
     };
-  }, [mobileMenuOpen, userMenuOpen]);
+  }, [mobileMenuOpen, userMenuOpen, searchScopeOpen]);
 
   useEffect(() => {
     if (!userMenuOpen || !isLoggedIn.value) return;
@@ -54,19 +94,44 @@ export function Header() {
     return () => { cancelled = true; };
   }, [userMenuOpen, user?.did]);
 
+  const pickSearchDestination = (d: HeaderSearchDestination) => {
+    if ((d === 'following' || d === 'me') && !isLoggedIn.value) {
+      showAuthDialog.value = true;
+      setSearchScopeOpen(false);
+      return;
+    }
+    setSearchDestination(d);
+    persistSearchDestination(d);
+    setSearchScopeOpen(false);
+    setMobileMenuOpen(false);
+    setUserMenuOpen(false);
+  };
+
   const onSearch = (e: Event) => {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
     const input = form.querySelector('input') as HTMLInputElement;
     const q = input.value.trim();
-    if (q) {
+    if (!q) return;
+
+    if (searchDestination === 'community') {
       if (q.startsWith('#') || q.match(/^[a-z0-9_-]+$/i)) {
         navigate(communityUrl(q.replace(/^#/, '')));
+        input.value = '';
       } else {
-        navigate(searchUrl(q, 'global'));
+        showToast('Use a hashtag or tag name (letters, numbers, _ and - only).');
       }
-      input.value = '';
+      return;
     }
+
+    if ((searchDestination === 'following' || searchDestination === 'me') && !isLoggedIn.value) {
+      showAuthDialog.value = true;
+      return;
+    }
+
+    const scope = searchDestination === 'global' ? 'global' : searchDestination;
+    navigate(searchUrl(q, scope));
+    input.value = '';
   };
 
   return (
@@ -86,7 +151,78 @@ export function Header() {
               Communities
             </a>
             <form class="header-search-area" onSubmit={onSearch}>
-              <input type="search" placeholder="Search communities…" enterKeyHint="search" />
+              <div class="header-search-inner" ref={searchScopeRef}>
+                <input
+                  type="search"
+                  class="header-search-field"
+                  placeholder="Search"
+                  enterKeyHint="search"
+                  aria-label={`Search (${SEARCH_DEST_LABELS[searchDestination]})`}
+                />
+                <button
+                  type="button"
+                  class="header-search-scope-trigger"
+                  aria-expanded={searchScopeOpen}
+                  aria-haspopup="menu"
+                  aria-controls="header-search-scope-panel"
+                  title={`Search in: ${SEARCH_DEST_LABELS[searchDestination]}. Click for other options.`}
+                  onClick={(e: Event) => {
+                    e.preventDefault();
+                    setSearchScopeOpen(o => !o);
+                    setMobileMenuOpen(false);
+                    setUserMenuOpen(false);
+                  }}
+                >
+                  <span class="header-search-scope-trigger-label" aria-hidden>
+                    {SEARCH_DEST_LABELS[searchDestination]}
+                  </span>
+                  <span class="header-search-scope-chevron" aria-hidden>
+                    ▼
+                  </span>
+                </button>
+                <button type="submit" class="header-search-submit" aria-label="Search" title="Search">
+                  <svg
+                    class="header-search-submit-icon"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden
+                  >
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="m21 21-4.3-4.3" />
+                  </svg>
+                </button>
+                {searchScopeOpen && (
+                  <div
+                    id="header-search-scope-panel"
+                    class="header-search-scope-panel"
+                    role="menu"
+                    aria-label="Search scope"
+                  >
+                    {SEARCH_DEST_MENU_ORDER.map(d => {
+                      const needsAuth = d === 'following' || d === 'me';
+                      const disabled = needsAuth && !isLoggedIn.value;
+                      return (
+                        <button
+                          key={d}
+                          type="button"
+                          role="menuitem"
+                          class={`header-search-scope-option${d === searchDestination ? ' header-search-scope-option--active' : ''}`}
+                          disabled={disabled}
+                          onClick={() => pickSearchDestination(d)}
+                        >
+                          {SEARCH_DEST_LABELS[d]}
+                          {disabled ? ' (sign in)' : ''}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </form>
           </div>
 
@@ -275,51 +411,65 @@ export function Header() {
             )}
             </div>
 
-            {showLoggedInChrome && (
-              <div class="header-mobile-menu" ref={mobileMenuRef}>
-                <button
-                  type="button"
-                  class="header-mobile-menu-toggle"
-                  aria-expanded={mobileMenuOpen}
-                  aria-haspopup="menu"
-                  aria-controls="header-mobile-menu-panel"
-                  onClick={() => {
-                    setUserMenuOpen(false);
-                    setMobileMenuOpen(o => !o);
-                  }}
-                >
-                  Menu
-                </button>
-                {mobileMenuOpen && (
-                  <div id="header-mobile-menu-panel" class="header-mobile-menu-panel" role="menu">
-                    <a
-                      href={hrefForAppPath('/activity')}
-                      role="menuitem"
-                      class="header-mobile-menu-item"
-                      onClick={(e: Event) => {
-                        e.preventDefault();
-                        setMobileMenuOpen(false);
-                        navigate('/activity');
-                      }}
-                    >
-                      Activity
-                    </a>
-                    <a
-                      href={hrefForAppPath('/saved')}
-                      role="menuitem"
-                      class="header-mobile-menu-item"
-                      onClick={(e: Event) => {
-                        e.preventDefault();
-                        setMobileMenuOpen(false);
-                        navigate('/saved');
-                      }}
-                    >
-                      Saved
-                    </a>
-                  </div>
-                )}
-              </div>
-            )}
+            <div class="header-mobile-menu" ref={mobileMenuRef}>
+              <button
+                type="button"
+                class="header-mobile-menu-toggle"
+                aria-expanded={mobileMenuOpen}
+                aria-haspopup="menu"
+                aria-controls="header-mobile-menu-panel"
+                onClick={() => {
+                  setUserMenuOpen(false);
+                  setMobileMenuOpen(o => !o);
+                }}
+              >
+                Menu
+              </button>
+              {mobileMenuOpen && (
+                <div id="header-mobile-menu-panel" class="header-mobile-menu-panel" role="menu">
+                  <a
+                    href={hrefForAppPath('/communities')}
+                    role="menuitem"
+                    class="header-mobile-menu-item"
+                    onClick={(e: Event) => {
+                      e.preventDefault();
+                      setMobileMenuOpen(false);
+                      navigate('/communities');
+                    }}
+                  >
+                    Communities
+                  </a>
+                  {showLoggedInChrome && (
+                    <>
+                      <a
+                        href={hrefForAppPath('/activity')}
+                        role="menuitem"
+                        class="header-mobile-menu-item"
+                        onClick={(e: Event) => {
+                          e.preventDefault();
+                          setMobileMenuOpen(false);
+                          navigate('/activity');
+                        }}
+                      >
+                        Activity
+                      </a>
+                      <a
+                        href={hrefForAppPath('/saved')}
+                        role="menuitem"
+                        class="header-mobile-menu-item"
+                        onClick={(e: Event) => {
+                          e.preventDefault();
+                          setMobileMenuOpen(false);
+                          navigate('/saved');
+                        }}
+                      >
+                        Saved
+                      </a>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
