@@ -1,0 +1,12 @@
+{
+  "client_id": "https://forumsky.app/client-metadata.json",
+  "client_name": "ForumSky",
+  "client_uri": "https://forumsky.app",
+  "redirect_uris": ["https://forumsky.app/"],
+  "grant_types": ["authorization_code", "refresh_token"],
+  "response_types": ["code"],
+  "scope": "atproto transition:generic rpc:app.bsky.feed.getTimeline?aud=did:web:api.bsky.app#bsky_appview rpc:app.bsky.feed.getFeed?aud=did:web:api.bsky.app#bsky_appview",
+  "application_type": "web",
+  "dpop_bound_access_tokens": true,
+  "token_endpoint_auth_method": "none"
+}

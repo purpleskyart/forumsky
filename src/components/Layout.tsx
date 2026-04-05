@@ -1,0 +1,84 @@
+import type { ComponentChildren } from 'preact';
+import { useEffect } from 'preact/hooks';
+import { Header } from './Header';
+import { AuthDialog } from './AuthDialog';
+import { SignUpDialog } from './SignUpDialog';
+import { Toast } from './Toast';
+import { OutboxRetryBar } from './OutboxRetryBar';
+import { OfflineBanner } from './OfflineBanner';
+import { authInitDone, currentUser } from '@/lib/store';
+import { clearGraphPolicy, refreshGraphPolicy } from '@/lib/graph-policy';
+import { appPathname } from '@/lib/app-base-path';
+import { navigateBack } from '@/lib/router';
+
+interface LayoutProps {
+  children: ComponentChildren;
+}
+
+function isEditableTarget(t: EventTarget | null): boolean {
+  if (!(t instanceof HTMLElement)) return false;
+  const tag = t.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+  return t.isContentEditable;
+}
+
+export function Layout({ children }: LayoutProps) {
+  useEffect(() => {
+    import('@/api/auth')
+      .then(m => m.initAuth())
+      .then(profile => {
+        if (profile) {
+          currentUser.value = profile;
+          void refreshGraphPolicy();
+        } else {
+          clearGraphPolicy();
+        }
+      })
+      .catch(() => {
+        clearGraphPolicy();
+        // Auth init failed -- app still works for reading public content
+      })
+      .finally(() => {
+        authInitDone.value = true;
+      });
+  }, []);
+
+  /* Artsky-style: Escape blurs fields; Q / Backspace = history back when not on home. */
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey) return;
+      const path = typeof window !== 'undefined' ? appPathname() : '/';
+      if (isEditableTarget(e.target)) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          (e.target as HTMLElement).blur();
+        }
+        return;
+      }
+      const k = e.key.toLowerCase();
+      if (k === 'q' || e.key === 'Backspace') {
+        if (path === '/' || path === '') return;
+        e.preventDefault();
+        navigateBack();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  return (
+    <div class="app-shell">
+      <Header />
+      <div class="main-wrap">
+        <OfflineBanner />
+        <main class="content">
+          {children}
+        </main>
+      </div>
+      <OutboxRetryBar />
+      <AuthDialog />
+      <SignUpDialog />
+      <Toast />
+    </div>
+  );
+}

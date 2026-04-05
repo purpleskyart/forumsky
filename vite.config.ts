@@ -1,0 +1,49 @@
+import { defineConfig } from 'vite';
+import preact from '@preact/preset-vite';
+import { VitePWA } from 'vite-plugin-pwa';
+import { resolve } from 'path';
+
+export default defineConfig({
+  // GitHub project pages: set GITHUB_PAGES_BASE=/repo-name/ when building (omit for custom domain at /).
+  base: process.env.GITHUB_PAGES_BASE || '/',
+  plugins: [
+    preact(),
+    VitePWA({
+      registerType: 'prompt',
+      includeAssets: ['icons/*.png'],
+      manifest: false,
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/api\//],
+        // Do not route api.bsky.app through Workbox: dynamic XRPC JSON must hit the
+        // network directly; NetworkFirst + short timeouts caused intermittent
+        // "Failed to fetch" when opening communities.
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/cdn\.bsky\.app\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'bsky-cdn',
+              expiration: { maxEntries: 500, maxAgeSeconds: 86400 * 30 },
+            },
+          },
+        ],
+      },
+    }),
+  ],
+  resolve: {
+    alias: { '@': resolve(__dirname, 'src') },
+  },
+  build: {
+    target: 'es2020',
+    minify: 'terser',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          oauth: ['@atproto/oauth-client-browser'],
+        },
+      },
+    },
+  },
+});
