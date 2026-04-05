@@ -17,6 +17,7 @@ import { Search } from './pages/Search';
 import { Activity } from './pages/Activity';
 import { SavedThreads } from './pages/SavedThreads';
 import { Drafts } from './pages/Drafts';
+import { Settings } from './pages/Settings';
 import { FOLLOWED_COMMUNITY_TAG } from './lib/preferences';
 import { browserHistory } from '@/lib/app-base-path';
 import { navigate } from './lib/router';
@@ -82,6 +83,7 @@ export function App() {
         <Route path="/activity" component={Activity} />
         <Route path="/saved" component={SavedThreads} />
         <Route path="/drafts" component={Drafts} />
+        <Route path="/settings" component={Settings} />
       </Router>
     </Layout>
   );

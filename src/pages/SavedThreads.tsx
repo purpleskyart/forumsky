@@ -5,6 +5,8 @@ import { parseAtUri, getPosts } from '@/api/feed';
 import { threadUrl, navigate } from '@/lib/router';
 import { postThreadListTitle } from '@/lib/thread-title';
 import { threadPreviewThumb } from '@/lib/richtext';
+import { postHasNsfwLabels } from '@/lib/nsfw-labels';
+import { NsfwMediaWrap } from '@/components/NsfwMediaWrap';
 import type { PostView } from '@/api/types';
 
 const GET_POSTS_CHUNK = 25;
@@ -91,13 +93,15 @@ export function SavedThreads() {
                       {preview && (
                         <span class="saved-thread-thumb-frame" aria-hidden="true">
                           <span class="thread-thumb-wrap">
-                            <img
-                              src={preview.url}
-                              alt=""
-                              class="thread-thumb"
-                              loading="lazy"
-                              decoding="async"
-                            />
+                            <NsfwMediaWrap isNsfw={Boolean(post && postHasNsfwLabels(post))} compact>
+                              <img
+                                src={preview.url}
+                                alt=""
+                                class="thread-thumb"
+                                loading="lazy"
+                                decoding="async"
+                              />
+                            </NsfwMediaWrap>
                             {preview.extraCount > 0 && (
                               <span class="thread-thumb-more">+{preview.extraCount}</span>
                             )}

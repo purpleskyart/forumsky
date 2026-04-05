@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'preact/hooks';
+import { Fragment } from 'preact';
+import { useState, useEffect, useMemo } from 'preact/hooks';
 import { getPosts, parseAtUri } from '@/api/feed';
 import type { PostView } from '@/api/types';
 import { GifImage, GifImageFromEmbed } from '@/components/GifImage';
 import { PostContentImage } from '@/components/PostContentImage';
 import { HlsVideo } from '@/components/HlsVideo';
+import { NsfwMediaWrap } from '@/components/NsfwMediaWrap';
 import {
   renderPostContent,
   getQuotedPostAggregatedMedia,
@@ -13,6 +15,7 @@ import {
 } from '@/lib/richtext';
 import { hrefForAppPath } from '@/lib/app-base-path';
 import { navigate, threadUrl } from '@/lib/router';
+import { postHasNsfwLabels } from '@/lib/nsfw-labels';
 
 export function QuotedPostEmbedCard({ quoted }: { quoted: PostView }) {
   const [hydrated, setHydrated] = useState<PostView | null>(null);
@@ -43,6 +46,7 @@ export function QuotedPostEmbedCard({ quoted }: { quoted: PostView }) {
     agg.external && isNativeExternalEmbed(agg.external)
       ? getExternalGifPlaybackSources(agg.external)
       : null;
+  const quotedNsfw = useMemo(() => postHasNsfwLabels(displayPost), [displayPost]);
   const quotedParsed = parseAtUri(displayPost.uri);
   const forumskyThreadPath = quotedParsed
     ? threadUrl(displayPost.author.handle || displayPost.author.did, quotedParsed.rkey)
@@ -73,73 +77,79 @@ export function QuotedPostEmbedCard({ quoted }: { quoted: PostView }) {
         <blockquote class="post-quoted-embed-quote">
           {renderPostContent(displayPost.record.text, displayPost.record.facets)}
         </blockquote>
-        {agg.images.map((img, i) =>
-          isGifImage(img) ? (
-            <GifImageFromEmbed
-              key={`img-${i}`}
-              img={img}
-              className="post-content-media post-content-media--gif post-quoted-embed-media post-quoted-embed-interactive"
-            />
-          ) : (
-            <PostContentImage
-              key={`img-${i}`}
-              className="post-content-media post-quoted-embed-media"
-              src={img.fullsize || img.thumb}
-              alt={img.alt ?? ''}
-            />
-          ),
-        )}
-        {agg.videos.map((vid, i) => (
-          <HlsVideo
-            key={`vid-${i}`}
-            playlist={vid.playlist}
-            poster={vid.thumbnail}
-            className="post-content-media post-quoted-embed-media post-quoted-embed-interactive"
-            aria-label={vid.alt || 'Video from quoted post'}
-          />
-        ))}
-        {agg.external &&
-          (quotedExtGif ? (
-            <GifImage
-              thumb={quotedExtGif.thumb}
-              fullsize={quotedExtGif.fullsize}
-              alt=""
-              className="post-external-gif post-quoted-embed-media post-quoted-embed-interactive"
-            />
-          ) : (
-            <a
-              href={agg.external.uri}
-              target="_blank"
-              rel="noopener noreferrer"
-              class="post-external-card post-quoted-embed-external post-quoted-embed-interactive"
-            >
-              {agg.external.thumb && (
-                <div class="post-external-card-media">
-                  <img
-                    class="post-external-thumb"
-                    src={agg.external.thumb}
-                    alt=""
-                    loading="lazy"
+        {agg.images.length + agg.videos.length + (agg.external ? 1 : 0) > 0 ? (
+          <NsfwMediaWrap isNsfw={quotedNsfw}>
+            <Fragment>
+              {agg.images.map((img, i) =>
+                isGifImage(img) ? (
+                  <GifImageFromEmbed
+                    key={`img-${i}`}
+                    img={img}
+                    className="post-content-media post-content-media--gif post-quoted-embed-media post-quoted-embed-interactive"
                   />
-                </div>
+                ) : (
+                  <PostContentImage
+                    key={`img-${i}`}
+                    className="post-content-media post-quoted-embed-media"
+                    src={img.fullsize || img.thumb}
+                    alt={img.alt ?? ''}
+                  />
+                ),
               )}
-              <div class="post-external-card-body">
-                <div class="post-external-card-host">
-                  {(() => {
-                    try {
-                      return new URL(agg.external!.uri).hostname;
-                    } catch {
-                      return 'Link';
-                    }
-                  })()}
-                </div>
-                <div class="post-external-title">{agg.external.title || agg.external.uri}</div>
-                {agg.external.description ? (
-                  <div class="post-external-desc">{agg.external.description}</div>
-                ) : null}
-              </div>
-            </a>
-          ))}
+              {agg.videos.map((vid, i) => (
+                <HlsVideo
+                  key={`vid-${i}`}
+                  playlist={vid.playlist}
+                  poster={vid.thumbnail}
+                  className="post-content-media post-quoted-embed-media post-quoted-embed-interactive"
+                  aria-label={vid.alt || 'Video from quoted post'}
+                />
+              ))}
+              {agg.external &&
+                (quotedExtGif ? (
+                  <GifImage
+                    thumb={quotedExtGif.thumb}
+                    fullsize={quotedExtGif.fullsize}
+                    alt=""
+                    className="post-external-gif post-quoted-embed-media post-quoted-embed-interactive"
+                  />
+                ) : (
+                  <a
+                    href={agg.external.uri}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="post-external-card post-quoted-embed-external post-quoted-embed-interactive"
+                  >
+                    {agg.external.thumb && (
+                      <div class="post-external-card-media">
+                        <img
+                          class="post-external-thumb"
+                          src={agg.external.thumb}
+                          alt=""
+                          loading="lazy"
+                        />
+                      </div>
+                    )}
+                    <div class="post-external-card-body">
+                      <div class="post-external-card-host">
+                        {(() => {
+                          try {
+                            return new URL(agg.external!.uri).hostname;
+                          } catch {
+                            return 'Link';
+                          }
+                        })()}
+                      </div>
+                      <div class="post-external-title">{agg.external.title || agg.external.uri}</div>
+                      {agg.external.description ? (
+                        <div class="post-external-desc">{agg.external.description}</div>
+                      ) : null}
+                    </div>
+                  </a>
+                ))}
+            </Fragment>
+          </NsfwMediaWrap>
+        ) : null}
       </div>
     </div>
   );

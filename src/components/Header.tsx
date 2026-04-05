@@ -224,18 +224,20 @@ export function Header() {
                 )}
               </div>
             </form>
+            {showLoggedInChrome && (
+              <a
+                href={hrefForAppPath('/activity')}
+                class="header-nav-link"
+                onClick={(e: Event) => { e.preventDefault(); navigate('/activity'); }}
+              >
+                Activity
+              </a>
+            )}
           </div>
 
           <div class="header-right">
             {showLoggedInChrome && (
               <>
-                <a
-                  href={hrefForAppPath('/activity')}
-                  class="header-nav-link header-nav-desktop"
-                  onClick={(e: Event) => { e.preventDefault(); navigate('/activity'); }}
-                >
-                  Activity
-                </a>
                 <a
                   href={hrefForAppPath('/saved')}
                   class="header-nav-link header-nav-desktop"
@@ -244,6 +246,18 @@ export function Header() {
                   Saved
                 </a>
               </>
+            )}
+            {!showLoggedInChrome && (
+              <a
+                href={hrefForAppPath('/settings')}
+                class="header-nav-link header-nav-desktop"
+                onClick={(e: Event) => {
+                  e.preventDefault();
+                  navigate('/settings');
+                }}
+              >
+                Settings
+              </a>
             )}
             <div class="header-auth">
             {showLoggedInChrome ? (
@@ -297,6 +311,18 @@ export function Header() {
                       }}
                     >
                       Drafts
+                    </a>
+                    <a
+                      href={hrefForAppPath('/settings')}
+                      role="menuitem"
+                      class="header-user-menu-item"
+                      onClick={(e: Event) => {
+                        e.preventDefault();
+                        setUserMenuOpen(false);
+                        navigate('/settings');
+                      }}
+                    >
+                      Settings
                     </a>
                     {accounts.length > 1 && (
                       <div class="header-user-menu-accounts" role="group" aria-label="Switch account">
@@ -439,20 +465,20 @@ export function Header() {
                   >
                     Communities
                   </a>
+                  <a
+                    href={hrefForAppPath('/settings')}
+                    role="menuitem"
+                    class="header-mobile-menu-item"
+                    onClick={(e: Event) => {
+                      e.preventDefault();
+                      setMobileMenuOpen(false);
+                      navigate('/settings');
+                    }}
+                  >
+                    Settings
+                  </a>
                   {showLoggedInChrome && (
                     <>
-                      <a
-                        href={hrefForAppPath('/activity')}
-                        role="menuitem"
-                        class="header-mobile-menu-item"
-                        onClick={(e: Event) => {
-                          e.preventDefault();
-                          setMobileMenuOpen(false);
-                          navigate('/activity');
-                        }}
-                      >
-                        Activity
-                      </a>
                       <a
                         href={hrefForAppPath('/saved')}
                         role="menuitem"

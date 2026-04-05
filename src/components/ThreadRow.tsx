@@ -1,4 +1,6 @@
+import { NsfwMediaWrap } from '@/components/NsfwMediaWrap';
 import { hrefForAppPath } from '@/lib/app-base-path';
+import { postHasNsfwLabels } from '@/lib/nsfw-labels';
 import { threadUrl } from '@/lib/router';
 import { parseAtUri } from '@/api/feed';
 import { threadPreviewThumb } from '@/lib/richtext';
@@ -75,7 +77,9 @@ export function ThreadRow({
           {preview && (
             <a href={hrefForAppPath(href)} class="thread-thumb-link" aria-hidden="true" tabindex={-1}>
               <span class="thread-thumb-wrap">
-                <img src={preview.url} alt="" class="thread-thumb" loading="lazy" decoding="async" />
+                <NsfwMediaWrap isNsfw={postHasNsfwLabels(post)} compact>
+                  <img src={preview.url} alt="" class="thread-thumb" loading="lazy" decoding="async" />
+                </NsfwMediaWrap>
                 {preview.extraCount > 0 && (
                   <span class="thread-thumb-more">+{preview.extraCount}</span>
                 )}

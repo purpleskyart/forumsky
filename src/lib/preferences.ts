@@ -128,6 +128,19 @@ export function isThreadHidden(uri: string): boolean {
   return getHiddenThreads().includes(uri);
 }
 
+/** How to show posts labeled as adult / sexual / etc. */
+export type NsfwMediaMode = 'show' | 'blur' | 'hide';
+
+export function getNsfwMediaMode(): NsfwMediaMode {
+  const v = loadJSON<string>('nsfw_media_mode', 'blur');
+  if (v === 'show' || v === 'blur' || v === 'hide') return v;
+  return 'blur';
+}
+
+export function setNsfwMediaMode(mode: NsfwMediaMode) {
+  saveJSON('nsfw_media_mode', mode);
+}
+
 // Pinned threads per community
 export function getPinnedThreads(tag: string): string[] {
   return loadJSON<string[]>(`pinned_threads_${tag}`, []);

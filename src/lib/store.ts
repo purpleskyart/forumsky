@@ -1,6 +1,7 @@
 import { signal, computed } from '@preact/signals';
 import type { ProfileView } from '@/api/types';
 import { mayHaveRestorableSession } from '@/api/auth';
+import { getNsfwMediaMode, setNsfwMediaMode, type NsfwMediaMode } from '@/lib/preferences';
 
 export const currentUser = signal<ProfileView | null>(null);
 export const isLoggedIn = computed(() => currentUser.value !== null);
@@ -36,3 +37,11 @@ export const isLoading = signal(false);
 /** Filled after sign-in via refreshGraphPolicy() */
 export const mutedDids = signal<Set<string>>(new Set());
 export const blockedDids = signal<Set<string>>(new Set());
+
+/** Sensitive / adult-labeled media: show, blur until revealed, or hide (stored in localStorage). */
+export const nsfwMediaMode = signal<NsfwMediaMode>(getNsfwMediaMode());
+
+export function applyNsfwMediaMode(mode: NsfwMediaMode) {
+  setNsfwMediaMode(mode);
+  nsfwMediaMode.value = mode;
+}

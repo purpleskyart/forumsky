@@ -12,6 +12,7 @@ import { QuotedPostEmbedCard } from '@/components/QuotedPostEmbedCard';
 import { GifImage, GifImageFromEmbed } from '@/components/GifImage';
 import { PostContentImage } from '@/components/PostContentImage';
 import { HlsVideo } from '@/components/HlsVideo';
+import { NsfwMediaWrap } from '@/components/NsfwMediaWrap';
 import { parseAtUri } from '@/api/feed';
 import type { FeedBlendSourceMeta, FeedViewPost, PostView } from '@/api/types';
 import { repostAttributionFromReason } from '@/lib/feed-reason';
@@ -30,6 +31,7 @@ import { navigate, threadUrl } from '@/lib/router';
 import { formatListDateTime, formatRelativeTime, t } from '@/lib/i18n';
 import { formatProfileJoined, formatProfileStatCount, toneIndexForHandle } from '@/lib/user-display';
 import { isLoggedIn, showAuthDialog } from '@/lib/store';
+import { postHasNsfwLabels } from '@/lib/nsfw-labels';
 
 export interface FollowingFeedRowProps {
   post: PostView;
@@ -88,6 +90,7 @@ export function FollowingFeedRow({
   const external = getPostExternal(post);
   const externalGifSrc =
     external && isNativeExternalEmbed(external) ? getExternalGifPlaybackSources(external) : null;
+  const nsfwMedia = useMemo(() => postHasNsfwLabels(post), [post]);
 
   const showAvatarFollowPlus = Boolean(
     onAvatarFollow &&
@@ -281,7 +284,11 @@ export function FollowingFeedRow({
 
         <div class="post-content">
           {renderPostContent(post.record.text, post.record.facets)}
-          {mediaCount > 1 ? <div class="post-content-media-stack">{mediaNodes}</div> : mediaNodes}
+          {mediaCount > 0 ? (
+            <NsfwMediaWrap isNsfw={nsfwMedia}>
+              {mediaCount > 1 ? <div class="post-content-media-stack">{mediaNodes}</div> : mediaNodes}
+            </NsfwMediaWrap>
+          ) : null}
 
           {quotedEmbed?.kind === 'post' && <QuotedPostEmbedCard quoted={quotedEmbed.post} />}
           {quotedEmbed?.kind === 'notFound' && (
@@ -296,41 +303,45 @@ export function FollowingFeedRow({
 
           {external &&
             (externalGifSrc ? (
-              <GifImage
-                thumb={externalGifSrc.thumb}
-                fullsize={externalGifSrc.fullsize}
-                alt=""
-                className="post-external-gif following-feed-row-media"
-              />
+              <NsfwMediaWrap isNsfw={nsfwMedia}>
+                <GifImage
+                  thumb={externalGifSrc.thumb}
+                  fullsize={externalGifSrc.fullsize}
+                  alt=""
+                  className="post-external-gif following-feed-row-media"
+                />
+              </NsfwMediaWrap>
             ) : (
-              <a
-                href={external.uri}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="post-external-card following-feed-row-external"
-                onClick={stopNav}
-              >
-                {external.thumb && (
-                  <div class="post-external-card-media">
-                    <img class="post-external-thumb" src={external.thumb} alt="" loading="lazy" />
+              <NsfwMediaWrap isNsfw={nsfwMedia}>
+                <a
+                  href={external.uri}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="post-external-card following-feed-row-external"
+                  onClick={stopNav}
+                >
+                  {external.thumb && (
+                    <div class="post-external-card-media">
+                      <img class="post-external-thumb" src={external.thumb} alt="" loading="lazy" />
+                    </div>
+                  )}
+                  <div class="post-external-card-body">
+                    <div class="post-external-card-host">
+                      {(() => {
+                        try {
+                          return new URL(external.uri).hostname;
+                        } catch {
+                          return 'Link';
+                        }
+                      })()}
+                    </div>
+                    <div class="post-external-title">{external.title || external.uri}</div>
+                    {external.description ? (
+                      <div class="post-external-desc">{external.description}</div>
+                    ) : null}
                   </div>
-                )}
-                <div class="post-external-card-body">
-                  <div class="post-external-card-host">
-                    {(() => {
-                      try {
-                        return new URL(external.uri).hostname;
-                      } catch {
-                        return 'Link';
-                      }
-                    })()}
-                  </div>
-                  <div class="post-external-title">{external.title || external.uri}</div>
-                  {external.description ? (
-                    <div class="post-external-desc">{external.description}</div>
-                  ) : null}
-                </div>
-              </a>
+                </a>
+              </NsfwMediaWrap>
             ))}
         </div>
 

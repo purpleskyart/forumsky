@@ -777,6 +777,86 @@ input:focus, textarea:focus {
   line-height: 1.35;
 }
 
+/* —— NSFW / sensitive media (labels) —— */
+.nsfw-media-blur-wrap {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.nsfw-media-blur-layer {
+  filter: blur(26px);
+  transform: scale(1.06);
+  pointer-events: none;
+  user-select: none;
+}
+.nsfw-media-blur-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.42);
+  z-index: 2;
+}
+.nsfw-media-reveal-btn {
+  flex-shrink: 0;
+}
+.nsfw-media-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  padding: 16px;
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  text-align: center;
+}
+.nsfw-media-placeholder--compact {
+  min-height: 48px;
+  padding: 6px 8px;
+  font-size: 0.72rem;
+}
+.nsfw-media-placeholder-text {
+  max-width: 220px;
+  line-height: 1.35;
+}
+.settings-section-title {
+  margin-top: 20px;
+  margin-bottom: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.settings-nsfw-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+.settings-nsfw-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+.settings-nsfw-option input {
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+.settings-nsfw-option:hover {
+  color: var(--text);
+}
+
 .following-feed-mix {
   flex: 1 1 100%;
   min-width: 0;

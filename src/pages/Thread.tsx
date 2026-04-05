@@ -23,6 +23,7 @@ import {
 import { GifImage, GifImageFromEmbed } from '@/components/GifImage';
 import { PostContentImage } from '@/components/PostContentImage';
 import { HlsVideo } from '@/components/HlsVideo';
+import { NsfwMediaWrap } from '@/components/NsfwMediaWrap';
 import { getPostThread, getPostUri, parseAtUri, getPosts, searchPosts } from '@/api/feed';
 import { resolveHandle } from '@/api/actor';
 import {
@@ -37,6 +38,7 @@ import {
   extractFirstHashtag,
 } from '@/lib/thread-merger';
 import { getDownvoteCounts } from '@/lib/constellation';
+import { postHasNsfwLabels } from '@/lib/nsfw-labels';
 import { formatProfileJoined, formatProfileStatCount, toneIndexForHandle } from '@/lib/user-display';
 import {
   renderPostContent,
@@ -2384,6 +2386,7 @@ function PostBlock({
   ]);
 
   const quotedEmbed = useMemo(() => getQuotedEmbedFromSegments(segments), [segments]);
+  const segmentsNsfw = useMemo(() => segments.some(postHasNsfwLabels), [segments]);
 
   const mediaCount = allImages.length + allVideos.length;
   const mediaNodes =
@@ -2809,7 +2812,11 @@ function PostBlock({
             })
           )}
 
-          {mediaCount > 1 ? <div class="post-content-media-stack">{mediaNodes}</div> : mediaNodes}
+          {mediaCount > 0 ? (
+            <NsfwMediaWrap isNsfw={segmentsNsfw}>
+              {mediaCount > 1 ? <div class="post-content-media-stack">{mediaNodes}</div> : mediaNodes}
+            </NsfwMediaWrap>
+          ) : null}
 
           {quotedEmbed?.kind === 'post' && <QuotedPostEmbedCard quoted={quotedEmbed.post} />}
           {quotedEmbed?.kind === 'notFound' && (
@@ -2855,45 +2862,49 @@ function PostBlock({
 
           {external &&
             (externalGifSrc ? (
-              <GifImage
-                thumb={externalGifSrc.thumb}
-                fullsize={externalGifSrc.fullsize}
-                alt=""
-                className="post-external-gif"
-              />
+              <NsfwMediaWrap isNsfw={segmentsNsfw}>
+                <GifImage
+                  thumb={externalGifSrc.thumb}
+                  fullsize={externalGifSrc.fullsize}
+                  alt=""
+                  className="post-external-gif"
+                />
+              </NsfwMediaWrap>
             ) : (
-              <a
-                href={external.uri}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="post-external-card"
-              >
-                {external.thumb && (
-                  <div class="post-external-card-media">
-                    <img
-                      class="post-external-thumb"
-                      src={external.thumb}
-                      alt=""
-                      loading="lazy"
-                    />
+              <NsfwMediaWrap isNsfw={segmentsNsfw}>
+                <a
+                  href={external.uri}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="post-external-card"
+                >
+                  {external.thumb && (
+                    <div class="post-external-card-media">
+                      <img
+                        class="post-external-thumb"
+                        src={external.thumb}
+                        alt=""
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
+                  <div class="post-external-card-body">
+                    <div class="post-external-card-host">
+                      {(() => {
+                        try {
+                          return new URL(external.uri).hostname;
+                        } catch {
+                          return 'Link';
+                        }
+                      })()}
+                    </div>
+                    <div class="post-external-title">{external.title || external.uri}</div>
+                    {external.description ? (
+                      <div class="post-external-desc">{external.description}</div>
+                    ) : null}
                   </div>
-                )}
-                <div class="post-external-card-body">
-                  <div class="post-external-card-host">
-                    {(() => {
-                      try {
-                        return new URL(external.uri).hostname;
-                      } catch {
-                        return 'Link';
-                      }
-                    })()}
-                  </div>
-                  <div class="post-external-title">{external.title || external.uri}</div>
-                  {external.description ? (
-                    <div class="post-external-desc">{external.description}</div>
-                  ) : null}
-                </div>
-              </a>
+                </a>
+              </NsfwMediaWrap>
             ))}
         </div>
         <div class="post-footer">
