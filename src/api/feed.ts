@@ -1,4 +1,4 @@
-import { xrpcGet, xrpcSessionGet } from './xrpc';
+import { xrpcGet, xrpcSessionGet, getOAuthSession } from './xrpc';
 import type {
   SearchPostsResponse,
   GetPostThreadResponse,
@@ -65,11 +65,10 @@ export async function getPostThread(
   depth = 100,
   parentHeight = 0,
 ): Promise<GetPostThreadResponse> {
-  return xrpcGet<GetPostThreadResponse>('app.bsky.feed.getPostThread', {
-    uri,
-    depth,
-    parentHeight,
-  });
+  const params = { uri, depth, parentHeight };
+  return getOAuthSession()
+    ? xrpcSessionGet<GetPostThreadResponse>('app.bsky.feed.getPostThread', params)
+    : xrpcGet<GetPostThreadResponse>('app.bsky.feed.getPostThread', params);
 }
 
 export async function getAuthorFeed(
@@ -87,7 +86,9 @@ export async function getAuthorFeed(
 export async function getPosts(uris: string[]): Promise<{ posts: PostView[] }> {
   const params: Record<string, string> = {};
   uris.forEach((u, i) => { params[`uris[${i}]`] = u; });
-  return xrpcGet('app.bsky.feed.getPosts', params);
+  return getOAuthSession()
+    ? xrpcSessionGet<{ posts: PostView[] }>('app.bsky.feed.getPosts', params)
+    : xrpcGet<{ posts: PostView[] }>('app.bsky.feed.getPosts', params);
 }
 
 export function getPostUri(did: string, rkey: string): string {

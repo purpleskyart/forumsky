@@ -43,6 +43,11 @@ export interface FollowingFeedRowProps {
   downvoteDisplayCount: number;
   downvoteBusy?: boolean;
   onDownvotePost: (uri: string, cid: string) => void | Promise<void>;
+  /** Same avatar “+ follow” control as thread roots (Following feed / homepage). */
+  onAvatarFollow?: (authorDid: string) => void | Promise<void>;
+  avatarFollowBusyDid?: string | null;
+  followingAuthorDids?: Set<string>;
+  viewerDid?: string;
 }
 
 const stopNav = (e: MouseEvent) => e.stopPropagation();
@@ -59,6 +64,10 @@ export function FollowingFeedRow({
   downvoteDisplayCount,
   downvoteBusy,
   onDownvotePost,
+  onAvatarFollow,
+  avatarFollowBusyDid,
+  followingAuthorDids,
+  viewerDid,
 }: FollowingFeedRowProps) {
   const repostBy = repostAttributionFromReason(feedReason);
   const customFeedLabel = blendSource?.kind === 'custom' ? blendSource.label : undefined;
@@ -79,6 +88,13 @@ export function FollowingFeedRow({
   const external = getPostExternal(post);
   const externalGifSrc =
     external && isNativeExternalEmbed(external) ? getExternalGifPlaybackSources(external) : null;
+
+  const showAvatarFollowPlus = Boolean(
+    onAvatarFollow &&
+      viewerDid &&
+      post.author.did !== viewerDid &&
+      !(followingAuthorDids?.has(post.author.did) ?? false),
+  );
 
   const onRowClick = (e: MouseEvent) => {
     const el = e.target as HTMLElement | null;
@@ -125,9 +141,20 @@ export function FollowingFeedRow({
       onClick={onRowClick}
     >
       <div class="post-author-card">
-        <a href={hrefForAppPath(`/u/${handle}`)} class="following-feed-row-profile-avatar" onClick={stopNav}>
-          <Avatar src={post.author.avatar} alt={displayName} />
-        </a>
+        <Avatar
+          src={post.author.avatar}
+          alt={displayName}
+          className="following-feed-row-profile-avatar"
+          followPlus={
+            showAvatarFollowPlus
+              ? {
+                  busy: avatarFollowBusyDid === post.author.did,
+                  onFollow: () => void onAvatarFollow!(post.author.did),
+                  title: `Follow @${handle}`,
+                }
+              : undefined
+          }
+        />
         <div class="post-author-meta">
           <div class="author-name">
             <a href={hrefForAppPath(`/u/${handle}`)} onClick={stopNav}>

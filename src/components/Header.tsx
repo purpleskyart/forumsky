@@ -77,11 +77,7 @@ export function Header() {
             ForumSky
           </a>
 
-          <form class="header-search-area" onSubmit={onSearch}>
-            <input type="search" placeholder="Search communities…" enterKeyHint="search" />
-          </form>
-
-          <div class="header-right">
+          <div class="header-center-cluster">
             <a
               href={hrefForAppPath('/communities')}
               class="header-nav-link"
@@ -89,6 +85,12 @@ export function Header() {
             >
               Communities
             </a>
+            <form class="header-search-area" onSubmit={onSearch}>
+              <input type="search" placeholder="Search communities…" enterKeyHint="search" />
+            </form>
+          </div>
+
+          <div class="header-right">
             {showLoggedInChrome && (
               <>
                 <a
@@ -104,13 +106,6 @@ export function Header() {
                   onClick={(e: Event) => { e.preventDefault(); navigate('/saved'); }}
                 >
                   Saved
-                </a>
-                <a
-                  href={hrefForAppPath('/drafts')}
-                  class="header-nav-link header-nav-desktop"
-                  onClick={(e: Event) => { e.preventDefault(); navigate('/drafts'); }}
-                >
-                  Drafts
                 </a>
               </>
             )}
@@ -154,6 +149,18 @@ export function Header() {
                     >
                       <div class="header-user-menu-name">{user?.displayName || user?.handle}</div>
                       <div class="header-user-menu-handle">@{user?.handle}</div>
+                    </a>
+                    <a
+                      href={hrefForAppPath('/drafts')}
+                      role="menuitem"
+                      class="header-user-menu-item"
+                      onClick={(e: Event) => {
+                        e.preventDefault();
+                        setUserMenuOpen(false);
+                        navigate('/drafts');
+                      }}
+                    >
+                      Drafts
                     </a>
                     {accounts.length > 1 && (
                       <div class="header-user-menu-accounts" role="group" aria-label="Switch account">
@@ -286,18 +293,6 @@ export function Header() {
                 {mobileMenuOpen && (
                   <div id="header-mobile-menu-panel" class="header-mobile-menu-panel" role="menu">
                     <a
-                      href={hrefForAppPath('/communities')}
-                      role="menuitem"
-                      class="header-mobile-menu-item"
-                      onClick={(e: Event) => {
-                        e.preventDefault();
-                        setMobileMenuOpen(false);
-                        navigate('/communities');
-                      }}
-                    >
-                      Communities
-                    </a>
-                    <a
                       href={hrefForAppPath('/activity')}
                       role="menuitem"
                       class="header-mobile-menu-item"
@@ -320,18 +315,6 @@ export function Header() {
                       }}
                     >
                       Saved
-                    </a>
-                    <a
-                      href={hrefForAppPath('/drafts')}
-                      role="menuitem"
-                      class="header-mobile-menu-item"
-                      onClick={(e: Event) => {
-                        e.preventDefault();
-                        setMobileMenuOpen(false);
-                        navigate('/drafts');
-                      }}
-                    >
-                      Drafts
                     </a>
                   </div>
                 )}

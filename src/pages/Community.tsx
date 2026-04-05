@@ -27,6 +27,8 @@ import {
 import { sortFeedRootItems, sortThreads, type CommunityThreadSort } from '@/lib/thread-sort';
 import { getDownvoteCounts } from '@/lib/constellation';
 import { createDownvote, deleteDownvote, listMyDownvotes } from '@/api/post';
+import { followActor, listAllFollowingDids } from '@/api/graph-follows';
+import { XRPCError } from '@/api/xrpc';
 import { showAuthDialog, showToast, currentUser, isLoggedIn } from '@/lib/store';
 import { appPathname, hrefForAppPath } from '@/lib/app-base-path';
 import { navigate, threadUrl } from '@/lib/router';
@@ -187,6 +189,8 @@ export function Community({ tag: tagProp }: CommunityProps) {
   const [feedDownvoteLoadingUri, setFeedDownvoteLoadingUri] = useState<string | null>(null);
   const feedDownvoteGenRef = useRef(0);
   const feedDownvoteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [feedFollowingDids, setFeedFollowingDids] = useState<Set<string>>(() => new Set());
+  const [feedAvatarFollowBusyDid, setFeedAvatarFollowBusyDid] = useState<string | null>(null);
 
   const loadGen = useRef(0);
   /** Distinguish remount/back-nav (keep feed visible) from tag/sort change (full reset). */
@@ -307,6 +311,35 @@ export function Community({ tag: tagProp }: CommunityProps) {
     }
     return m;
   }, [isFollowing, followingPool]);
+
+  useEffect(() => {
+    if (!isFollowing || !user?.did) {
+      setFeedFollowingDids(new Set());
+      return;
+    }
+    let cancelled = false;
+    void listAllFollowingDids().then(set => {
+      if (!cancelled) setFeedFollowingDids(set);
+    });
+    return () => { cancelled = true; };
+  }, [isFollowing, user?.did]);
+
+  const handleFollowingAvatarFollow = useCallback(async (authorDid: string) => {
+    const meDid = currentUser.value?.did;
+    if (!meDid) {
+      showAuthDialog.value = true;
+      return;
+    }
+    setFeedAvatarFollowBusyDid(authorDid);
+    try {
+      await followActor(meDid, authorDid);
+      setFeedFollowingDids(prev => new Set(prev).add(authorDid));
+    } catch (e) {
+      showToast(e instanceof XRPCError ? e.message : 'Could not follow');
+    } finally {
+      setFeedAvatarFollowBusyDid(null);
+    }
+  }, []);
 
   useEffect(() => {
     if (!tag) return;
@@ -1107,6 +1140,10 @@ export function Community({ tag: tagProp }: CommunityProps) {
                   )}
                   onDownvotePost={handleDownvoteFeedPost}
                   downvoteBusy={feedDownvoteLoadingUri === post.uri}
+                  onAvatarFollow={handleFollowingAvatarFollow}
+                  avatarFollowBusyDid={feedAvatarFollowBusyDid}
+                  followingAuthorDids={feedFollowingDids}
+                  viewerDid={user?.did}
                 />
               ) : (
                 <ThreadRow
