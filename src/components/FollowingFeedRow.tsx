@@ -281,6 +281,8 @@ export function FollowingFeedRow({
 
         <div class="post-content">
           {renderPostContent(post.record.text, post.record.facets)}
+          {mediaCount > 1 ? <div class="post-content-media-stack">{mediaNodes}</div> : mediaNodes}
+
           {quotedEmbed?.kind === 'post' && <QuotedPostEmbedCard quoted={quotedEmbed.post} />}
           {quotedEmbed?.kind === 'notFound' && (
             <p class="post-quoted-embed-fallback">Quoted post could not be found.</p>
@@ -291,8 +293,6 @@ export function FollowingFeedRow({
           {quotedEmbed?.kind === 'detached' && (
             <p class="post-quoted-embed-fallback">Quoted post is no longer available.</p>
           )}
-
-          {mediaCount > 1 ? <div class="post-content-media-stack">{mediaNodes}</div> : mediaNodes}
 
           {external &&
             (externalGifSrc ? (

@@ -36,6 +36,7 @@ import { parseCommunityRoutePath } from '@/lib/spa-route-params';
 import { useRouter } from 'preact-router';
 import { parseAtUri } from '@/api/feed';
 import { isAuthorFiltered } from '@/lib/graph-policy';
+import { dominantVisibleListRowIndex } from '@/lib/dominant-visible-row';
 import { restoreScrollNow } from '@/lib/scroll-restore';
 import type { FeedBlendSourceMeta, FeedRootItem, PostView } from '@/api/types';
 
@@ -926,10 +927,13 @@ export function Community({ tag: tagProp }: CommunityProps) {
       if (down || up) {
         e.preventDefault();
         setKbRowOutlineActive(true);
-        setKbRow(i => {
-          const max = Math.max(0, list.length - 1);
-          return Math.min(max, Math.max(0, i + (down ? 1 : -1)));
-        });
+        const max = Math.max(0, list.length - 1);
+        const anchor = dominantVisibleListRowIndex(
+          list.length,
+          i => `community-feed-kb-${i}`,
+          kbRowRef.current,
+        );
+        setKbRow(Math.min(max, Math.max(0, anchor + (down ? 1 : -1))));
         return;
       }
       if (e.key === 'e' || e.key === 'Enter') {
@@ -944,6 +948,15 @@ export function Community({ tag: tagProp }: CommunityProps) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
+
+  useLayoutEffect(() => {
+    if (!kbRowOutlineActive) return;
+    document.getElementById(`community-feed-kb-${kbRow}`)?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+      inline: 'nearest',
+    });
+  }, [kbRow, kbRowOutlineActive]);
 
   const tagSearchSort =
     !isFollowing && (sortMode === 'recent' || sortMode === 'likes' || sortMode === 'author');
@@ -1122,6 +1135,7 @@ export function Community({ tag: tagProp }: CommunityProps) {
           displayPosts.map((post, i) => (
             <div
               key={post.uri}
+              id={`community-feed-kb-${i}`}
               class={kbRowOutlineActive && i === kbRow ? 'thread-row-kb-focus' : undefined}
             >
               {isFollowing ? (

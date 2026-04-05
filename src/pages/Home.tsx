@@ -12,6 +12,7 @@ import { searchPosts, getTimeline } from '@/api/feed';
 import { swr } from '@/lib/cache';
 import { currentUser, showAuthDialog } from '@/lib/store';
 import { appPathname } from '@/lib/app-base-path';
+import { dominantVisibleListRowIndex } from '@/lib/dominant-visible-row';
 import { navigate, communityUrl } from '@/lib/router';
 
 interface CommunityPreview {
@@ -105,10 +106,13 @@ export function Home() {
       if (down || up) {
         e.preventDefault();
         setKbRowOutlineActive(true);
-        setKbRow(i => {
-          const max = Math.max(0, list.length - 1);
-          return Math.min(max, Math.max(0, i + (down ? 1 : -1)));
-        });
+        const max = Math.max(0, list.length - 1);
+        const anchor = dominantVisibleListRowIndex(
+          list.length,
+          i => `home-community-kb-${i}`,
+          kbRowRef.current,
+        );
+        setKbRow(Math.min(max, Math.max(0, anchor + (down ? 1 : -1))));
         return;
       }
       if (e.key === 'e' || e.key === 'Enter') {
@@ -125,8 +129,9 @@ export function Home() {
   useLayoutEffect(() => {
     if (!kbRowOutlineActive) return;
     document.getElementById(`home-community-kb-${kbRow}`)?.scrollIntoView({
-      block: 'nearest',
       behavior: 'smooth',
+      block: 'center',
+      inline: 'nearest',
     });
   }, [kbRow, kbRowOutlineActive]);
 

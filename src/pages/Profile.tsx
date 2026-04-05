@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'preact/hooks';
+import { useState, useEffect, useRef, useLayoutEffect } from 'preact/hooks';
 import { Avatar } from '@/components/Avatar';
 import { ThreadRow } from '@/components/ThreadRow';
 import { getProfile } from '@/api/actor';
@@ -7,6 +7,7 @@ import { followActor, unfollowByRecordUri } from '@/api/graph-follows';
 import { XRPCError } from '@/api/xrpc';
 import { swr, removeCacheEntry } from '@/lib/cache';
 import { appPathname, hrefForAppPath } from '@/lib/app-base-path';
+import { dominantVisibleListRowIndex } from '@/lib/dominant-visible-row';
 import { navigate, threadUrl } from '@/lib/router';
 import { parseProfileRoutePath } from '@/lib/spa-route-params';
 import { useRouter } from 'preact-router';
@@ -95,10 +96,13 @@ export function Profile(props: ProfileProps) {
       if (down || up) {
         e.preventDefault();
         setKbRowOutlineActive(true);
-        setKbRow(i => {
-          const max = Math.max(0, list.length - 1);
-          return Math.min(max, Math.max(0, i + (down ? 1 : -1)));
-        });
+        const max = Math.max(0, list.length - 1);
+        const anchor = dominantVisibleListRowIndex(
+          list.length,
+          i => `profile-feed-kb-${i}`,
+          kbRowRef.current,
+        );
+        setKbRow(Math.min(max, Math.max(0, anchor + (down ? 1 : -1))));
         return;
       }
       if (e.key === 'e' || e.key === 'Enter') {
@@ -113,6 +117,15 @@ export function Profile(props: ProfileProps) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
+
+  useLayoutEffect(() => {
+    if (!kbRowOutlineActive) return;
+    document.getElementById(`profile-feed-kb-${kbRow}`)?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+      inline: 'nearest',
+    });
+  }, [kbRow, kbRowOutlineActive]);
 
   const handleFollow = async () => {
     if (!me?.did) {
@@ -248,7 +261,11 @@ export function Profile(props: ProfileProps) {
           <div class="empty"><p>No threads yet</p></div>
         ) : (
           posts.map((post, i) => (
-            <div key={post.uri} class={kbRowOutlineActive && i === kbRow ? 'thread-row-kb-focus' : undefined}>
+            <div
+              key={post.uri}
+              id={`profile-feed-kb-${i}`}
+              class={kbRowOutlineActive && i === kbRow ? 'thread-row-kb-focus' : undefined}
+            >
               <ThreadRow post={post} />
             </div>
           ))

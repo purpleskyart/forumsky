@@ -398,16 +398,41 @@ function parseEmbeddedRecordUnion(unionRec: unknown): ParsedEmbeddedRecord | nul
   return null;
 }
 
+/**
+ * AppView often nests the quoted post as:
+ * - `record#view.record` → viewRecord, or
+ * - `recordWithMedia#view.record` → `{ record: viewRecord }` (no `$type` on the wrapper).
+ * Normalize to the inner `app.bsky.embed.record#viewRecord` object for {@link parseEmbeddedRecordUnion}.
+ */
+function unwrapEmbeddedRecordViewRecord(raw: unknown): unknown {
+  if (!raw || typeof raw !== 'object') return raw;
+  const o = raw as Record<string, unknown>;
+  if (o.$type === 'app.bsky.embed.record#view' && o.record != null) {
+    return o.record;
+  }
+  const nested = o.record;
+  if (nested && typeof nested === 'object') {
+    const inner = nested as Record<string, unknown>;
+    if (inner.$type === 'app.bsky.embed.record#viewRecord') {
+      return nested;
+    }
+    if (inner.$type === 'app.bsky.embed.record#view' && inner.record != null) {
+      return inner.record;
+    }
+  }
+  return raw;
+}
+
 /** Parse record / recordWithMedia embed on a single post segment. */
 export function parseEmbeddedRecordEmbed(post: PostView): ParsedEmbeddedRecord | null {
   const e = post.embed;
   if (!e) return null;
   const t = e.$type;
   if (t === 'app.bsky.embed.record#view') {
-    return parseEmbeddedRecordUnion(e.record);
+    return parseEmbeddedRecordUnion(unwrapEmbeddedRecordViewRecord(e.record));
   }
   if (t === 'app.bsky.embed.recordWithMedia#view') {
-    return parseEmbeddedRecordUnion((e as { record?: unknown }).record);
+    return parseEmbeddedRecordUnion(unwrapEmbeddedRecordViewRecord((e as { record?: unknown }).record));
   }
   return null;
 }

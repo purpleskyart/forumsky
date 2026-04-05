@@ -87,6 +87,7 @@ import {
   toggleSubscribedThreadRoot,
   isThreadSubscribed,
 } from '@/lib/forumsky-local';
+import { dominantVisibleThreadPostNumber } from '@/lib/dominant-visible-row';
 import { reportPost } from '@/api/moderation';
 import { deletePost, createDownvote, deleteDownvote, listMyDownvotes } from '@/api/post';
 import { followActor, listAllFollowingDids } from '@/api/graph-follows';
@@ -798,11 +799,10 @@ function ThreadView({
       if (down || up) {
         e.preventDefault();
         setKbOutlineActive(true);
-        setKbFocusPost(p => {
-          const next = Math.min(maxKbPostNum, Math.max(1, p + (down ? 1 : -1)));
-          requestAnimationFrame(() => scrollToThreadPost(next));
-          return next;
-        });
+        const anchor = dominantVisibleThreadPostNumber(maxKbPostNum, kbFocusPostRef.current);
+        setKbFocusPost(
+          Math.min(maxKbPostNum, Math.max(1, anchor + (down ? 1 : -1))),
+        );
         return;
       }
       if (e.key === 'e' || e.key === 'Enter') {
@@ -841,6 +841,11 @@ function ThreadView({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [maxKbPostNum, postByKeyboardNumber, handleReplyClick]);
+
+  useLayoutEffect(() => {
+    if (!kbOutlineActive) return;
+    scrollToThreadPost(kbFocusPost);
+  }, [kbFocusPost, kbOutlineActive]);
 
   useLayoutEffect(() => {
     if (composerFocusRequest === 0) return;
@@ -2804,6 +2809,8 @@ function PostBlock({
             })
           )}
 
+          {mediaCount > 1 ? <div class="post-content-media-stack">{mediaNodes}</div> : mediaNodes}
+
           {quotedEmbed?.kind === 'post' && <QuotedPostEmbedCard quoted={quotedEmbed.post} />}
           {quotedEmbed?.kind === 'notFound' && (
             <p class="post-quoted-embed-fallback">Quoted post could not be found.</p>
@@ -2845,8 +2852,6 @@ function PostBlock({
           {quotedEmbed?.kind === 'detached' && (
             <p class="post-quoted-embed-fallback">Quoted post is no longer available.</p>
           )}
-
-          {mediaCount > 1 ? <div class="post-content-media-stack">{mediaNodes}</div> : mediaNodes}
 
           {external &&
             (externalGifSrc ? (
