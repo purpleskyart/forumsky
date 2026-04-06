@@ -27,7 +27,7 @@ import {
   getExternalGifPlaybackSources,
 } from '@/lib/richtext';
 import { hrefForAppPath } from '@/lib/app-base-path';
-import { navigate, threadUrl } from '@/lib/router';
+import { navigate, threadUrl, SPA_ANCHOR_SHIELD, spaNavigateClickStopRow } from '@/lib/router';
 import { formatListDateTime, formatRelativeTime, t } from '@/lib/i18n';
 import { formatProfileJoined, formatProfileStatCount, toneIndexForHandle } from '@/lib/user-display';
 import { isLoggedIn, showAuthDialog } from '@/lib/store';
@@ -52,6 +52,7 @@ export interface FollowingFeedRowProps {
   viewerDid?: string;
 }
 
+/** Stop row background navigation when interacting with controls (not for `<a>`, which use {@link spaNavigateClickStopRow}). */
 const stopNav = (e: MouseEvent) => e.stopPropagation();
 
 export function FollowingFeedRow({
@@ -160,12 +161,20 @@ export function FollowingFeedRow({
         />
         <div class="post-author-meta">
           <div class="author-name">
-            <a href={hrefForAppPath(`/u/${handle}`)} onClick={stopNav}>
+            <a
+              href={hrefForAppPath(`/u/${handle}`)}
+              {...SPA_ANCHOR_SHIELD}
+              onClick={spaNavigateClickStopRow(`/u/${handle}`)}
+            >
               {displayName}
             </a>
           </div>
           <div class="author-handle-line">
-            <a href={hrefForAppPath(`/u/${handle}`)} onClick={stopNav}>
+            <a
+              href={hrefForAppPath(`/u/${handle}`)}
+              {...SPA_ANCHOR_SHIELD}
+              onClick={spaNavigateClickStopRow(`/u/${handle}`)}
+            >
               @{handle}
             </a>
             <AuthorFlair profile={post.author} postLabels={post.labels} />
@@ -228,7 +237,8 @@ export function FollowingFeedRow({
                     <a
                       href={hrefForAppPath(`/u/${repostBy.handle}`)}
                       class="thread-row-repost-via-link"
-                      onClick={stopNav}
+                      {...SPA_ANCHOR_SHIELD}
+                      onClick={spaNavigateClickStopRow(`/u/${repostBy.handle}`)}
                     >
                       {repostBy.displayName || repostBy.handle}
                     </a>

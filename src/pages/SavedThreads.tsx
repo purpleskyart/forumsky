@@ -2,7 +2,7 @@ import { useState, useEffect } from 'preact/hooks';
 import { hrefForAppPath } from '@/lib/app-base-path';
 import { getSavedThreadRootUris } from '@/lib/forumsky-local';
 import { parseAtUri, getPosts } from '@/api/feed';
-import { threadUrl, navigate } from '@/lib/router';
+import { threadUrl, navigate, SPA_ANCHOR_SHIELD } from '@/lib/router';
 import { postThreadListTitle } from '@/lib/thread-title';
 import { threadPreviewThumb } from '@/lib/richtext';
 import { postHasNsfwLabels } from '@/lib/nsfw-labels';
@@ -47,7 +47,13 @@ export function SavedThreads() {
   return (
     <div>
       <div class="breadcrumb">
-        <a href={hrefForAppPath('/')} onClick={(e: Event) => { e.preventDefault(); navigate('/'); }}>ForumSky</a>
+        <a
+          href={hrefForAppPath('/')}
+          {...SPA_ANCHOR_SHIELD}
+          onClick={(e: Event) => { e.preventDefault(); navigate('/'); }}
+        >
+          ForumSky
+        </a>
         <span class="sep">&gt;</span>
         <span>Saved threads</span>
       </div>
@@ -79,6 +85,7 @@ export function SavedThreads() {
                     <a
                       href={hrefForAppPath(path)}
                       class="saved-thread-row-link"
+                      {...SPA_ANCHOR_SHIELD}
                       onClick={(e: Event) => { e.preventDefault(); navigate(path); }}
                     >
                       <div class="saved-thread-row-main">

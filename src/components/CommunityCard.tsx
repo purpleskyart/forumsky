@@ -1,5 +1,5 @@
 import { hrefForAppPath } from '@/lib/app-base-path';
-import { communityUrl } from '@/lib/router';
+import { communityUrl, navigate, SPA_ANCHOR_SHIELD } from '@/lib/router';
 import type { CommunityConfig } from '@/lib/preferences';
 
 interface CommunityCardProps {
@@ -14,7 +14,19 @@ export function CommunityCard({ community, lastPost, onClick }: CommunityCardPro
       <div class="community-icon">&hearts;</div>
       <div class="community-info">
         <div class="community-name">
-          <a href={hrefForAppPath(communityUrl(community.tag))} onClick={onClick}>{community.name}</a>
+          <a
+            href={hrefForAppPath(communityUrl(community.tag))}
+            {...SPA_ANCHOR_SHIELD}
+            onClick={
+              onClick ??
+              ((e: Event) => {
+                e.preventDefault();
+                navigate(communityUrl(community.tag));
+              })
+            }
+          >
+            {community.name}
+          </a>
         </div>
         <div class="community-desc">{community.description}</div>
       </div>

@@ -70,7 +70,13 @@ import { appPathname, hrefForAppPath } from '@/lib/app-base-path';
 import { swr } from '@/lib/cache';
 import { parseThreadRoutePath } from '@/lib/spa-route-params';
 import { useRouter } from 'preact-router';
-import { navigate, communityUrl, threadUrl } from '@/lib/router';
+import {
+  navigate,
+  communityUrl,
+  threadUrl,
+  SPA_ANCHOR_SHIELD,
+  spaNavigateClick,
+} from '@/lib/router';
 import { formatThreadTitlePreviewLine } from '@/lib/thread-title';
 import { t } from '@/lib/i18n';
 import { isLoggedIn, showAuthDialog, currentUser, showToast, mutedDids, blockedDids } from '@/lib/store';
@@ -275,6 +281,7 @@ function CrossDiscussionPanel({ rootPost }: { rootPost: PostView }) {
           <li key={p.uri}>
             <a
               href={hrefForAppPath(threadUrl(p.handle, p.rkey))}
+              {...SPA_ANCHOR_SHIELD}
               onClick={(e: Event) => {
                 e.preventDefault();
                 navigate(threadUrl(p.handle, p.rkey));
@@ -301,6 +308,13 @@ export function Thread(props: ThreadProps) {
   const [thread, setThread] = useState<MergedThread | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  useLayoutEffect(() => {
+    if (!actor || !rkey) return;
+    setLoading(true);
+    setThread(null);
+    setError('');
+  }, [actor, rkey]);
 
   useEffect(() => {
     if (!actor || !rkey) return;
@@ -918,14 +932,30 @@ function ThreadView({
         <div class="breadcrumb">
           {communityTag ? (
             <>
-              <a href={hrefForAppPath('/')} onClick={(e: Event) => { e.preventDefault(); navigate('/'); }}>ForumSky</a>
+              <a
+                href={hrefForAppPath('/')}
+                {...SPA_ANCHOR_SHIELD}
+                onClick={(e: Event) => { e.preventDefault(); navigate('/'); }}
+              >
+                ForumSky
+              </a>
               <span class="sep">&gt;</span>
-              <a href={hrefForAppPath(communityUrl(communityTag))} onClick={(e: Event) => { e.preventDefault(); navigate(communityUrl(communityTag)); }}>
+              <a
+                href={hrefForAppPath(communityUrl(communityTag))}
+                {...SPA_ANCHOR_SHIELD}
+                onClick={(e: Event) => { e.preventDefault(); navigate(communityUrl(communityTag)); }}
+              >
                 #{communityTag}
               </a>
             </>
           ) : (
-            <a href={hrefForAppPath('/')} onClick={(e: Event) => { e.preventDefault(); navigate('/'); }}>ForumSky</a>
+            <a
+              href={hrefForAppPath('/')}
+              {...SPA_ANCHOR_SHIELD}
+              onClick={(e: Event) => { e.preventDefault(); navigate('/'); }}
+            >
+              ForumSky
+            </a>
           )}
         </div>
         <div class="thread-page-title-block">
@@ -2447,10 +2477,22 @@ function PostBlock({
         />
         <div class="post-author-meta">
           <div class="author-name">
-            <a href={hrefForAppPath(`/u/${handle}`)}>{displayName}</a>
+            <a
+              href={hrefForAppPath(`/u/${handle}`)}
+              {...SPA_ANCHOR_SHIELD}
+              onClick={spaNavigateClick(`/u/${handle}`)}
+            >
+              {displayName}
+            </a>
           </div>
           <div class="author-handle-line">
-            <a href={hrefForAppPath(`/u/${handle}`)}>@{handle}</a>
+            <a
+              href={hrefForAppPath(`/u/${handle}`)}
+              {...SPA_ANCHOR_SHIELD}
+              onClick={spaNavigateClick(`/u/${handle}`)}
+            >
+              @{handle}
+            </a>
             <AuthorFlair profile={root.author} postLabels={root.labels} />
           </div>
           <table class="author-stats-table">

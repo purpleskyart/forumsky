@@ -2,7 +2,7 @@ import { useState, useEffect } from 'preact/hooks';
 import { listNotifications, type NotificationItem } from '@/api/notifications';
 import { getPosts, parseAtUri } from '@/api/feed';
 import { hrefForAppPath } from '@/lib/app-base-path';
-import { navigate, threadUrl, communityUrl } from '@/lib/router';
+import { navigate, threadUrl, communityUrl, SPA_ANCHOR_SHIELD } from '@/lib/router';
 import { showToast, currentUser, isLoggedIn, authInitDone, sessionRestorePending } from '@/lib/store';
 import { getSubscribedThreadRoots } from '@/lib/forumsky-local';
 import { formatRelativeTime } from '@/lib/i18n';
@@ -165,7 +165,13 @@ export function Activity() {
     return (
       <div>
         <div class="breadcrumb">
-          <a href={hrefForAppPath('/')} onClick={(e: Event) => { e.preventDefault(); navigate('/'); }}>ForumSky</a>
+          <a
+            href={hrefForAppPath('/')}
+            {...SPA_ANCHOR_SHIELD}
+            onClick={(e: Event) => { e.preventDefault(); navigate('/'); }}
+          >
+            ForumSky
+          </a>
           <span class="sep">&gt;</span>
           <span>Activity</span>
         </div>
@@ -179,7 +185,13 @@ export function Activity() {
   return (
     <div>
       <div class="breadcrumb">
-        <a href={hrefForAppPath('/')} onClick={(e: Event) => { e.preventDefault(); navigate('/'); }}>ForumSky</a>
+        <a
+          href={hrefForAppPath('/')}
+          {...SPA_ANCHOR_SHIELD}
+          onClick={(e: Event) => { e.preventDefault(); navigate('/'); }}
+        >
+          ForumSky
+        </a>
         <span class="sep">&gt;</span>
         <span>Activity</span>
       </div>
@@ -334,6 +346,7 @@ export function Activity() {
                     <a
                       href={hrefForAppPath(path)}
                       class="activity-item-link"
+                      {...SPA_ANCHOR_SHIELD}
                       onClick={(e: Event) => {
                         e.preventDefault();
                         navigate(path);

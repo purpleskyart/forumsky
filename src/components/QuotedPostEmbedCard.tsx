@@ -14,7 +14,7 @@ import {
   getExternalGifPlaybackSources,
 } from '@/lib/richtext';
 import { hrefForAppPath } from '@/lib/app-base-path';
-import { navigate, threadUrl } from '@/lib/router';
+import { navigate, threadUrl, SPA_ANCHOR_SHIELD } from '@/lib/router';
 import { postHasNsfwLabels } from '@/lib/nsfw-labels';
 
 export function QuotedPostEmbedCard({ quoted }: { quoted: PostView }) {
@@ -59,6 +59,7 @@ export function QuotedPostEmbedCard({ quoted }: { quoted: PostView }) {
           href={hrefForAppPath(forumskyThreadPath)}
           class="post-quoted-embed-stretch"
           aria-label={`Open quoted post by @${handle} in ForumSky`}
+          {...SPA_ANCHOR_SHIELD}
           onClick={(e: MouseEvent) => {
             if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button !== 0) return;
             e.preventDefault();

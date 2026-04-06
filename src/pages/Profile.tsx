@@ -8,7 +8,7 @@ import { XRPCError } from '@/api/xrpc';
 import { swr, removeCacheEntry } from '@/lib/cache';
 import { appPathname, hrefForAppPath } from '@/lib/app-base-path';
 import { dominantVisibleListRowIndex } from '@/lib/dominant-visible-row';
-import { navigate, threadUrl } from '@/lib/router';
+import { navigate, threadUrl, SPA_ANCHOR_SHIELD } from '@/lib/router';
 import { parseProfileRoutePath } from '@/lib/spa-route-params';
 import { useRouter } from 'preact-router';
 import { currentUser, showAuthDialog, showToast } from '@/lib/store';
@@ -188,7 +188,13 @@ export function Profile(props: ProfileProps) {
   return (
     <div>
       <div class="breadcrumb">
-        <a href={hrefForAppPath('/')} onClick={(e: Event) => { e.preventDefault(); navigate('/'); }}>ForumSky</a>
+        <a
+          href={hrefForAppPath('/')}
+          {...SPA_ANCHOR_SHIELD}
+          onClick={(e: Event) => { e.preventDefault(); navigate('/'); }}
+        >
+          ForumSky
+        </a>
         <span class="sep">&gt;</span>
         <span>{profile.displayName || profile.handle}</span>
       </div>

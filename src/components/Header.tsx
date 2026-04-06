@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'preact/hooks';
 import { Avatar } from '@/components/Avatar';
 import { showAuthDialog, showSignUpDialog, currentUser, isLoggedIn, showToast, sessionRestorePending } from '@/lib/store';
 import { hrefForAppPath } from '@/lib/app-base-path';
-import { navigate, communityUrl, searchUrl } from '@/lib/router';
+import { navigate, communityUrl, searchUrl, SPA_ANCHOR_SHIELD } from '@/lib/router';
 import { clearGraphPolicy, refreshGraphPolicy } from '@/lib/graph-policy';
 import type { ProfileView } from '@/api/types';
 
@@ -138,7 +138,12 @@ export function Header() {
     <header class="header">
       <div class="header-banner">
         <div class="header-banner-inner">
-          <a href={hrefForAppPath('/')} class="header-brand" onClick={(e: Event) => { e.preventDefault(); navigate('/'); }}>
+          <a
+            href={hrefForAppPath('/')}
+            class="header-brand"
+            {...SPA_ANCHOR_SHIELD}
+            onClick={(e: Event) => { e.preventDefault(); navigate('/'); }}
+          >
             ForumSky
           </a>
 
@@ -146,6 +151,7 @@ export function Header() {
             <a
               href={hrefForAppPath('/communities')}
               class="header-nav-link"
+              {...SPA_ANCHOR_SHIELD}
               onClick={(e: Event) => { e.preventDefault(); navigate('/communities'); }}
             >
               Communities
@@ -228,6 +234,7 @@ export function Header() {
               <a
                 href={hrefForAppPath('/activity')}
                 class="header-nav-link"
+                {...SPA_ANCHOR_SHIELD}
                 onClick={(e: Event) => { e.preventDefault(); navigate('/activity'); }}
               >
                 Activity
@@ -241,6 +248,7 @@ export function Header() {
                 <a
                   href={hrefForAppPath('/saved')}
                   class="header-nav-link header-nav-desktop"
+                  {...SPA_ANCHOR_SHIELD}
                   onClick={(e: Event) => { e.preventDefault(); navigate('/saved'); }}
                 >
                   Saved
@@ -251,6 +259,7 @@ export function Header() {
               <a
                 href={hrefForAppPath('/settings')}
                 class="header-nav-link header-nav-desktop"
+                {...SPA_ANCHOR_SHIELD}
                 onClick={(e: Event) => {
                   e.preventDefault();
                   navigate('/settings');
@@ -291,6 +300,7 @@ export function Header() {
                       href={hrefForAppPath(`/u/${user!.handle}`)}
                       role="menuitem"
                       class="header-user-menu-head"
+                      {...SPA_ANCHOR_SHIELD}
                       onClick={(e: Event) => {
                         e.preventDefault();
                         setUserMenuOpen(false);
@@ -304,6 +314,7 @@ export function Header() {
                       href={hrefForAppPath('/drafts')}
                       role="menuitem"
                       class="header-user-menu-item"
+                      {...SPA_ANCHOR_SHIELD}
                       onClick={(e: Event) => {
                         e.preventDefault();
                         setUserMenuOpen(false);
@@ -316,6 +327,7 @@ export function Header() {
                       href={hrefForAppPath('/settings')}
                       role="menuitem"
                       class="header-user-menu-item"
+                      {...SPA_ANCHOR_SHIELD}
                       onClick={(e: Event) => {
                         e.preventDefault();
                         setUserMenuOpen(false);
@@ -457,6 +469,7 @@ export function Header() {
                     href={hrefForAppPath('/communities')}
                     role="menuitem"
                     class="header-mobile-menu-item"
+                    {...SPA_ANCHOR_SHIELD}
                     onClick={(e: Event) => {
                       e.preventDefault();
                       setMobileMenuOpen(false);
@@ -469,6 +482,7 @@ export function Header() {
                     href={hrefForAppPath('/settings')}
                     role="menuitem"
                     class="header-mobile-menu-item"
+                    {...SPA_ANCHOR_SHIELD}
                     onClick={(e: Event) => {
                       e.preventDefault();
                       setMobileMenuOpen(false);
@@ -483,6 +497,7 @@ export function Header() {
                         href={hrefForAppPath('/saved')}
                         role="menuitem"
                         class="header-mobile-menu-item"
+                        {...SPA_ANCHOR_SHIELD}
                         onClick={(e: Event) => {
                           e.preventDefault();
                           setMobileMenuOpen(false);

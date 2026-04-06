@@ -1,7 +1,7 @@
 import { NsfwMediaWrap } from '@/components/NsfwMediaWrap';
 import { hrefForAppPath } from '@/lib/app-base-path';
 import { postHasNsfwLabels } from '@/lib/nsfw-labels';
-import { threadUrl } from '@/lib/router';
+import { threadUrl, SPA_ANCHOR_SHIELD, spaNavigateClick } from '@/lib/router';
 import { parseAtUri } from '@/api/feed';
 import { threadPreviewThumb } from '@/lib/richtext';
 import { postThreadListTitle } from '@/lib/thread-title';
@@ -67,7 +67,9 @@ export function ThreadRow({
       <div class="thread-info">
         <div class="thread-title-row">
           <div class="thread-title">
-            <a href={hrefForAppPath(href)}>{title}</a>
+            <a href={hrefForAppPath(href)} {...SPA_ANCHOR_SHIELD} onClick={spaNavigateClick(href)}>
+              {title}
+            </a>
             {showUnreadReplies && (
               <span class="thread-row-badge thread-row-badge--unread" title={t('thread.unreadReplies')}>
                 New replies
@@ -75,7 +77,14 @@ export function ThreadRow({
             )}
           </div>
           {preview && (
-            <a href={hrefForAppPath(href)} class="thread-thumb-link" aria-hidden="true" tabindex={-1}>
+            <a
+              href={hrefForAppPath(href)}
+              class="thread-thumb-link"
+              aria-hidden="true"
+              tabindex={-1}
+              {...SPA_ANCHOR_SHIELD}
+              onClick={spaNavigateClick(href)}
+            >
               <span class="thread-thumb-wrap">
                 <NsfwMediaWrap isNsfw={postHasNsfwLabels(post)} compact>
                   <img src={preview.url} alt="" class="thread-thumb" loading="lazy" decoding="async" />
@@ -108,6 +117,8 @@ export function ThreadRow({
               <a
                 href={hrefForAppPath(`/u/${repostBy.handle}`)}
                 class="thread-row-repost-via-link"
+                {...SPA_ANCHOR_SHIELD}
+                onClick={spaNavigateClick(`/u/${repostBy.handle}`)}
               >
                 {repostBy.displayName || repostBy.handle}
               </a>
@@ -115,7 +126,12 @@ export function ThreadRow({
           )}
           <div class="thread-meta-author">
             by{' '}
-            <a href={hrefForAppPath(`/u/${post.author.handle}`)} style="color:var(--text-secondary);text-decoration:none">
+            <a
+              href={hrefForAppPath(`/u/${post.author.handle}`)}
+              style="color:var(--text-secondary);text-decoration:none"
+              {...SPA_ANCHOR_SHIELD}
+              onClick={spaNavigateClick(`/u/${post.author.handle}`)}
+            >
               {post.author.displayName || post.author.handle}
             </a>
           </div>
@@ -126,7 +142,12 @@ export function ThreadRow({
         <div class="lr-date">{dateStr}</div>
         <div class="lr-user">
           Last Reply by{' '}
-          <a href={hrefForAppPath(`/u/${post.author.handle}`)} class="lr-user">
+          <a
+            href={hrefForAppPath(`/u/${post.author.handle}`)}
+            class="lr-user"
+            {...SPA_ANCHOR_SHIELD}
+            onClick={spaNavigateClick(`/u/${post.author.handle}`)}
+          >
             {post.author.displayName || post.author.handle}
           </a>
         </div>

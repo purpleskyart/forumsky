@@ -1,6 +1,6 @@
 import { hrefForAppPath } from '@/lib/app-base-path';
 import { listComposerDrafts, clearComposerDraft } from '@/lib/forumsky-local';
-import { navigate, communityUrl, threadUrl } from '@/lib/router';
+import { navigate, communityUrl, threadUrl, SPA_ANCHOR_SHIELD } from '@/lib/router';
 import { parseAtUri } from '@/api/feed';
 import { formatListDateTime } from '@/lib/i18n';
 import { t } from '@/lib/i18n';
@@ -33,7 +33,13 @@ export function Drafts() {
   return (
     <div>
       <div class="breadcrumb">
-        <a href={hrefForAppPath('/')} onClick={(e: Event) => { e.preventDefault(); navigate('/'); }}>ForumSky</a>
+        <a
+          href={hrefForAppPath('/')}
+          {...SPA_ANCHOR_SHIELD}
+          onClick={(e: Event) => { e.preventDefault(); navigate('/'); }}
+        >
+          ForumSky
+        </a>
         <span class="sep">&gt;</span>
         <span>{t('drafts.title')}</span>
       </div>

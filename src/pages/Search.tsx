@@ -3,7 +3,7 @@ import { searchPosts, parseAtUri } from '@/api/feed';
 import { listAllFollowingDids } from '@/api/graph-follows';
 import { currentUser, showToast } from '@/lib/store';
 import { hrefForAppPath } from '@/lib/app-base-path';
-import { threadUrl, navigate } from '@/lib/router';
+import { threadUrl, navigate, SPA_ANCHOR_SHIELD, spaNavigateClick } from '@/lib/router';
 import { formatThreadTitlePreviewLine } from '@/lib/thread-title';
 import type { PostView } from '@/api/types';
 
@@ -83,7 +83,11 @@ export function Search() {
   return (
     <div>
       <div class="breadcrumb">
-        <a href={hrefForAppPath('/')} onClick={(e: Event) => { e.preventDefault(); navigate('/'); }}>
+        <a
+          href={hrefForAppPath('/')}
+          {...SPA_ANCHOR_SHIELD}
+          onClick={(e: Event) => { e.preventDefault(); navigate('/'); }}
+        >
           ForumSky
         </a>
         <span class="sep">&gt;</span>
@@ -139,7 +143,12 @@ export function Search() {
               const title = formatThreadTitlePreviewLine(p.record.text.split('\n')[0]);
               return (
                 <li key={p.uri} class="search-results-item">
-                  <a href={hrefForAppPath(href)} class="search-results-title">
+                  <a
+                    href={hrefForAppPath(href)}
+                    class="search-results-title"
+                    {...SPA_ANCHOR_SHIELD}
+                    onClick={spaNavigateClick(href)}
+                  >
                     {title}
                   </a>
                   <div class="search-results-meta">

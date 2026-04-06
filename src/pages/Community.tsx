@@ -31,7 +31,7 @@ import { followActor, listAllFollowingDids } from '@/api/graph-follows';
 import { XRPCError } from '@/api/xrpc';
 import { showAuthDialog, showToast, currentUser, isLoggedIn } from '@/lib/store';
 import { appPathname, hrefForAppPath } from '@/lib/app-base-path';
-import { navigate, threadUrl } from '@/lib/router';
+import { navigate, threadUrl, SPA_ANCHOR_SHIELD } from '@/lib/router';
 import { parseCommunityRoutePath } from '@/lib/spa-route-params';
 import { useRouter } from 'preact-router';
 import { parseAtUri } from '@/api/feed';
@@ -1002,7 +1002,13 @@ export function Community({ tag: tagProp }: CommunityProps) {
           </div>
           <div class="community-header-right">
             <div class="breadcrumb">
-              <a href={hrefForAppPath('/')} onClick={(e: Event) => { e.preventDefault(); navigate('/'); }}>ForumSky</a>
+              <a
+                href={hrefForAppPath('/')}
+                {...SPA_ANCHOR_SHIELD}
+                onClick={(e: Event) => { e.preventDefault(); navigate('/'); }}
+              >
+                ForumSky
+              </a>
               <span class="sep">&gt;</span>
               <span>{FOLLOWED_COMMUNITY.name}</span>
             </div>
@@ -1036,7 +1042,13 @@ export function Community({ tag: tagProp }: CommunityProps) {
         </div>
         <div class="community-header-right">
           <div class="breadcrumb">
-            <a href={hrefForAppPath('/')} onClick={(e: Event) => { e.preventDefault(); navigate('/'); }}>ForumSky</a>
+            <a
+              href={hrefForAppPath('/')}
+              {...SPA_ANCHOR_SHIELD}
+              onClick={(e: Event) => { e.preventDefault(); navigate('/'); }}
+            >
+              ForumSky
+            </a>
             <span class="sep">&gt;</span>
             <span>{communityName}</span>
           </div>

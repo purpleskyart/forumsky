@@ -1,5 +1,5 @@
 import { hrefForAppPath } from '@/lib/app-base-path';
-import { navigate } from '@/lib/router';
+import { navigate, SPA_ANCHOR_SHIELD } from '@/lib/router';
 import { applyNsfwMediaMode, nsfwMediaMode } from '@/lib/store';
 import type { NsfwMediaMode } from '@/lib/preferences';
 
@@ -13,7 +13,11 @@ export function Settings() {
   return (
     <div>
       <div class="breadcrumb">
-        <a href={hrefForAppPath('/')} onClick={(e: Event) => { e.preventDefault(); navigate('/'); }}>
+        <a
+          href={hrefForAppPath('/')}
+          {...SPA_ANCHOR_SHIELD}
+          onClick={(e: Event) => { e.preventDefault(); navigate('/'); }}
+        >
           ForumSky
         </a>
         <span class="sep">&gt;</span>
