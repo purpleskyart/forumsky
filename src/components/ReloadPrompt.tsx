@@ -3,10 +3,6 @@ import { useRegisterSW } from 'virtual:pwa-register/preact';
 import { useIosUpdate } from '@/hooks/useIosUpdate';
 
 export function ReloadPrompt() {
-  const [showPrompt, setShowPrompt] = useState(false);
-  const [isUpdate, setIsUpdate] = useState(false);
-  const { needsUpdate: iosNeedsUpdate, dismissUpdate, forceReload } = useIosUpdate();
-
   const { needRefresh, offlineReady, updateServiceWorker } = useRegisterSW({
     onRegisteredSW(swUrl, r) {
       if (!r) return;
@@ -17,20 +13,12 @@ export function ReloadPrompt() {
     },
   });
 
-  useEffect(() => {
-    if (needRefresh) {
-      setShowPrompt(true);
-      setIsUpdate(true);
-    } else if (offlineReady) {
-      setShowPrompt(true);
-      setIsUpdate(false);
-    } else {
-      setShowPrompt(false);
-    }
-  }, [needRefresh, offlineReady]);
+  const { needsUpdate: iosNeedsUpdate, dismissUpdate, forceReload, clearVersion } = useIosUpdate();
+
+  const showPrompt = needRefresh || offlineReady || iosNeedsUpdate;
+  const isUpdate = needRefresh || iosNeedsUpdate;
 
   const close = () => {
-    setShowPrompt(false);
     dismissUpdate();
   };
 
@@ -42,12 +30,12 @@ export function ReloadPrompt() {
     }
   };
 
-  if (!showPrompt && !iosNeedsUpdate) return null;
+  if (!showPrompt) return null;
 
   return (
     <div class="pwa-toast" role="alert">
       <div class="pwa-toast-message">
-        {isUpdate || iosNeedsUpdate ? (
+        {isUpdate ? (
           <>
             <strong>New version available</strong>
             <span> A new version has been downloaded. Reload to update.</span>
@@ -60,7 +48,7 @@ export function ReloadPrompt() {
         )}
       </div>
       <div class="pwa-toast-actions">
-        {(isUpdate || iosNeedsUpdate) && (
+        {isUpdate && (
           <button
             type="button"
             class="pwa-toast-btn pwa-toast-reload"

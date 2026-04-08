@@ -2,7 +2,6 @@ import { useEffect, useState } from 'preact/hooks';
 
 const VERSION_URL = '/version.json';
 const CACHE_KEY = 'forumsky_version';
-const PROMPT_KEY = 'forumsky_update_dismissed';
 
 interface VersionInfo {
   version: string;
@@ -14,11 +13,9 @@ export function useIosUpdate() {
   const [currentVersion, setCurrentVersion] = useState('');
 
   useEffect(() => {
-    let dismissed = false;
+    let lastVersion = '';
 
     const checkForUpdate = async () => {
-      if (dismissed) return;
-
       const storedVersion = localStorage.getItem(CACHE_KEY);
 
       try {
@@ -28,15 +25,16 @@ export function useIosUpdate() {
         const info: VersionInfo = await res.json();
         const latestVersion = info.version;
 
+        setCurrentVersion(latestVersion);
+
         if (!storedVersion) {
           localStorage.setItem(CACHE_KEY, latestVersion);
-          setCurrentVersion(latestVersion);
           return;
         }
 
         if (storedVersion !== latestVersion) {
+          lastVersion = latestVersion;
           setNeedsUpdate(true);
-          setCurrentVersion(latestVersion);
         }
       } catch {
         // Network error or offline - skip
@@ -49,29 +47,39 @@ export function useIosUpdate() {
       }
     };
 
-    const handleLoad = () => {
-      checkForUpdate();
-    };
-
-    window.addEventListener('load', handleLoad);
+    checkForUpdate();
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      dismissed = true;
-      window.removeEventListener('load', handleLoad);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 
   const dismissUpdate = () => {
-    localStorage.setItem(PROMPT_KEY, currentVersion);
+    if (currentVersion) {
+      localStorage.setItem(CACHE_KEY, currentVersion);
+    }
     setNeedsUpdate(false);
   };
 
   const forceReload = () => {
-    localStorage.setItem(CACHE_KEY, currentVersion);
+    if (currentVersion) {
+      localStorage.setItem(CACHE_KEY, currentVersion);
+    }
     window.location.reload();
   };
 
-  return { needsUpdate, dismissUpdate, forceReload };
+  const clearVersion = () => {
+    localStorage.removeItem(CACHE_KEY);
+    setNeedsUpdate(false);
+  };
+
+  return { needsUpdate, dismissUpdate, forceReload, clearVersion };
+}
+
+if (typeof window !== 'undefined') {
+  (window as unknown as { __clearVersion: () => void }).__clearVersion = () => {
+    localStorage.removeItem(CACHE_KEY);
+    console.log('Version cleared. Reload to test update prompt.');
+  };
 }
