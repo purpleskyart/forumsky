@@ -3734,6 +3734,22 @@ button.post-ref-expand-translate-btn {
   .main-wrap {
     padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
   }
+  .mobile-auth-bar {
+    display: flex;
+  }
+  .mobile-auth-bar + .main-wrap {
+    padding-top: 8px;
+  }
+}
+
+.mobile-auth-bar {
+  display: none;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
 }
 
 .bottom-nav {

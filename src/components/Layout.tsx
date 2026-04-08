@@ -2,12 +2,13 @@ import type { ComponentChildren } from 'preact';
 import { useEffect } from 'preact/hooks';
 import { Header } from './Header';
 import { BottomNav } from './BottomNav';
+import { MobileAuthBar } from './MobileAuthBar';
 import { AuthDialog } from './AuthDialog';
 import { SignUpDialog } from './SignUpDialog';
 import { Toast } from './Toast';
 import { OutboxRetryBar } from './OutboxRetryBar';
 import { OfflineBanner } from './OfflineBanner';
-import { authInitDone, currentUser } from '@/lib/store';
+import { authInitDone, currentUser, isLoggedIn, sessionRestorePending } from '@/lib/store';
 import { clearGraphPolicy, refreshGraphPolicy } from '@/lib/graph-policy';
 import { appPathname } from '@/lib/app-base-path';
 import { navigateBack } from '@/lib/router';
@@ -67,9 +68,13 @@ export function Layout({ children }: LayoutProps) {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
+  const showLoggedInChrome = isLoggedIn.value || sessionRestorePending();
+  const showMobileAuthBar = !showLoggedInChrome;
+
   return (
     <div class="app-shell">
       <Header />
+      {showMobileAuthBar && <MobileAuthBar />}
       <div class="main-wrap">
         <OfflineBanner />
         <main class="content">
