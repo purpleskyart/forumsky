@@ -3673,6 +3673,57 @@ button.post-ref-expand-translate-btn {
   .post-hls-video-wrap {
     max-width: 100%;
   }
+  .post-quoted-embed {
+    padding: 8px 10px;
+    margin: 8px 0 4px;
+  }
+  .post-quoted-embed-head {
+    font-size: 0.72rem;
+    gap: 4px 8px;
+  }
+  .post-quoted-embed-author {
+    font-size: 0.72rem;
+  }
+  .post-quoted-embed-handle {
+    font-size: 0.65rem;
+  }
+  .post-quoted-embed-label {
+    font-size: 0.6rem;
+  }
+  .post-quoted-embed-quote {
+    font-size: 0.78rem;
+    -webkit-line-clamp: 4;
+  }
+  .post-quoted-embed-external {
+    max-width: 100%;
+  }
+  .post-quoted-embed-external img {
+    max-width: 100%;
+    height: auto;
+  }
+  .post-footer {
+    gap: 8px;
+    padding: 8px 10px;
+  }
+  .post-actions {
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .post-reply-btn--social,
+  .post-like-btn,
+  .post-repost-btn,
+  .post-share-btn {
+    padding: 4px 8px;
+    font-size: 0.72rem;
+    min-height: 28px;
+  }
+  .post-reply-btn-icon,
+  .post-like-btn-icon,
+  .post-repost-btn-icon,
+  .post-share-btn-icon {
+    width: 16px;
+    height: 16px;
+  }
 }
 
 /* ========== Utilities ========== */
