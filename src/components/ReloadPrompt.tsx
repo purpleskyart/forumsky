@@ -1,17 +1,13 @@
-import { useState, useEffect } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { useRegisterSW } from 'virtual:pwa-register/preact';
 import { useIosUpdate } from '@/hooks/useIosUpdate';
 
 export function ReloadPrompt() {
-  const [needRefresh, setNeedRefresh] = useState(false);
-  const [offlineReady, setOfflineReady] = useState(false);
+  const [showPrompt, setShowPrompt] = useState(false);
+  const [isUpdate, setIsUpdate] = useState(false);
   const { needsUpdate: iosNeedsUpdate, dismissUpdate, forceReload } = useIosUpdate();
 
-  const {
-    needRefresh: [needRefreshLocal, setNeedRefreshLocal],
-    offlineReady: [offlineReadyLocal, setOfflineReadyLocal],
-    updateServiceWorker,
-  } = useRegisterSW({
+  const { needRefresh, offlineReady, updateServiceWorker } = useRegisterSW({
     onRegisteredSW(swUrl, r) {
       if (!r) return;
       console.log('Service worker registered:', swUrl);
@@ -22,13 +18,19 @@ export function ReloadPrompt() {
   });
 
   useEffect(() => {
-    setNeedRefresh(needRefreshLocal);
-    setOfflineReady(offlineReadyLocal);
-  }, [needRefreshLocal, offlineReadyLocal]);
+    if (needRefresh) {
+      setShowPrompt(true);
+      setIsUpdate(true);
+    } else if (offlineReady) {
+      setShowPrompt(true);
+      setIsUpdate(false);
+    } else {
+      setShowPrompt(false);
+    }
+  }, [needRefresh, offlineReady]);
 
   const close = () => {
-    setNeedRefreshLocal(false);
-    setOfflineReadyLocal(false);
+    setShowPrompt(false);
     dismissUpdate();
   };
 
@@ -40,12 +42,12 @@ export function ReloadPrompt() {
     }
   };
 
-  if (!needRefresh && !offlineReady && !iosNeedsUpdate) return null;
+  if (!showPrompt && !iosNeedsUpdate) return null;
 
   return (
     <div class="pwa-toast" role="alert">
       <div class="pwa-toast-message">
-        {needRefresh || iosNeedsUpdate ? (
+        {isUpdate || iosNeedsUpdate ? (
           <>
             <strong>New version available</strong>
             <span> A new version has been downloaded. Reload to update.</span>
@@ -58,7 +60,7 @@ export function ReloadPrompt() {
         )}
       </div>
       <div class="pwa-toast-actions">
-        {(needRefresh || iosNeedsUpdate) && (
+        {(isUpdate || iosNeedsUpdate) && (
           <button
             type="button"
             class="pwa-toast-btn pwa-toast-reload"
