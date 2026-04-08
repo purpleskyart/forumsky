@@ -97,7 +97,6 @@ export function Header() {
     setSearchDestination(d);
     persistSearchDestination(d);
     setSearchScopeOpen(false);
-    setMobileMenuOpen(false);
     setUserMenuOpen(false);
   };
 
@@ -169,7 +168,6 @@ export function Header() {
                   onClick={(e: Event) => {
                     e.preventDefault();
                     setSearchScopeOpen(o => !o);
-                    setMobileMenuOpen(false);
                     setUserMenuOpen(false);
                   }}
                 >
@@ -278,7 +276,6 @@ export function Header() {
                   aria-controls="header-user-menu-panel"
                   title={`${user?.displayName || user?.handle} — account menu`}
                   onClick={() => {
-                    setMobileMenuOpen(false);
                     setUserMenuOpen(o => !o);
                   }}
                 >

@@ -3,7 +3,15 @@ import { navigate, communityUrl } from '@/lib/router';
 import { currentUser, isLoggedIn } from '@/lib/store';
 import { Avatar } from '@/components/Avatar';
 
-const NAV_ITEMS = [
+interface NavItem {
+  href: string;
+  label: string;
+  icon: preact.JSX.Element | null;
+  requiresAuth?: boolean;
+  isProfile?: boolean;
+}
+
+const NAV_ITEMS: NavItem[] = [
   {
     href: '/',
     label: 'Home',
@@ -43,7 +51,7 @@ const NAV_ITEMS = [
     isProfile: true,
     icon: null,
   },
-] as const;
+];
 
 export function BottomNav() {
   const [visible, setVisible] = useState(true);
