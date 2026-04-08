@@ -1,67 +1,45 @@
-import { useRegisterSW } from 'virtual:pwa-register/preact';
+import { useState, useEffect } from 'preact/hooks';
 import { useIosUpdate } from '@/hooks/useIosUpdate';
 
 export function ReloadPrompt() {
-  const { needRefresh, offlineReady, updateServiceWorker } = useRegisterSW({
-    onRegisteredSW(swUrl, r) {
-      if (!r) return;
-      console.log('Service worker registered:', swUrl);
-    },
-    onRegisterError(error) {
-      console.error('SW registration error', error);
-    },
-  });
+  const { needsUpdate, dismissUpdate, forceReload } = useIosUpdate();
 
-  const { needsUpdate: iosNeedsUpdate, dismissUpdate, forceReload } = useIosUpdate();
+  const [visible, setVisible] = useState(false);
 
-  const showPrompt = needRefresh || offlineReady || iosNeedsUpdate;
-  const isUpdate = needRefresh || iosNeedsUpdate;
+  useEffect(() => {
+    setVisible(needsUpdate);
+  }, [needsUpdate]);
 
-  const close = () => {
+  const handleReload = () => {
     dismissUpdate();
+    forceReload();
   };
 
-  const reload = () => {
+  const handleClose = () => {
     dismissUpdate();
-    setTimeout(() => {
-      if (iosNeedsUpdate) {
-        forceReload();
-      } else {
-        updateServiceWorker(true);
-      }
-    }, 50);
+    setVisible(false);
   };
 
-  if (!showPrompt) return null;
+  if (!visible) return null;
 
   return (
     <div class="pwa-toast" role="alert">
       <div class="pwa-toast-content">
-        {isUpdate ? (
-          <>
-            <strong>New version available</strong>
-            <span> Reload to update.</span>
-          </>
-        ) : (
-          <>
-            <strong>App ready offline</strong>
-          </>
-        )}
+        <strong>New version available</strong>
+        <span> Reload to update.</span>
       </div>
       <div class="pwa-toast-actions">
-        {isUpdate && (
-          <button
-            type="button"
-            class="pwa-toast-btn pwa-toast-reload"
-            onClick={reload}
-          >
-            Reload
-          </button>
-        )}
+        <button
+          type="button"
+          class="pwa-toast-btn pwa-toast-reload"
+          onClick={handleReload}
+        >
+          Reload
+        </button>
         <button
           type="button"
           class="pwa-toast-btn pwa-toast-close"
-          onClick={close}
+          onClick={handleClose}
           aria-label="Close"
         >
           ✕
