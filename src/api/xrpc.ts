@@ -1,4 +1,4 @@
-import type { AtprotoBlobRef } from './types';
+import type { AtprotoBlobRef, OAuthSession } from './types';
 
 const PUBLIC_API = 'https://api.bsky.app';
 
@@ -25,13 +25,13 @@ export class XRPCError extends Error {
   }
 }
 
-let oauthSession: any = null;
+let oauthSession: OAuthSession | null = null;
 
-export function setOAuthSession(session: any) {
+export function setOAuthSession(session: OAuthSession | null) {
   oauthSession = session;
 }
 
-export function getOAuthSession(): any {
+export function getOAuthSession(): OAuthSession | null {
   return oauthSession;
 }
 

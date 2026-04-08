@@ -1,21 +1,37 @@
 const CACHE_PREFIX = 'fsky_cache_';
+const META_PREFIX = 'fsky_meta_';
 const DEFAULT_TTL = 60_000; // 1 minute
+
+export const CACHE_TTL = {
+  DEFAULT: DEFAULT_TTL,
+  PROFILE: 5 * 60 * 1000, // 5 minutes
+  TIMELINE: 30_000, // 30 seconds
+  FEED: 60_000, // 1 minute
+  COMMUNITY_STATS: 120_000, // 2 minutes
+} as const;
 
 interface CacheEntry<T> {
   data: T;
+}
+
+interface CacheMeta {
   ts: number;
   ttl: number;
 }
 
 export function getCached<T>(key: string): T | null {
   try {
-    const raw = localStorage.getItem(CACHE_PREFIX + key);
-    if (!raw) return null;
-    const entry: CacheEntry<T> = JSON.parse(raw);
-    if (Date.now() - entry.ts > entry.ttl) {
+    const metaRaw = localStorage.getItem(META_PREFIX + key);
+    if (!metaRaw) return null;
+    const meta: CacheMeta = JSON.parse(metaRaw);
+    if (Date.now() - meta.ts > meta.ttl) {
+      localStorage.removeItem(META_PREFIX + key);
       localStorage.removeItem(CACHE_PREFIX + key);
       return null;
     }
+    const dataRaw = localStorage.getItem(CACHE_PREFIX + key);
+    if (!dataRaw) return null;
+    const entry: CacheEntry<T> = JSON.parse(dataRaw);
     return entry.data;
   } catch {
     return null;
@@ -24,10 +40,13 @@ export function getCached<T>(key: string): T | null {
 
 export function getStale<T>(key: string): { data: T; stale: boolean } | null {
   try {
-    const raw = localStorage.getItem(CACHE_PREFIX + key);
-    if (!raw) return null;
-    const entry: CacheEntry<T> = JSON.parse(raw);
-    const stale = Date.now() - entry.ts > entry.ttl;
+    const metaRaw = localStorage.getItem(META_PREFIX + key);
+    if (!metaRaw) return null;
+    const meta: CacheMeta = JSON.parse(metaRaw);
+    const stale = Date.now() - meta.ts > meta.ttl;
+    const dataRaw = localStorage.getItem(CACHE_PREFIX + key);
+    if (!dataRaw) return null;
+    const entry: CacheEntry<T> = JSON.parse(dataRaw);
     return { data: entry.data, stale };
   } catch {
     return null;
@@ -36,14 +55,17 @@ export function getStale<T>(key: string): { data: T; stale: boolean } | null {
 
 export function setCache<T>(key: string, data: T, ttl = DEFAULT_TTL) {
   try {
-    const entry: CacheEntry<T> = { data, ts: Date.now(), ttl };
+    const entry: CacheEntry<T> = { data };
+    const meta: CacheMeta = { ts: Date.now(), ttl };
     localStorage.setItem(CACHE_PREFIX + key, JSON.stringify(entry));
+    localStorage.setItem(META_PREFIX + key, JSON.stringify(meta));
   } catch {
-    // storage full, evict oldest entries
     evictOldest(5);
     try {
-      const entry: CacheEntry<T> = { data, ts: Date.now(), ttl };
+      const entry: CacheEntry<T> = { data };
+      const meta: CacheMeta = { ts: Date.now(), ttl };
       localStorage.setItem(CACHE_PREFIX + key, JSON.stringify(entry));
+      localStorage.setItem(META_PREFIX + key, JSON.stringify(meta));
     } catch {
       // give up
     }
@@ -54,7 +76,7 @@ export function clearCache() {
   const keys: string[] = [];
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
-    if (key?.startsWith(CACHE_PREFIX)) keys.push(key);
+    if (key?.startsWith(CACHE_PREFIX) || key?.startsWith(META_PREFIX)) keys.push(key);
   }
   keys.forEach(k => localStorage.removeItem(k));
 }
@@ -62,28 +84,34 @@ export function clearCache() {
 export function removeCacheEntry(key: string) {
   try {
     localStorage.removeItem(CACHE_PREFIX + key);
+    localStorage.removeItem(META_PREFIX + key);
   } catch {
     /* ignore */
   }
 }
 
 function evictOldest(count: number) {
-  const entries: { key: string; ts: number }[] = [];
+  const metaKeys = new Set<string>();
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
-    if (!key?.startsWith(CACHE_PREFIX)) continue;
+    if (key?.startsWith(META_PREFIX)) metaKeys.add(key);
+  }
+  const entries: { key: string; ts: number }[] = [];
+  for (const metaKey of metaKeys) {
     try {
-      const raw = localStorage.getItem(key);
+      const raw = localStorage.getItem(metaKey);
       if (!raw) continue;
       const { ts } = JSON.parse(raw);
-      entries.push({ key, ts });
+      entries.push({ key: metaKey.slice(META_PREFIX.length), ts });
     } catch {
-      entries.push({ key, ts: 0 });
+      entries.push({ key: metaKey.slice(META_PREFIX.length), ts: 0 });
     }
   }
   entries.sort((a, b) => a.ts - b.ts);
   for (let i = 0; i < Math.min(count, entries.length); i++) {
-    localStorage.removeItem(entries[i].key);
+    const { key } = entries[i];
+    localStorage.removeItem(CACHE_PREFIX + key);
+    localStorage.removeItem(META_PREFIX + key);
   }
 }
 

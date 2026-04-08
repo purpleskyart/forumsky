@@ -231,3 +231,9 @@ export function isThreadViewPost(v: unknown): v is ThreadViewPost {
   return !!v && typeof v === 'object' && '$type' in v &&
     (v as { $type: string }).$type === 'app.bsky.feed.defs#threadViewPost';
 }
+
+export interface OAuthSession {
+  did: string;
+  sub?: string;
+  fetchHandler: (path: string, init: RequestInit) => Promise<Response>;
+}

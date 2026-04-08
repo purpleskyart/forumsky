@@ -1,10 +1,12 @@
 import { buildAtprotoLoopbackClientId, atprotoLoopbackClientMetadata } from '@atproto/oauth-types';
 import { appDeploymentRoot } from '@/lib/app-base-path';
 import { setOAuthSession } from './xrpc';
-import type { ProfileView } from './types';
+import type { ProfileView, OAuthSession } from './types';
 import { getProfile } from './actor';
 
-let browserClient: any = null;
+type BrowserOAuthClient = InstanceType<typeof import('@atproto/oauth-client-browser').BrowserOAuthClient>;
+
+let browserClient: BrowserOAuthClient | null = null;
 let currentSession: { did: string; handle: string } | null = null;
 
 const ACCOUNTS_KEY = 'forumsky:account-dids';
@@ -50,6 +52,7 @@ function getLoopbackClientMetadata() {
   return atprotoLoopbackClientMetadata(clientId);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getClientMetadata(): any {
   if (isLocalhost()) {
     return getLoopbackClientMetadata();
@@ -69,7 +72,7 @@ function getClientMetadata(): any {
   };
 }
 
-async function getClient(): Promise<any> {
+async function getClient(): Promise<BrowserOAuthClient> {
   if (browserClient) return browserClient;
 
   const mod = await import('@atproto/oauth-client-browser');
@@ -163,8 +166,8 @@ export async function signIn(handle: string): Promise<void> {
   });
 }
 
-async function setupSession(session: any): Promise<ProfileView> {
-  const did: string = session.did || session.sub;
+async function setupSession(session: OAuthSession): Promise<ProfileView> {
+  const did: string = session.did ?? session.sub ?? '';
 
   setOAuthSession(session);
 

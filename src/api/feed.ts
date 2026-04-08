@@ -8,6 +8,7 @@ import type {
   GetFeedGeneratorResponse,
   PostView,
 } from './types';
+import { TIMELINE_LIMIT, SEARCH_LIMIT, AUTHOR_FEED_LIMIT, POST_URI_CHUNK_SIZE } from '@/lib/constants';
 
 export async function searchPosts(
   query: string,
@@ -15,7 +16,7 @@ export async function searchPosts(
 ): Promise<SearchPostsResponse> {
   return xrpcGet<SearchPostsResponse>('app.bsky.feed.searchPosts', {
     q: query,
-    limit: opts?.limit ?? 25,
+    limit: opts?.limit ?? SEARCH_LIMIT,
     cursor: opts?.cursor,
     sort: opts?.sort ?? 'latest',
   });
@@ -36,7 +37,7 @@ export async function getTimeline(
   opts?: { cursor?: string; limit?: number },
 ): Promise<GetTimelineResponse> {
   return xrpcSessionGet<GetTimelineResponse>('app.bsky.feed.getTimeline', {
-    limit: opts?.limit ?? 30,
+    limit: opts?.limit ?? TIMELINE_LIMIT,
     cursor: opts?.cursor,
   });
 }
@@ -48,7 +49,7 @@ export async function getFeed(
 ): Promise<GetFeedResponse> {
   return xrpcSessionGet<GetFeedResponse>('app.bsky.feed.getFeed', {
     feed: feedAtUri,
-    limit: opts?.limit ?? 30,
+    limit: opts?.limit ?? TIMELINE_LIMIT,
     cursor: opts?.cursor,
   });
 }
@@ -77,18 +78,27 @@ export async function getAuthorFeed(
 ): Promise<GetAuthorFeedResponse> {
   return xrpcGet<GetAuthorFeedResponse>('app.bsky.feed.getAuthorFeed', {
     actor,
-    limit: opts?.limit ?? 30,
+    limit: opts?.limit ?? AUTHOR_FEED_LIMIT,
     cursor: opts?.cursor,
     filter: opts?.filter ?? 'posts_no_replies',
   });
 }
 
 export async function getPosts(uris: string[]): Promise<{ posts: PostView[] }> {
-  const params: Record<string, string> = {};
-  uris.forEach((u, i) => { params[`uris[${i}]`] = u; });
-  return getOAuthSession()
-    ? xrpcSessionGet<{ posts: PostView[] }>('app.bsky.feed.getPosts', params)
-    : xrpcGet<{ posts: PostView[] }>('app.bsky.feed.getPosts', params);
+  if (uris.length === 0) return { posts: [] };
+
+  const chunks: PostView[][] = [];
+  for (let i = 0; i < uris.length; i += POST_URI_CHUNK_SIZE) {
+    const chunk = uris.slice(i, i + POST_URI_CHUNK_SIZE);
+    const params: Record<string, string> = {};
+    chunk.forEach((u, j) => { params[`uris[${j}]`] = u; });
+    const res = getOAuthSession()
+      ? await xrpcSessionGet<{ posts: PostView[] }>('app.bsky.feed.getPosts', params)
+      : await xrpcGet<{ posts: PostView[] }>('app.bsky.feed.getPosts', params);
+    chunks.push(res.posts);
+  }
+
+  return { posts: chunks.flat() };
 }
 
 export function getPostUri(did: string, rkey: string): string {

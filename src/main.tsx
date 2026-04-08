@@ -2,6 +2,7 @@ import { render } from 'preact';
 import { App } from './app';
 import './styles/global.css';
 import { registerSW } from 'virtual:pwa-register';
+import { SWR_INTERVAL_MS } from './lib/constants';
 
 registerSW({
   immediate: true,
@@ -10,7 +11,7 @@ registerSW({
     const checkForUpdate = () => {
       void registration.update();
     };
-    window.setInterval(checkForUpdate, 45 * 60 * 1000);
+    window.setInterval(checkForUpdate, SWR_INTERVAL_MS);
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') checkForUpdate();
     });

@@ -14,6 +14,7 @@ import { currentUser, showAuthDialog } from '@/lib/store';
 import { appPathname } from '@/lib/app-base-path';
 import { dominantVisibleListRowIndex } from '@/lib/dominant-visible-row';
 import { navigate, communityUrl } from '@/lib/router';
+import { COMMUNITY_STATS_TTL, TIMELINE_PREVIEW_LIMIT } from '@/lib/constants';
 
 interface CommunityPreview {
   lastPost: { title: string; author: string; date: string } | null;
@@ -138,29 +139,37 @@ export function Home() {
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      for (const c of communities) {
+      const fetches = communities.map(async (c) => {
         try {
           const res = await swr(
             `community_stats_${c.tag}`,
             () => searchPosts(`#${c.tag}`, { limit: 1 }),
-            120_000,
+            COMMUNITY_STATS_TTL,
           );
-          if (cancelled) return;
+          if (cancelled) return null;
           const last = res.posts[0];
-          setPreviews(prev => ({
-            ...prev,
-            [c.tag]: {
-              lastPost: last ? {
-                title: last.record.text.split('\n')[0].slice(0, 50),
-                author: last.author.displayName || last.author.handle,
-                date: last.indexedAt,
-              } : null,
-            },
-          }));
+          return {
+            tag: c.tag,
+            lastPost: last ? {
+              title: last.record.text.split('\n')[0].slice(0, 50),
+              author: last.author.displayName || last.author.handle,
+              date: last.indexedAt,
+            } : null,
+          };
         } catch {
-          if (cancelled) return;
+          if (cancelled) return null;
+          return { tag: c.tag, lastPost: null };
         }
-      }
+      });
+      const results = await Promise.all(fetches);
+      if (cancelled) return;
+      setPreviews(prev => {
+        const next = { ...prev };
+        for (const r of results) {
+          if (r) next[r.tag] = { lastPost: r.lastPost };
+        }
+        return next;
+      });
     };
     load();
     return () => { cancelled = true; };
@@ -174,7 +183,7 @@ export function Home() {
     }
     (async () => {
       try {
-        const res = await getTimeline({ limit: 40 });
+        const res = await getTimeline({ limit: TIMELINE_PREVIEW_LIMIT });
         if (cancelled) return;
         const roots = res.feed
           .map(f => f.post)

@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect } from 'preact/hooks';
 import { Router, Route } from 'preact-router';
 import type { RouterOnChangeArgs } from 'preact-router';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Layout } from './components/Layout';
 import {
   attachPopstateScrollGuard,
@@ -71,7 +72,8 @@ export function App() {
 
   return (
     <Layout>
-      <Router history={browserHistory} onChange={onRouterChange}>
+      <ErrorBoundary>
+        <Router history={browserHistory} onChange={onRouterChange}>
         <Route path="/" component={RootRoute} />
         <Route path="/communities" component={Home} />
         <Route path="/followed" component={RedirectFollowedUrlsToHome} />
@@ -84,7 +86,8 @@ export function App() {
         <Route path="/saved" component={SavedThreads} />
         <Route path="/drafts" component={Drafts} />
         <Route path="/settings" component={Settings} />
-      </Router>
+        </Router>
+      </ErrorBoundary>
     </Layout>
   );
 }

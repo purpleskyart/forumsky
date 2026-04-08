@@ -1,0 +1,9 @@
+export const SWR_INTERVAL_MS = 45 * 60 * 1000; // 45 minutes
+export const AUTH_TIMEOUT_MS = 120_000; // 2 minutes
+export const TIMELINE_LIMIT = 30;
+export const TIMELINE_INITIAL_MAX_ROUNDS = 3;
+export const SEARCH_LIMIT = 25;
+export const AUTHOR_FEED_LIMIT = 30;
+export const POST_URI_CHUNK_SIZE = 25;
+export const COMMUNITY_STATS_TTL = 120_000; // 2 minutes
+export const TIMELINE_PREVIEW_LIMIT = 40;
