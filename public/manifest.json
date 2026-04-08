@@ -2,7 +2,7 @@
   "name": "ForumSky",
   "short_name": "ForumSky",
   "description": "A forum powered by Bluesky and the AT Protocol",
-  "start_url": "/",
+  "start_url": "/forumsky/",
   "display": "standalone",
   "background_color": "#1a1a2e",
   "theme_color": "#1a1a2e",
