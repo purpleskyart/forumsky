@@ -3726,16 +3726,16 @@ button.post-ref-expand-translate-btn {
   }
 
   .bottom-nav {
-    display: block;
+    display: block !important;
   }
   .header {
-    display: none;
+    display: none !important;
   }
   .main-wrap {
-    padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px)) !important;
   }
   .mobile-auth-bar {
-    display: flex;
+    display: flex !important;
   }
   .mobile-auth-bar + .main-wrap {
     padding-top: 8px;
