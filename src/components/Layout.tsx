@@ -8,6 +8,7 @@ import { SignUpDialog } from './SignUpDialog';
 import { Toast } from './Toast';
 import { OutboxRetryBar } from './OutboxRetryBar';
 import { OfflineBanner } from './OfflineBanner';
+import { ReloadPrompt } from './ReloadPrompt';
 import { authInitDone, currentUser, isLoggedIn, sessionRestorePending } from '@/lib/store';
 import { clearGraphPolicy, refreshGraphPolicy } from '@/lib/graph-policy';
 import { appPathname } from '@/lib/app-base-path';
@@ -86,6 +87,7 @@ export function Layout({ children }: LayoutProps) {
       <AuthDialog />
       <SignUpDialog />
       <Toast />
+      <ReloadPrompt />
     </div>
   );
 }

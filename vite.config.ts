@@ -9,10 +9,10 @@ export default defineConfig({
   plugins: [
     preact(),
     VitePWA({
-      /** New SW activates and reloads tabs automatically; no “refresh to update” prompt. */
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       includeAssets: ['icons/*.png'],
       manifest: false,
+      injectRegister: 'auto',
       workbox: {
         globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
         navigateFallback: '/index.html',

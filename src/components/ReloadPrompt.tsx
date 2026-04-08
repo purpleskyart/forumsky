@@ -1,50 +1,70 @@
-import { useState, useEffect, useRef } from 'preact/hooks';
+import { useState, useEffect } from 'preact/hooks';
+import { useRegisterSW } from 'virtual:pwa-register/preact';
 
 export function ReloadPrompt() {
   const [needRefresh, setNeedRefresh] = useState(false);
   const [offlineReady, setOfflineReady] = useState(false);
-  const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null);
-  const reloadAfterActivateRef = useRef(false);
+
+  const {
+    needRefresh: [needRefreshLocal, setNeedRefreshLocal],
+    offlineReady: [offlineReadyLocal, setOfflineReadyLocal],
+    updateServiceWorker,
+  } = useRegisterSW({
+    onRegisteredSW(swUrl, r) {
+      if (!r) return;
+      console.log('Service worker registered:', swUrl);
+    },
+    onRegisterError(error) {
+      console.error('SW registration error', error);
+    },
+  });
 
   useEffect(() => {
-    if (!('serviceWorker' in navigator)) return;
+    setNeedRefresh(needRefreshLocal);
+    setOfflineReady(offlineReadyLocal);
+  }, [needRefreshLocal, offlineReadyLocal]);
 
-    navigator.serviceWorker.ready.then(reg => {
-      setRegistration(reg);
-      reg.addEventListener('updatefound', () => {
-        const newWorker = reg.installing;
-        if (!newWorker) return;
-        newWorker.addEventListener('statechange', () => {
-          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            setNeedRefresh(true);
-          }
-        });
-      });
-    });
-
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (reloadAfterActivateRef.current) {
-        reloadAfterActivateRef.current = false;
-        window.location.reload();
-      }
-    });
-  }, []);
-
-  const updateSW = () => {
-    reloadAfterActivateRef.current = true;
-    if (registration?.waiting) {
-      registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-    }
+  const close = () => {
+    setNeedRefreshLocal(false);
+    setOfflineReadyLocal(false);
   };
 
-  if (needRefresh) {
-    return (
-      <div class="toast" style="display:flex;align-items:center;gap:12px">
-        <span>New version available!</span>
-        <button class="btn btn-primary btn-sm" onClick={updateSW}>Update</button>
-      </div>
-    );
-  }
+  if (!needRefresh && !offlineReady) return null;
 
-  return null;
+  return (
+    <div class="pwa-toast" role="alert">
+      <div class="pwa-toast-message">
+        {needRefresh ? (
+          <>
+            <strong>New version available</strong>
+            <span> A new version has been downloaded. Reload to update.</span>
+          </>
+        ) : (
+          <>
+            <strong>App ready</strong>
+            <span> Available offline now.</span>
+          </>
+        )}
+      </div>
+      <div class="pwa-toast-actions">
+        {needRefresh && (
+          <button
+            type="button"
+            class="pwa-toast-btn pwa-toast-reload"
+            onClick={() => updateServiceWorker(true)}
+          >
+            Reload
+          </button>
+        )}
+        <button
+          type="button"
+          class="pwa-toast-btn pwa-toast-close"
+          onClick={close}
+          aria-label="Close"
+        >
+          ✕
+        </button>
+      </div>
+    </div>
+  );
 }

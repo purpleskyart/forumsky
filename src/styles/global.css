@@ -3834,6 +3834,79 @@ button.post-ref-expand-translate-btn {
   margin: 0;
 }
 
+.pwa-toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  z-index: 2000;
+  animation: fadeUp 0.3s ease;
+  max-width: calc(100vw - 32px);
+}
+
+.pwa-toast-message {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.pwa-toast-message strong {
+  font-weight: 600;
+}
+
+.pwa-toast-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.pwa-toast-btn {
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.pwa-toast-reload {
+  background: var(--accent);
+  color: #fff;
+}
+
+.pwa-toast-reload:hover {
+  background: var(--accent-hover);
+}
+
+.pwa-toast-close {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  padding: 6px 10px;
+}
+
+.pwa-toast-close:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text);
+}
+
+@media (max-width: 600px) {
+  .pwa-toast {
+    bottom: 80px;
+  }
+}
+
 /* ========== Utilities ========== */
 .loading { text-align: center; padding: 40px; color: var(--text-muted); }
 .spinner {
