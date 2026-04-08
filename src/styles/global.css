@@ -3669,6 +3669,10 @@ button.post-ref-expand-translate-btn {
     padding-top: 0;
   }
   .community-title { font-size: 1.1rem; }
+  .post-content .post-content-media,
+  .post-hls-video-wrap {
+    max-width: 100%;
+  }
 }
 
 /* ========== Utilities ========== */
