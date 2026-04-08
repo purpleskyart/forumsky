@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'preact/hooks';
 import { useRegisterSW } from 'virtual:pwa-register/preact';
+import { useIosUpdate } from '@/hooks/useIosUpdate';
 
 export function ReloadPrompt() {
   const [needRefresh, setNeedRefresh] = useState(false);
   const [offlineReady, setOfflineReady] = useState(false);
+  const { needsUpdate: iosNeedsUpdate, dismissUpdate, forceReload } = useIosUpdate();
 
   const {
     needRefresh: [needRefreshLocal, setNeedRefreshLocal],
@@ -27,14 +29,23 @@ export function ReloadPrompt() {
   const close = () => {
     setNeedRefreshLocal(false);
     setOfflineReadyLocal(false);
+    dismissUpdate();
   };
 
-  if (!needRefresh && !offlineReady) return null;
+  const reload = () => {
+    if (iosNeedsUpdate) {
+      forceReload();
+    } else {
+      updateServiceWorker(true);
+    }
+  };
+
+  if (!needRefresh && !offlineReady && !iosNeedsUpdate) return null;
 
   return (
     <div class="pwa-toast" role="alert">
       <div class="pwa-toast-message">
-        {needRefresh ? (
+        {needRefresh || iosNeedsUpdate ? (
           <>
             <strong>New version available</strong>
             <span> A new version has been downloaded. Reload to update.</span>
@@ -47,11 +58,11 @@ export function ReloadPrompt() {
         )}
       </div>
       <div class="pwa-toast-actions">
-        {needRefresh && (
+        {(needRefresh || iosNeedsUpdate) && (
           <button
             type="button"
             class="pwa-toast-btn pwa-toast-reload"
-            onClick={() => updateServiceWorker(true)}
+            onClick={reload}
           >
             Reload
           </button>
