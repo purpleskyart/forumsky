@@ -72,45 +72,8 @@ const NAV_ITEMS: NavItem[] = [
 
 export function BottomNav() {
   const [visible, setVisible] = useState(true);
-  const lastScrollY = useRef(0);
-  const hideTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const user = currentUser.value;
   const loggedIn = isLoggedIn.value;
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const currentY = window.scrollY;
-      const scrollingDown = currentY > lastScrollY.current;
-      const delta = Math.abs(currentY - lastScrollY.current);
-
-      if (hideTimeout.current) {
-        clearTimeout(hideTimeout.current);
-        hideTimeout.current = null;
-      }
-
-      if (delta < 10) {
-        setVisible(true);
-      } else if (scrollingDown && currentY > 100) {
-        setVisible(false);
-      } else {
-        setVisible(true);
-      }
-
-      lastScrollY.current = currentY;
-
-      if (!scrollingDown && currentY > 50) {
-        hideTimeout.current = setTimeout(() => {
-          setVisible(true);
-        }, 2000);
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      if (hideTimeout.current) clearTimeout(hideTimeout.current);
-    };
-  }, []);
 
   const handleNav = (e: MouseEvent, href: string | undefined) => {
     if (!href) return;
