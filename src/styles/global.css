@@ -3767,12 +3767,13 @@ button.post-ref-expand-translate-btn {
   display: flex;
   justify-content: space-around;
   align-items: center;
-  height: 56px;
-  margin: 0 8px;
-  padding: 0 8px;
+  height: 48px;
+  margin: 0 10px;
+  padding: 0 4px;
   padding-bottom: env(safe-area-inset-bottom, 8px);
-  background: var(--bg-surface);
-  border-radius: 16px;
+  background: rgba(27, 27, 27, 0.85);
+  backdrop-filter: blur(10px);
+  border-radius: 24px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
   transition: transform 0.3s ease, opacity 0.3s ease;
 }
@@ -3789,17 +3790,17 @@ button.post-ref-expand-translate-btn {
 
 .bottom-nav-item {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  padding: 6px 12px;
+  gap: 4px;
+  padding: 6px 8px;
   color: var(--text-secondary);
   background: transparent;
   border: none;
   cursor: pointer;
   text-decoration: none;
-  min-width: 52px;
+  min-width: 48px;
   border-radius: var(--radius);
   pointer-events: auto;
 }
@@ -3824,9 +3825,7 @@ button.post-ref-expand-translate-btn {
 }
 
 .bottom-nav-label {
-  font-size: 0.62rem;
-  font-weight: 500;
-  line-height: 1;
+  display: none;
 }
 
 .bottom-nav-profile {
