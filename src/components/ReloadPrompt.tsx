@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'preact/hooks';
 import { useRegisterSW } from 'virtual:pwa-register/preact';
 import { useIosUpdate } from '@/hooks/useIosUpdate';
 
@@ -13,7 +12,7 @@ export function ReloadPrompt() {
     },
   });
 
-  const { needsUpdate: iosNeedsUpdate, dismissUpdate, forceReload, clearVersion } = useIosUpdate();
+  const { needsUpdate: iosNeedsUpdate, dismissUpdate, forceReload } = useIosUpdate();
 
   const showPrompt = needRefresh || offlineReady || iosNeedsUpdate;
   const isUpdate = needRefresh || iosNeedsUpdate;
@@ -23,27 +22,29 @@ export function ReloadPrompt() {
   };
 
   const reload = () => {
-    if (iosNeedsUpdate) {
-      forceReload();
-    } else {
-      updateServiceWorker(true);
-    }
+    dismissUpdate();
+    setTimeout(() => {
+      if (iosNeedsUpdate) {
+        forceReload();
+      } else {
+        updateServiceWorker(true);
+      }
+    }, 50);
   };
 
   if (!showPrompt) return null;
 
   return (
     <div class="pwa-toast" role="alert">
-      <div class="pwa-toast-message">
+      <div class="pwa-toast-content">
         {isUpdate ? (
           <>
             <strong>New version available</strong>
-            <span> A new version has been downloaded. Reload to update.</span>
+            <span> Reload to update.</span>
           </>
         ) : (
           <>
-            <strong>App ready</strong>
-            <span> Available offline now.</span>
+            <strong>App ready offline</strong>
           </>
         )}
       </div>
