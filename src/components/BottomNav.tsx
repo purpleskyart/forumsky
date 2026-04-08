@@ -1,14 +1,16 @@
 import { useState, useEffect, useRef } from 'preact/hooks';
-import { navigate, communityUrl } from '@/lib/router';
-import { currentUser, isLoggedIn } from '@/lib/store';
+import { navigate } from '@/lib/router';
+import { currentUser, isLoggedIn, showAuthDialog, showSignUpDialog } from '@/lib/store';
 import { Avatar } from '@/components/Avatar';
 
 interface NavItem {
-  href: string;
+  href?: string;
   label: string;
   icon: preact.JSX.Element | null;
   requiresAuth?: boolean;
   isProfile?: boolean;
+  requiresLogout?: boolean;
+  onClick?: () => void;
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -50,6 +52,21 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Settings',
     isProfile: true,
     icon: null,
+  },
+  {
+    label: 'Login',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+        <polyline points="10 17 15 12 10 7" />
+        <line x1="15" y1="12" x2="3" y2="12" />
+      </svg>
+    ),
+    requiresLogout: true,
+    onClick: () => {
+      showSignUpDialog.value = false;
+      showAuthDialog.value = true;
+    },
   },
 ];
 
@@ -95,7 +112,8 @@ export function BottomNav() {
     };
   }, []);
 
-  const handleNav = (e: MouseEvent, href: string) => {
+  const handleNav = (e: MouseEvent, href: string | undefined) => {
+    if (!href) return;
     e.preventDefault();
     navigate(href);
   };
@@ -103,18 +121,25 @@ export function BottomNav() {
   return (
     <nav class="bottom-nav" aria-label="Mobile navigation">
       <div class={`bottom-nav-inner${visible ? ' bottom-nav-visible' : ' bottom-nav-hidden'}`}>
-        {NAV_ITEMS.map((item) => {
+        {NAV_ITEMS.map((item, index) => {
           if (item.requiresAuth && !loggedIn) return null;
+          if (item.requiresLogout && loggedIn) return null;
 
           if (item.isProfile) {
             return (
               <button
-                key={item.href}
+                key={item.href || `profile-${index}`}
                 type="button"
                 class="bottom-nav-item bottom-nav-profile"
                 aria-label={item.label}
                 title={item.label}
-                onClick={(e) => handleNav(e, user ? `/u/${user.handle}` : item.href)}
+                onClick={() => {
+                  if (user) {
+                    navigate(`/u/${user.handle}`);
+                  } else if (item.onClick) {
+                    item.onClick();
+                  }
+                }}
               >
                 {user ? (
                   <Avatar src={user.avatar} alt={user.displayName || user.handle} size={28} />
@@ -126,9 +151,25 @@ export function BottomNav() {
             );
           }
 
+          if (item.onClick) {
+            return (
+              <button
+                key={`action-${index}`}
+                type="button"
+                class="bottom-nav-item"
+                aria-label={item.label}
+                title={item.label}
+                onClick={item.onClick}
+              >
+                <span class="bottom-nav-icon">{item.icon}</span>
+                <span class="bottom-nav-label">{item.label}</span>
+              </button>
+            );
+          }
+
           return (
             <a
-              key={item.href}
+              key={item.href || `link-${index}`}
               href={item.href}
               class="bottom-nav-item"
               aria-label={item.label}
