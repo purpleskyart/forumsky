@@ -44,11 +44,9 @@ export function Header() {
   const user = currentUser.value;
   const restoringSession = sessionRestorePending();
   const showLoggedInChrome = isLoggedIn.value || restoringSession;
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [accounts, setAccounts] = useState<ProfileView[]>([]);
   const [accountActionBusy, setAccountActionBusy] = useState(false);
-  const mobileMenuRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const searchScopeRef = useRef<HTMLDivElement>(null);
   const [searchScopeOpen, setSearchScopeOpen] = useState(false);
@@ -57,12 +55,9 @@ export function Header() {
   const bumpUi = () => setUiTick(t => t + 1);
 
   useEffect(() => {
-    if (!mobileMenuOpen && !userMenuOpen && !searchScopeOpen) return;
+    if (!userMenuOpen && !searchScopeOpen) return;
     const onDocPointer = (e: Event) => {
       const t = e.target as Node;
-      if (mobileMenuOpen && mobileMenuRef.current && !mobileMenuRef.current.contains(t)) {
-        setMobileMenuOpen(false);
-      }
       if (userMenuOpen && userMenuRef.current && !userMenuRef.current.contains(t)) {
         setUserMenuOpen(false);
       }
@@ -72,7 +67,6 @@ export function Header() {
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        setMobileMenuOpen(false);
         setUserMenuOpen(false);
         setSearchScopeOpen(false);
       }
@@ -83,7 +77,7 @@ export function Header() {
       document.removeEventListener('pointerdown', onDocPointer);
       document.removeEventListener('keydown', onKey);
     };
-  }, [mobileMenuOpen, userMenuOpen, searchScopeOpen]);
+  }, [userMenuOpen, searchScopeOpen]);
 
   useEffect(() => {
     if (!userMenuOpen || !isLoggedIn.value) return;
@@ -449,68 +443,7 @@ export function Header() {
             )}
             </div>
 
-            <div class="header-mobile-menu" ref={mobileMenuRef}>
-              <button
-                type="button"
-                class="header-mobile-menu-toggle"
-                aria-expanded={mobileMenuOpen}
-                aria-haspopup="menu"
-                aria-controls="header-mobile-menu-panel"
-                onClick={() => {
-                  setUserMenuOpen(false);
-                  setMobileMenuOpen(o => !o);
-                }}
-              >
-                Menu
-              </button>
-              {mobileMenuOpen && (
-                <div id="header-mobile-menu-panel" class="header-mobile-menu-panel" role="menu">
-                  <a
-                    href={hrefForAppPath('/communities')}
-                    role="menuitem"
-                    class="header-mobile-menu-item"
-                    {...SPA_ANCHOR_SHIELD}
-                    onClick={(e: Event) => {
-                      e.preventDefault();
-                      setMobileMenuOpen(false);
-                      navigate('/communities');
-                    }}
-                  >
-                    Communities
-                  </a>
-                  <a
-                    href={hrefForAppPath('/settings')}
-                    role="menuitem"
-                    class="header-mobile-menu-item"
-                    {...SPA_ANCHOR_SHIELD}
-                    onClick={(e: Event) => {
-                      e.preventDefault();
-                      setMobileMenuOpen(false);
-                      navigate('/settings');
-                    }}
-                  >
-                    Settings
-                  </a>
-                  {showLoggedInChrome && (
-                    <>
-                      <a
-                        href={hrefForAppPath('/saved')}
-                        role="menuitem"
-                        class="header-mobile-menu-item"
-                        {...SPA_ANCHOR_SHIELD}
-                        onClick={(e: Event) => {
-                          e.preventDefault();
-                          setMobileMenuOpen(false);
-                          navigate('/saved');
-                        }}
-                      >
-                        Saved
-                      </a>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
+
           </div>
         </div>
       </div>

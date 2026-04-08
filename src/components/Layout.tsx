@@ -1,6 +1,7 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect } from 'preact/hooks';
 import { Header } from './Header';
+import { BottomNav } from './BottomNav';
 import { AuthDialog } from './AuthDialog';
 import { SignUpDialog } from './SignUpDialog';
 import { Toast } from './Toast';
@@ -76,6 +77,7 @@ export function Layout({ children }: LayoutProps) {
         </main>
       </div>
       <OutboxRetryBar />
+      <BottomNav />
       <AuthDialog />
       <SignUpDialog />
       <Toast />
