@@ -14,7 +14,7 @@ import { PostContentImage } from '@/components/PostContentImage';
 import { HlsVideo } from '@/components/HlsVideo';
 import { NsfwMediaWrap } from '@/components/NsfwMediaWrap';
 import { parseAtUri } from '@/api/feed';
-import type { FeedBlendSourceMeta, FeedViewPost, PostView } from '@/api/types';
+import type { FeedBlendSourceMeta, FeedViewPost, PostView, ProfileView } from '@/api/types';
 import { repostAttributionFromReason } from '@/lib/feed-reason';
 import {
   renderPostContent,

@@ -38,7 +38,7 @@ import { parseAtUri } from '@/api/feed';
 import { isAuthorFiltered } from '@/lib/graph-policy';
 import { dominantVisibleListRowIndex } from '@/lib/dominant-visible-row';
 import { restoreScrollNow } from '@/lib/scroll-restore';
-import type { FeedBlendSourceMeta, FeedRootItem, PostView } from '@/api/types';
+import type { FeedBlendSourceMeta, FeedRootItem, PostView, ProfileView } from '@/api/types';
 
 const THREADS_PER_PAGE = 25;
 /** Max timeline pages to scan on first paint (each ~100 items; not all are thread roots). */

@@ -5,7 +5,7 @@ import { threadUrl, SPA_ANCHOR_SHIELD, spaNavigateClick } from '@/lib/router';
 import { parseAtUri } from '@/api/feed';
 import { threadPreviewThumb } from '@/lib/richtext';
 import { postThreadListTitle } from '@/lib/thread-title';
-import type { FeedBlendSourceMeta, FeedViewPost, PostView } from '@/api/types';
+import type { FeedBlendSourceMeta, FeedViewPost, PostView, ProfileView } from '@/api/types';
 import { repostAttributionFromReason } from '@/lib/feed-reason';
 import {
   threadHasNewRepliesSinceLastMark,
