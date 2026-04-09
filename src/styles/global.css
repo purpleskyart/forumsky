@@ -1652,6 +1652,19 @@ input:focus, textarea:focus {
   border: none;
 }
 
+.settings-footer {
+  margin-top: 32px;
+  padding-top: 16px;
+  border-top: 1px solid var(--divider);
+}
+
+.settings-version {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+
 /* ========== Post View (Thread Page) ========== */
 .post-container {
   display: flex;
