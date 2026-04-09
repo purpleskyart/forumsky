@@ -3752,7 +3752,8 @@ button.post-ref-expand-translate-btn {
   .post-reply-btn-icon,
   .post-like-btn-icon,
   .post-repost-btn-icon,
-  .post-share-btn-icon {
+  .post-share-btn-icon,
+  .post-downvote-btn-icon {
     width: 16px;
     height: 16px;
   }
