@@ -181,7 +181,7 @@ export function Profile(props: ProfileProps) {
 
   if (error) return <div class="empty"><p>{error}</p></div>;
 
-  const isOwnProfile = Boolean(me?.did && profile.did === me.did);
+  const isOwnProfile = Boolean(me?.did && profile && profile.did === me.did);
 
   return (
     <div>
@@ -194,7 +194,7 @@ export function Profile(props: ProfileProps) {
           ForumSky
         </a>
         <span class="sep">&gt;</span>
-        <span>{profile.displayName || profile.handle}</span>
+        <span>{profile ? (profile.displayName || profile.handle) : `@${handle}`}</span>
       </div>
 
       <div class="panel" style="margin-bottom:16px">
@@ -263,7 +263,7 @@ export function Profile(props: ProfileProps) {
       </div>
 
       <div class="panel">
-        <div class="panel-header">Threads by {profile.displayName || profile.handle}</div>
+        <div class="panel-header">Threads by {profile ? (profile.displayName || profile.handle) : `@${handle}`}</div>
         <div class="thread-list-header">
           <div style="flex:1">Thread</div>
           <div style="width:60px;text-align:center">Replies</div>
