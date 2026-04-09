@@ -3680,12 +3680,15 @@ button.post-ref-expand-translate-btn {
     padding-top: 0;
   }
   .community-title { font-size: 1.1rem; }
+  .post-hls-video-wrap {
+    max-width: 100%;
+    width: 100%;
+    height: auto;
+  }
   .post-content .post-content-media,
-  .post-hls-video-wrap,
   .post-quoted-embed-media,
   .post-quoted-embed img {
     max-width: 100%;
-    width: 100%;
     height: auto;
   }
   .post-quoted-embed {

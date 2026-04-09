@@ -78,8 +78,9 @@ export function QuotedPostEmbedCard({ quoted }: { quoted: PostView }) {
         <blockquote class="post-quoted-embed-quote">
           {renderPostContent(displayPost.record.text, displayPost.record.facets)}
         </blockquote>
-        {agg.images.length + agg.videos.length + (agg.external ? 1 : 0) > 0 ? (
-          <NsfwMediaWrap isNsfw={quotedNsfw}>
+        {(() => {
+          const mediaCount = agg.images.length + agg.videos.length;
+          const mediaNodes = mediaCount > 0 ? (
             <Fragment>
               {agg.images.map((img, i) =>
                 isGifImage(img) ? (
@@ -106,51 +107,66 @@ export function QuotedPostEmbedCard({ quoted }: { quoted: PostView }) {
                   aria-label={vid.alt || 'Video from quoted post'}
                 />
               ))}
-              {agg.external &&
-                (quotedExtGif ? (
-                  <GifImage
-                    thumb={quotedExtGif.thumb}
-                    fullsize={quotedExtGif.fullsize}
-                    alt=""
-                    className="post-external-gif post-quoted-embed-media post-quoted-embed-interactive"
-                  />
-                ) : (
-                  <a
-                    href={agg.external.uri}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="post-external-card post-quoted-embed-external post-quoted-embed-interactive"
-                  >
-                    {agg.external.thumb && (
-                      <div class="post-external-card-media">
-                        <img
-                          class="post-external-thumb"
-                          src={agg.external.thumb}
-                          alt=""
-                          loading="lazy"
-                        />
-                      </div>
-                    )}
-                    <div class="post-external-card-body">
-                      <div class="post-external-card-host">
-                        {(() => {
-                          try {
-                            return new URL(agg.external!.uri).hostname;
-                          } catch {
-                            return 'Link';
-                          }
-                        })()}
-                      </div>
-                      <div class="post-external-title">{agg.external.title || agg.external.uri}</div>
-                      {agg.external.description ? (
-                        <div class="post-external-desc">{agg.external.description}</div>
-                      ) : null}
-                    </div>
-                  </a>
-                ))}
             </Fragment>
-          </NsfwMediaWrap>
-        ) : null}
+          ) : null;
+
+          const externalNode = agg.external ? (
+            quotedExtGif ? (
+              <GifImage
+                thumb={quotedExtGif.thumb}
+                fullsize={quotedExtGif.fullsize}
+                alt=""
+                className="post-external-gif post-quoted-embed-media post-quoted-embed-interactive"
+              />
+            ) : (
+              <a
+                href={agg.external.uri}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="post-external-card post-quoted-embed-external post-quoted-embed-interactive"
+              >
+                {agg.external.thumb && (
+                  <div class="post-external-card-media">
+                    <img
+                      class="post-external-thumb"
+                      src={agg.external.thumb}
+                      alt=""
+                      loading="lazy"
+                    />
+                  </div>
+                )}
+                <div class="post-external-card-body">
+                  <div class="post-external-card-host">
+                    {(() => {
+                      try {
+                        return new URL(agg.external!.uri).hostname;
+                      } catch {
+                        return 'Link';
+                      }
+                    })()}
+                  </div>
+                  <div class="post-external-title">{agg.external.title || agg.external.uri}</div>
+                  {agg.external.description ? (
+                    <div class="post-external-desc">{agg.external.description}</div>
+                  ) : null}
+                </div>
+              </a>
+            )
+          ) : null;
+
+          if (mediaCount === 0 && !externalNode) return null;
+
+          return (
+            <NsfwMediaWrap isNsfw={quotedNsfw}>
+              {mediaCount > 1 ? (
+                <div class="post-content-media-stack">{mediaNodes}</div>
+              ) : (
+                mediaNodes
+              )}
+              {externalNode}
+            </NsfwMediaWrap>
+          );
+        })()}
       </div>
     </div>
   );
