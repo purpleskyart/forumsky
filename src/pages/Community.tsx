@@ -1024,42 +1024,7 @@ export function Community({ tag: tagProp }: CommunityProps) {
         ? Math.max(1, page + (tagSearchHasMore ? 1 : 0))
         : Math.max(1, Math.ceil(totalHits / THREADS_PER_PAGE));
 
-  if (isFollowing && !user?.did) {
-    return (
-      <div>
-        <div class="community-header-row">
-          <div class="community-header-left">
-            <div class="community-title">{FOLLOWED_COMMUNITY.name}</div>
-            <div class="community-title-desc">{FOLLOWED_COMMUNITY.description}</div>
-          </div>
-          <div class="community-header-right">
-            <div class="breadcrumb">
-              <a
-                href={hrefForAppPath('/')}
-                {...SPA_ANCHOR_SHIELD}
-                onClick={(e: Event) => { e.preventDefault(); navigate('/'); }}
-              >
-                ForumSky
-              </a>
-              <span class="sep">&gt;</span>
-              <span>{FOLLOWED_COMMUNITY.name}</span>
-            </div>
-          </div>
-        </div>
-        <div class="panel empty" style="padding:24px">
-          <p>Sign in with your Bluesky account to see posts from people you follow.</p>
-          <button
-            type="button"
-            class="btn btn-primary"
-            style="margin-top:12px"
-            onClick={() => { showAuthDialog.value = true; }}
-          >
-            Login
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // Removed early return for guest users to prevent UI jumps; guests will see the login prompt inside the panel.
 
   return (
     <div>
@@ -1148,6 +1113,23 @@ export function Community({ tag: tagProp }: CommunityProps) {
           </div>
         )}
 
+        {isFollowing && !user?.did ? (
+          <div class="empty" style="padding:24px">
+            <p>Sign in with your Bluesky account to see posts from people you follow.</p>
+            <button
+              type="button"
+              class="btn btn-primary"
+              style="margin-top:12px"
+              onClick={() => {
+                showAuthDialog.value = true;
+              }}
+            >
+              Login
+            </button>
+          </div>
+        ) : (
+          <>
+
         {loading ? (
           <div class="loading"><div class="spinner" /></div>
         ) : error ? (
@@ -1205,6 +1187,8 @@ export function Community({ tag: tagProp }: CommunityProps) {
               )}
             </div>
           ))
+        )}
+        </>
         )}
       </div>
 

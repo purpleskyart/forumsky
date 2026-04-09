@@ -179,9 +179,7 @@ export function Profile(props: ProfileProps) {
 
   if (!handle) return <div class="empty"><p>No user specified</p></div>;
 
-  if (loading) return <div class="loading"><div class="spinner" /></div>;
   if (error) return <div class="empty"><p>{error}</p></div>;
-  if (!profile) return <div class="empty"><p>User not found</p></div>;
 
   const isOwnProfile = Boolean(me?.did && profile.did === me.did);
 
@@ -200,59 +198,67 @@ export function Profile(props: ProfileProps) {
       </div>
 
       <div class="panel" style="margin-bottom:16px">
-        <div class="panel-body" style="display:flex;gap:16px;align-items:center">
-          <Avatar
-            className="profile-header-avatar"
-            src={profile.avatar}
-            alt={profile.displayName || profile.handle}
-            size={64}
-            followPlus={
-              !isOwnProfile && !profile.viewer?.following
-                ? {
-                    busy: followBusy,
-                    onFollow: handleFollow,
-                    title: `Follow @${profile.handle}`,
-                  }
-                : undefined
-            }
-          />
-          <div>
-            <div style="font-size:1.1rem;font-weight:600;color:var(--accent)">
-              {profile.displayName || profile.handle}
-            </div>
-            <div style="font-size:0.82rem;color:var(--text-secondary)">@{profile.handle}</div>
-            {profile.description && (
-              <div style="font-size:0.85rem;margin-top:6px;color:var(--text)">{profile.description}</div>
-            )}
-            <div style="display:flex;gap:16px;margin-top:8px;font-size:0.8rem;color:var(--text-muted)">
-              <span><strong>{profile.postsCount ?? 0}</strong> posts</span>
-              <span><strong>{profile.followersCount ?? 0}</strong> followers</span>
-              <span><strong>{profile.followsCount ?? 0}</strong> following</span>
-            </div>
-            {!isOwnProfile && (
-              <div class="profile-follow-actions">
-                {profile.viewer?.following ? (
-                  <button
-                    type="button"
-                    class="btn btn-outline btn-sm"
-                    disabled={followBusy}
-                    onClick={() => void handleUnfollow()}
-                  >
-                    Unfollow
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    class="btn btn-primary btn-sm"
-                    disabled={followBusy}
-                    onClick={() => void handleFollow()}
-                  >
-                    Follow
-                  </button>
+        <div class="panel-body">
+          {!profile && loading ? (
+            <div class="loading" style="padding: 20px 0"><div class="spinner" /></div>
+          ) : !profile ? (
+            <div class="empty"><p>User not found</p></div>
+          ) : (
+            <div style="display:flex;gap:16px;align-items:center">
+              <Avatar
+                className="profile-header-avatar"
+                src={profile.avatar}
+                alt={profile.displayName || profile.handle}
+                size={64}
+                followPlus={
+                  !isOwnProfile && !profile.viewer?.following
+                    ? {
+                        busy: followBusy,
+                        onFollow: handleFollow,
+                        title: `Follow @${profile.handle}`,
+                      }
+                    : undefined
+                }
+              />
+              <div>
+                <div style="font-size:1.1rem;font-weight:600;color:var(--accent)">
+                  {profile.displayName || profile.handle}
+                </div>
+                <div style="font-size:0.82rem;color:var(--text-secondary)">@{profile.handle}</div>
+                {profile.description && (
+                  <div style="font-size:0.85rem;margin-top:6px;color:var(--text)">{profile.description}</div>
+                )}
+                <div style="display:flex;gap:16px;margin-top:8px;font-size:0.8rem;color:var(--text-muted)">
+                  <span><strong>{profile.postsCount ?? 0}</strong> posts</span>
+                  <span><strong>{profile.followersCount ?? 0}</strong> followers</span>
+                  <span><strong>{profile.followsCount ?? 0}</strong> following</span>
+                </div>
+                {!isOwnProfile && (
+                  <div class="profile-follow-actions">
+                    {profile.viewer?.following ? (
+                      <button
+                        type="button"
+                        class="btn btn-outline btn-sm"
+                        disabled={followBusy}
+                        onClick={() => void handleUnfollow()}
+                      >
+                        Unfollow
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        class="btn btn-primary btn-sm"
+                        disabled={followBusy}
+                        onClick={() => void handleFollow()}
+                      >
+                        Follow
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -263,7 +269,9 @@ export function Profile(props: ProfileProps) {
           <div style="width:60px;text-align:center">Replies</div>
           <div style="width:160px;text-align:right">Date</div>
         </div>
-        {posts.length === 0 ? (
+        {loading && posts.length === 0 ? (
+          <div class="loading" style="padding: 24px 0"><div class="spinner" /></div>
+        ) : posts.length === 0 ? (
           <div class="empty"><p>No threads yet</p></div>
         ) : (
           posts.map((post, i) => (

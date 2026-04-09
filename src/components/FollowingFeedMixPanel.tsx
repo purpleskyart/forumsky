@@ -13,6 +13,7 @@ import {
   type SavedGeneratorFeedRef,
 } from '@/lib/saved-feed-preferences';
 import { showToast } from '@/lib/store';
+import { swr } from '@/lib/cache';
 
 const BLEND_WEIGHT_STEP = 5;
 const BLEND_WEIGHT_MIN = 1;
@@ -212,12 +213,12 @@ export function FollowingFeedMixPanel({ onConfigChanged }: Props) {
     (async () => {
       setPrefsLoading(true);
       try {
-        const { preferences } = await getActorPreferences();
+        const { preferences } = await swr('user_prefs', () => getActorPreferences(), 300_000);
         if (cancelled) return;
         const list = parseSavedGeneratorFeedsFromPreferences(preferences);
         setAccountFeeds(list);
         const uris = [...new Set(list.map(f => f.uri))];
-        const labels = await resolveFeedLabels(uris);
+        const labels = await swr(`feed_labels_${uris.sort().join(',')}`, () => resolveFeedLabels(uris), 600_000);
         if (cancelled) return;
         setFeedLabels(labels);
         setPrefsLoaded(true);

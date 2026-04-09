@@ -20,8 +20,8 @@ function shouldUseNativeShare(): boolean {
   return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 }
 
-async function shareOrCopyPostUrl(url: string): Promise<void> {
-  if (shouldUseNativeShare()) {
+async function shareOrCopyPostUrl(url: string, forceToast = false): Promise<void> {
+  if (shouldUseNativeShare() && !forceToast) {
     try {
       await navigator.share({ url, title: 'Bluesky post' });
       return;

@@ -3,7 +3,26 @@ import type { ProfileView } from '@/api/types';
 import { mayHaveRestorableSession } from '@/api/auth';
 import { getNsfwMediaMode, setNsfwMediaMode, type NsfwMediaMode } from '@/lib/preferences';
 
-export const currentUser = signal<ProfileView | null>(null);
+const STORED_USER_KEY = 'fsky_currentUser';
+
+function getStoredUser(): ProfileView | null {
+  try {
+    const raw = localStorage.getItem(STORED_USER_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export const currentUser = signal<ProfileView | null>(getStoredUser());
+
+currentUser.subscribe(user => {
+  try {
+    if (user) localStorage.setItem(STORED_USER_KEY, JSON.stringify(user));
+    else localStorage.removeItem(STORED_USER_KEY);
+  } catch { /* ignore */ }
+});
+
 export const isLoggedIn = computed(() => currentUser.value !== null);
 
 /** Set true after the first OAuth client init in Layout (whether or not a session exists). */
