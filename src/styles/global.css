@@ -3752,8 +3752,7 @@ button.post-ref-expand-translate-btn {
   .post-reply-btn-icon,
   .post-like-btn-icon,
   .post-repost-btn-icon,
-  .post-share-btn-icon,
-  .post-downvote-btn-icon {
+  .post-share-btn-icon {
     width: 16px;
     height: 16px;
   }
@@ -3789,7 +3788,7 @@ button.post-ref-expand-translate-btn {
 .bottom-nav {
   display: none;
   position: fixed;
-  bottom: 20px;
+  bottom: 12px;
   left: 0;
   right: 0;
   z-index: 2000;
@@ -3801,7 +3800,7 @@ button.post-ref-expand-translate-btn {
   justify-content: space-around;
   align-items: center;
   height: 54px;
-  margin: 0 16px;
+  margin: 0 10px;
   padding: 0 4px;
   padding-bottom: env(safe-area-inset-bottom, 8px);
   background: rgba(27, 27, 27, 0.85);
@@ -3867,7 +3866,6 @@ button.post-ref-expand-translate-btn {
 
 .bottom-nav-profile .avatar {
   margin: 0;
-  border-radius: 50%;
 }
 
 .pwa-toast {
