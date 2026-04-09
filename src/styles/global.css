@@ -3788,7 +3788,7 @@ button.post-ref-expand-translate-btn {
 .bottom-nav {
   display: none;
   position: fixed;
-  bottom: 12px;
+  bottom: 20px;
   left: 0;
   right: 0;
   z-index: 2000;
@@ -3800,7 +3800,7 @@ button.post-ref-expand-translate-btn {
   justify-content: space-around;
   align-items: center;
   height: 54px;
-  margin: 0 10px;
+  margin: 0 16px;
   padding: 0 4px;
   padding-bottom: env(safe-area-inset-bottom, 8px);
   background: rgba(27, 27, 27, 0.85);
@@ -3866,6 +3866,7 @@ button.post-ref-expand-translate-btn {
 
 .bottom-nav-profile .avatar {
   margin: 0;
+  border-radius: 50%;
 }
 
 .pwa-toast {
