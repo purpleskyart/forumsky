@@ -100,7 +100,22 @@ export function BottomNav() {
   const handleNav = (e: MouseEvent, href: string | undefined) => {
     if (!href) return;
     e.preventDefault();
-    navigate(href);
+
+    const isHome = href === '/';
+    const isCurrentlyOnThisPage = isHome
+      ? route.path === '/'
+      : route.path.startsWith(href);
+
+    if (isCurrentlyOnThisPage) {
+      // Always scroll to top if already on the page
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      navigate(href);
+      // For non-home buttons, the user specifically wants to be at the top.
+      if (!isHome) {
+        window.scrollTo({ top: 0 });
+      }
+    }
   };
 
   return (
