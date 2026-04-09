@@ -3767,7 +3767,7 @@ button.post-ref-expand-translate-btn {
   display: flex;
   justify-content: space-around;
   align-items: center;
-  height: 48px;
+  height: 54px;
   margin: 0 10px;
   padding: 0 4px;
   padding-bottom: env(safe-area-inset-bottom, 8px);
@@ -3815,13 +3815,13 @@ button.post-ref-expand-translate-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
 }
 
 .bottom-nav-icon svg {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
 }
 
 .bottom-nav-label {
