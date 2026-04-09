@@ -3,7 +3,8 @@ import { Avatar } from '@/components/Avatar';
 import { showAuthDialog, showSignUpDialog, currentUser, isLoggedIn, showToast, sessionRestorePending } from '@/lib/store';
 import { hrefForAppPath } from '@/lib/app-base-path';
 import { navigate, communityUrl, searchUrl, SPA_ANCHOR_SHIELD } from '@/lib/router';
-import { clearGraphPolicy, refreshGraphPolicy } from '@/lib/graph-policy';
+import { refreshGraphPolicy } from '@/lib/graph-policy';
+import { UserMenuPanel } from '@/components/UserMenuPanel';
 import type { ProfileView } from '@/api/types';
 
 const HEADER_SEARCH_DEST_KEY = 'forumsky.headerSearchDestination';
@@ -45,8 +46,6 @@ export function Header() {
   const restoringSession = sessionRestorePending();
   const showLoggedInChrome = isLoggedIn.value || restoringSession;
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [accounts, setAccounts] = useState<ProfileView[]>([]);
-  const [accountActionBusy, setAccountActionBusy] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const searchScopeRef = useRef<HTMLDivElement>(null);
   const [searchScopeOpen, setSearchScopeOpen] = useState(false);
@@ -79,14 +78,7 @@ export function Header() {
     };
   }, [userMenuOpen, searchScopeOpen]);
 
-  useEffect(() => {
-    if (!userMenuOpen || !isLoggedIn.value) return;
-    let cancelled = false;
-    import('@/api/auth').then(m => m.listStoredAccountProfiles()).then(list => {
-      if (!cancelled) setAccounts(list);
-    });
-    return () => { cancelled = true; };
-  }, [userMenuOpen, user?.did]);
+
 
   const pickSearchDestination = (d: HeaderSearchDestination) => {
     if ((d === 'following' || d === 'me') && !isLoggedIn.value) {
@@ -286,130 +278,7 @@ export function Header() {
                   />
                 </button>
                 {userMenuOpen && (
-                  <div id="header-user-menu-panel" class="header-user-menu-panel" role="menu">
-                    <a
-                      href={hrefForAppPath(`/u/${user!.handle}`)}
-                      role="menuitem"
-                      class="header-user-menu-head"
-                      {...SPA_ANCHOR_SHIELD}
-                      onClick={(e: Event) => {
-                        e.preventDefault();
-                        setUserMenuOpen(false);
-                        navigate(`/u/${user!.handle}`);
-                      }}
-                    >
-                      <div class="header-user-menu-name">{user?.displayName || user?.handle}</div>
-                      <div class="header-user-menu-handle">@{user?.handle}</div>
-                    </a>
-                    <a
-                      href={hrefForAppPath('/drafts')}
-                      role="menuitem"
-                      class="header-user-menu-item"
-                      {...SPA_ANCHOR_SHIELD}
-                      onClick={(e: Event) => {
-                        e.preventDefault();
-                        setUserMenuOpen(false);
-                        navigate('/drafts');
-                      }}
-                    >
-                      Drafts
-                    </a>
-                    <a
-                      href={hrefForAppPath('/settings')}
-                      role="menuitem"
-                      class="header-user-menu-item"
-                      {...SPA_ANCHOR_SHIELD}
-                      onClick={(e: Event) => {
-                        e.preventDefault();
-                        setUserMenuOpen(false);
-                        navigate('/settings');
-                      }}
-                    >
-                      Settings
-                    </a>
-                    {accounts.length > 1 && (
-                      <div class="header-user-menu-accounts" role="group" aria-label="Switch account">
-                        <div class="header-user-menu-section-title">Accounts</div>
-                        {accounts.map(acc => (
-                          <button
-                            key={acc.did}
-                            type="button"
-                            role="menuitem"
-                            class={`header-user-menu-account${acc.did === user?.did ? ' header-user-menu-account--active': ''}`}
-                            disabled={accountActionBusy}
-                            onClick={async () => {
-                              if (acc.did === user?.did) {
-                                setUserMenuOpen(false);
-                                return;
-                              }
-                              setAccountActionBusy(true);
-                              try {
-                                const { switchToAccount } = await import('@/api/auth');
-                                const profile = await switchToAccount(acc.did);
-                                currentUser.value = profile;
-                                void refreshGraphPolicy();
-                                bumpUi();
-                              } catch {
-                                showToast('Could not switch to that account');
-                              } finally {
-                                setAccountActionBusy(false);
-                                setUserMenuOpen(false);
-                              }
-                            }}
-                          >
-                            <Avatar
-                              src={acc.avatar}
-                              alt={acc.displayName || acc.handle}
-                              size={28}
-                            />
-                            <span class="header-user-menu-account-text">
-                              <span class="header-user-menu-account-name">
-                                {acc.displayName || acc.handle}
-                              </span>
-                              <span class="header-user-menu-account-handle">@{acc.handle}</span>
-                            </span>
-                            {acc.did === user?.did && (
-                              <span class="header-user-menu-account-badge">Active</span>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                    <button
-                      type="button"
-                      role="menuitem"
-                      class="header-user-menu-item header-user-menu-add-account"
-                      disabled={accountActionBusy}
-                      onClick={() => {
-                        setUserMenuOpen(false);
-                        showAuthDialog.value = true;
-                      }}
-                    >
-                      Add account
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      class="header-user-menu-item header-user-menu-signout"
-                      disabled={accountActionBusy}
-                      onClick={async () => {
-                        setUserMenuOpen(false);
-                        setAccountActionBusy(true);
-                        try {
-                          const { signOutCurrentUser } = await import('@/api/auth');
-                          const profile = await signOutCurrentUser();
-                          currentUser.value = profile;
-                          if (profile) void refreshGraphPolicy();
-                          else clearGraphPolicy();
-                          bumpUi();
-                        } finally {
-                          setAccountActionBusy(false);
-                        }
-                      }}
-                    >
-                      Sign out
-                    </button>
-                  </div>
+                  <UserMenuPanel onClose={() => setUserMenuOpen(false)} />
                 )}
               </div>
               )

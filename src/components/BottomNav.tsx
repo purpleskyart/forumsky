@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'preact/hooks';
 import { navigate } from '@/lib/router';
 import { currentUser, isLoggedIn, showAuthDialog, showSignUpDialog } from '@/lib/store';
 import { Avatar } from '@/components/Avatar';
+import { UserMenuPanel } from '@/components/UserMenuPanel';
 
 interface NavItem {
   href?: string;
@@ -55,10 +56,24 @@ const NAV_ITEMS: NavItem[] = [
   },
 ];
 
+
 export function BottomNav() {
   const [visible, setVisible] = useState(true);
   const user = currentUser.value;
   const loggedIn = isLoggedIn.value;
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!userMenuOpen) return;
+    const onDoc = (e: Event) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('pointerdown', onDoc);
+    return () => document.removeEventListener('pointerdown', onDoc);
+  }, [userMenuOpen]);
 
   const handleNav = (e: MouseEvent, href: string | undefined) => {
     if (!href) return;
@@ -75,33 +90,42 @@ export function BottomNav() {
 
           if (item.isProfile) {
             return (
-              <button
-                key={item.href || `profile-${index}`}
-                type="button"
-                class="bottom-nav-item bottom-nav-profile"
-                aria-label={item.label}
-                title={item.label}
-                onClick={() => {
-                  if (user) {
-                    navigate(`/u/${user.handle}`);
-                  } else {
-                    showSignUpDialog.value = false;
-                    showAuthDialog.value = true;
-                  }
-                }}
-              >
-                {user ? (
-                  <Avatar src={user.avatar} alt={user.displayName || user.handle} size={28} />
-                ) : (
-                  <span class="bottom-nav-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-                      <polyline points="10 17 15 12 10 7" />
-                      <line x1="15" y1="12" x2="3" y2="12" />
-                    </svg>
-                  </span>
+              <div key={item.href || `profile-${index}`} class="bottom-nav-profile-wrap" ref={userMenuRef}>
+                {userMenuOpen && (
+                  <UserMenuPanel
+                    className="bottom-nav-user-menu"
+                    onClose={() => setUserMenuOpen(false)}
+                  />
                 )}
-              </button>
+                <button
+                  type="button"
+                  class="bottom-nav-item bottom-nav-profile"
+                  aria-label={item.label}
+                  aria-expanded={userMenuOpen}
+                  aria-haspopup="menu"
+                  title={item.label}
+                  onClick={() => {
+                    if (user) {
+                      setUserMenuOpen(o => !o);
+                    } else {
+                      showSignUpDialog.value = false;
+                      showAuthDialog.value = true;
+                    }
+                  }}
+                >
+                  {user ? (
+                    <Avatar src={user.avatar} alt={user.displayName || user.handle} size={28} />
+                  ) : (
+                    <span class="bottom-nav-icon">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                        <polyline points="10 17 15 12 10 7" />
+                        <line x1="15" y1="12" x2="3" y2="12" />
+                      </svg>
+                    </span>
+                  )}
+                </button>
+              </div>
             );
           }
 

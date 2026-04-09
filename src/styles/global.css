@@ -3863,6 +3863,20 @@ button.post-ref-expand-translate-btn {
   display: none;
 }
 
+.bottom-nav-profile-wrap {
+  position: relative;
+  pointer-events: auto;
+}
+
+.bottom-nav-user-menu {
+  position: absolute !important;
+  top: auto !important;
+  bottom: calc(100% + 12px) !important;
+  right: -6px !important;
+  width: 250px !important;
+  max-width: calc(100vw - 32px) !important;
+}
+
 .bottom-nav-profile {
   padding: 4px 10px;
 }
