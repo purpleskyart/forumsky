@@ -183,6 +183,15 @@ async function setupSession(session: OAuthSession): Promise<ProfileView> {
   }
 
   rememberAccountDid(profile.did);
+
+  // Sync pinned threads from repo after login
+  try {
+    const { syncPinnedThreadsFromRepo } = await import('@/lib/preferences');
+    void syncPinnedThreadsFromRepo();
+  } catch {
+    // Sync failed, will use localStorage
+  }
+
   return profile;
 }
 

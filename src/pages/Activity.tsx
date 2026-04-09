@@ -5,7 +5,7 @@ import { hrefForAppPath } from '@/lib/app-base-path';
 import { navigate, threadUrl, communityUrl, SPA_ANCHOR_SHIELD } from '@/lib/router';
 import { showToast, currentUser, isLoggedIn, authInitDone, sessionRestorePending } from '@/lib/store';
 import { getSubscribedThreadRoots } from '@/lib/forumsky-local';
-import { formatRelativeTime } from '@/lib/i18n';
+import { formatRelativeTime, formatListDateTime } from '@/lib/i18n';
 import { Avatar } from '@/components/Avatar';
 import { postThreadListTitle } from '@/lib/thread-title';
 import { extractFirstHashtag } from '@/lib/thread-merger';
@@ -76,6 +76,7 @@ export function Activity() {
   const [loading, setLoading] = useState(true);
   const [hydratingPosts, setHydratingPosts] = useState(false);
   const [subscribedOnly, setSubscribedOnly] = useState(false);
+  const [exactTimeItems, setExactTimeItems] = useState<Set<string>>(new Set());
   const authReady = authInitDone.value;
   const viewerDid = currentUser.value?.did;
 
@@ -288,8 +289,24 @@ export function Activity() {
                         </span>
                       )}
                       {unread && <span class="activity-unread-pill" aria-label="Unread">New</span>}
-                      <time class="activity-cell-time" dateTime={n.indexedAt} title={n.indexedAt}>
-                        {formatRelativeTime(n.indexedAt)}
+                      <time
+                        class="activity-cell-time"
+                        dateTime={n.indexedAt}
+                        title={n.indexedAt}
+                        onClick={() => {
+                          setExactTimeItems(prev => {
+                            const next = new Set(prev);
+                            if (next.has(n.uri)) {
+                              next.delete(n.uri);
+                            } else {
+                              next.add(n.uri);
+                            }
+                            return next;
+                          });
+                        }}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        {exactTimeItems.has(n.uri) ? formatListDateTime(n.indexedAt) : formatRelativeTime(n.indexedAt)}
                       </time>
                     </div>
                     <div class="activity-cell-actor">

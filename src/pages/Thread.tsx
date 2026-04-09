@@ -2848,6 +2848,8 @@ function PostBlock({
                                 src={img.fullsize || img.thumb}
                                 alt={img.alt ?? ''}
                                 aspectRatio={img.aspectRatio}
+                                allImages={segImages}
+                                currentIndex={i}
                               />
                             ),
                           )}
@@ -2877,6 +2879,8 @@ function PostBlock({
                                 src={img.fullsize || img.thumb}
                                 alt={img.alt ?? ''}
                                 aspectRatio={img.aspectRatio}
+                                allImages={segImages}
+                                currentIndex={i}
                               />
                             ),
                           )}
@@ -2992,10 +2996,23 @@ function PostBlock({
             <PostLikeButton post={root} />
             <button
               type="button"
-              class="btn btn-outline post-reply-btn"
+              class="post-reply-btn post-reply-btn--social"
               onClick={() => onReply?.({ uri: root.uri, cid: root.cid }, handle, postNumber)}
             >
-              Reply
+              <span class="post-reply-btn-icon" aria-hidden>
+                <svg
+                  class="post-reply-btn-icon-svg"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                </svg>
+              </span>
             </button>
             <PostRepostButton
               post={root}

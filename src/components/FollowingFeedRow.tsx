@@ -1,5 +1,5 @@
 import { Fragment } from 'preact';
-import { useMemo } from 'preact/hooks';
+import { useMemo, useState } from 'preact/hooks';
 import { Avatar } from '@/components/Avatar';
 import { AuthorFlair } from '@/components/AuthorFlair';
 import {
@@ -112,6 +112,7 @@ export function FollowingFeedRow({
       followingAuthorDids &&
       !followingAuthorDids.has(post.author.did),
   );
+  const [showExactTime, setShowExactTime] = useState(false);
 
   const onRowClick = (e: MouseEvent) => {
     const el = e.target as HTMLElement | null;
@@ -138,6 +139,8 @@ export function FollowingFeedRow({
               src={img.fullsize || img.thumb}
               alt={img.alt ?? ''}
               aspectRatio={img.aspectRatio}
+              allImages={allImages}
+              currentIndex={i}
             />
           ),
         )}
@@ -222,7 +225,13 @@ export function FollowingFeedRow({
               dateTime={activityDate}
               title={dateStr}
             >
-              <span class="post-header-date-relative">{relativeTimeStr}</span>
+              <span
+                class="post-header-date-relative"
+                onClick={() => setShowExactTime(!showExactTime)}
+                style={{ cursor: 'pointer' }}
+              >
+                {showExactTime ? dateStr : relativeTimeStr}
+              </span>
               {customFeedLabel && (
                 <>
                   <span class="following-feed-row-header-sep" aria-hidden>
@@ -260,10 +269,6 @@ export function FollowingFeedRow({
                   </span>
                 </>
               )}
-              <span class="following-feed-row-header-sep" aria-hidden>
-                ·
-              </span>
-              <span class="post-header-date-exact">{dateStr}</span>
             </time>
           </div>
           <div class="post-header-right">

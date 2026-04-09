@@ -852,8 +852,8 @@ export function Community({ tag: tagProp }: CommunityProps) {
     void fp(pageRef.current + 1);
   };
 
-  const handlePin = (uri: string) => {
-    togglePinnedThread(tag, uri);
+  const handlePin = async (uri: string) => {
+    await togglePinnedThread(tag, uri);
     setPosts([...posts]);
     showToast(isThreadPinned(tag, uri) ? 'Thread pinned' : 'Thread unpinned');
   };

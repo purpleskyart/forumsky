@@ -2619,6 +2619,44 @@ a.post-overflow-menu-item {
 .media-lightbox-close:hover {
   background: rgba(255, 255, 255, 0.12);
 }
+.media-lightbox-nav {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 2rem;
+  line-height: 1;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.media-lightbox-nav--prev {
+  left: 12px;
+}
+.media-lightbox-nav--next {
+  right: 12px;
+}
+.media-lightbox-nav:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.media-lightbox-counter {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+  padding: 6px 12px;
+  font-size: 0.9rem;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 20px;
+  pointer-events: none;
+}
 
 /* HlsVideo: overlay until first play; controls always on so layout height does not jump */
 .post-hls-video-wrap {
