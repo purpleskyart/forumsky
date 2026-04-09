@@ -31,7 +31,7 @@
   --user-cyan: #4dd0e1;
   --user-violet: #b794f6;
   --post-card-bg: #1a1a1a;
-  --post-sidebar-bg: rgba(0, 0, 0, 0.2);
+  --post-sidebar-bg: transparent;
   /* Distance from viewport top when thread author sidebar is stuck */
   --thread-author-sticky-top: 0px;
 }
@@ -1890,7 +1890,7 @@ input:focus, textarea:focus {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  background: rgba(0, 0, 0, 0.12);
+  background: transparent;
   border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
   /* visible: overflow:hidden clips post-footer dropdowns (repost menu) */
   overflow: visible;
@@ -1901,7 +1901,7 @@ input:focus, textarea:focus {
   justify-content: space-between;
   align-items: center;
   gap: 10px;
-  padding: 3px 10px;
+  padding: 3px 0 3px 10px;
   font-size: 0.76rem;
   color: var(--text-muted);
   background: rgba(0, 0, 0, 0.2);
@@ -2423,7 +2423,7 @@ a.post-overflow-menu-item {
 }
 
 .post-content {
-  padding: 14px 14px 14px 6px;
+  padding: 14px 0 14px 6px;
   flex: 1;
   line-height: 1.65;
   font-size: 0.93rem;
@@ -2715,7 +2715,7 @@ video.post-hls-video--has-overlay {
   justify-content: flex-start;
   align-items: center;
   gap: 12px;
-  padding: 10px 10px 10px 6px;
+  padding: 10px 0 10px 6px;
   font-size: 0.78rem;
   background: transparent;
 }
@@ -2820,16 +2820,14 @@ button.post-ref-expand-translate-btn {
   font-weight: 600;
   line-height: 1.2;
   color: var(--text-muted);
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--divider-strong);
-  border-radius: var(--radius);
+  background: transparent;
+  border: none;
   cursor: pointer;
   box-sizing: border-box;
 }
 .post-like-btn:hover:not(:disabled) {
-  border-color: rgba(233, 30, 140, 0.35);
   color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.07);
+  background: transparent;
 }
 .post-like-btn:disabled {
   opacity: 0.65;
@@ -2837,12 +2835,9 @@ button.post-ref-expand-translate-btn {
 }
 .post-like-btn--liked {
   color: var(--user-rose);
-  border-color: rgba(214, 51, 132, 0.45);
-  background: rgba(214, 51, 132, 0.12);
 }
 .post-like-btn--liked:hover:not(:disabled) {
   color: var(--accent-hover);
-  border-color: rgba(233, 30, 140, 0.55);
 }
 .post-like-btn-icon {
   font-size: 0.95rem;
@@ -2865,16 +2860,14 @@ button.post-ref-expand-translate-btn {
   font-weight: 600;
   line-height: 1.2;
   color: var(--text-muted);
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--divider-strong);
-  border-radius: var(--radius);
+  background: transparent;
+  border: none;
   cursor: pointer;
   box-sizing: border-box;
 }
 .post-downvote-btn:hover:not(:disabled) {
-  border-color: rgba(120, 160, 220, 0.4);
   color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.07);
+  background: transparent;
 }
 .post-downvote-btn:disabled {
   opacity: 0.65;
@@ -2882,12 +2875,9 @@ button.post-ref-expand-translate-btn {
 }
 .post-downvote-btn--active {
   color: #8eb4e8;
-  border-color: rgba(120, 160, 220, 0.5);
-  background: rgba(100, 140, 200, 0.14);
 }
 .post-downvote-btn--active:hover:not(:disabled) {
   color: #a8c8f0;
-  border-color: rgba(140, 180, 230, 0.55);
 }
 .post-downvote-btn-icon {
   font-size: 0.95rem;
@@ -2914,16 +2904,14 @@ button.post-ref-expand-translate-btn {
   font-weight: 600;
   line-height: 1.2;
   color: var(--text-muted);
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--divider-strong);
-  border-radius: var(--radius);
+  background: transparent;
+  border: none;
   cursor: pointer;
   box-sizing: border-box;
 }
 .post-repost-btn:hover:not(:disabled) {
-  border-color: rgba(233, 30, 140, 0.35);
   color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.07);
+  background: transparent;
 }
 .post-repost-btn:disabled {
   opacity: 0.65;
@@ -2931,12 +2919,9 @@ button.post-ref-expand-translate-btn {
 }
 .post-repost-btn--active {
   color: var(--user-teal);
-  border-color: rgba(0, 206, 209, 0.45);
-  background: rgba(0, 206, 209, 0.1);
 }
 .post-repost-btn--active:hover:not(:disabled) {
   color: var(--user-cyan);
-  border-color: rgba(77, 208, 225, 0.55);
 }
 .post-repost-btn-icon {
   font-size: 0.95rem;
@@ -2991,9 +2976,8 @@ button.post-ref-expand-translate-btn {
   font-weight: 600;
   line-height: 1.2;
   color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--divider-strong);
-  border-radius: var(--radius);
+  background: transparent;
+  border: none;
   cursor: pointer;
   box-sizing: border-box;
 }
@@ -3009,9 +2993,8 @@ button.post-ref-expand-translate-btn {
   height: 100%;
 }
 .post-share-btn:hover:not(:disabled) {
-  border-color: rgba(233, 30, 140, 0.35);
   color: var(--text);
-  background: rgba(255, 255, 255, 0.07);
+  background: transparent;
 }
 .post-share-btn:disabled {
   opacity: 0.65;
@@ -3044,16 +3027,14 @@ button.post-ref-expand-translate-btn {
   font-weight: 600;
   line-height: 1.2;
   color: var(--text-muted);
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--divider-strong);
-  border-radius: var(--radius);
+  background: transparent;
+  border: none;
   cursor: pointer;
   box-sizing: border-box;
 }
 .post-reply-btn--social:hover:not(:disabled) {
-  border-color: rgba(233, 30, 140, 0.35);
   color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.07);
+  background: transparent;
 }
 .post-reply-btn--social:disabled {
   opacity: 0.65;
@@ -3636,7 +3617,7 @@ button.post-ref-expand-translate-btn {
     flex-direction: column;
     align-items: center;
     text-align: center;
-    padding: 8px 6px;
+    padding: 8px 6px 8px 0;
     gap: 4px;
   }
   .post-author-card .avatar {
@@ -3818,11 +3799,18 @@ button.post-ref-expand-translate-btn {
 .bottom-nav {
   display: none;
   position: fixed;
-  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  bottom: 12px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   left: 0;
   right: 0;
   z-index: 2000;
   pointer-events: none;
+}
+
+@media all and (display-mode: standalone) {
+  .bottom-nav {
+    padding-bottom: max(24px, env(safe-area-inset-bottom, 24px));
+  }
 }
 
 .bottom-nav-inner {

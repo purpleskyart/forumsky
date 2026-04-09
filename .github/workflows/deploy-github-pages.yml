@@ -1,4 +1,8 @@
-# Build, version bump, and deploy to GitHub Pages.
+# Automates versioning and deployment.
+# Structure:
+# 1. 'bump' job: Updates version and pushes a 'chore' commit.
+# 2. 'build' job: Runs after the bump, builds the app, and prepares it for hosting.
+# 3. 'deploy' job: Publishes the build results to GitHub Pages.
 name: CI/CD
 
 on:
@@ -16,10 +20,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    # Avoid infinite loops from version bump commits and focus on user-initiated pushes
+  bump:
+    # Only run on pushes that aren't already version bumps to avoid loops
     if: "!contains(github.event.head_commit.message, '[skip ci]')"
     runs-on: ubuntu-latest
+    outputs:
+      new_sha: ${{ steps.push.outputs.new_sha }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -29,22 +35,39 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
 
-      - run: npm ci
-
-      # 1. Version Management
-      # Bump version locally before building so the 'Settings' page reflects the new version immediately.
       - name: Git Config
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Bump Version
-        run: |
-          npm version patch -m "chore: bump version to %s [skip ci]"
+        run: npm version patch -m "chore: bump version to %s [skip ci]"
 
-      # 2. Application Build
+      - name: Push changes
+        id: push
+        run: |
+          git push origin main --follow-tags
+          echo "new_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  build:
+    # Run after the bump job is complete
+    needs: bump
+    runs-on: ubuntu-latest
+    steps:
+      # We check out the NEW sha pushed by the 'bump' job
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
       - name: OAuth client metadata
         env:
           SITE_ORIGIN: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
@@ -56,11 +79,6 @@ jobs:
         run: npm run build
 
       - run: npm run gh-pages:prepare
-
-      # 3. Finalize and Push
-      # Only push the version bump once we know the build is successful.
-      - name: Push changes
-        run: git push origin main --follow-tags
 
       - uses: actions/upload-pages-artifact@v3
         with:
