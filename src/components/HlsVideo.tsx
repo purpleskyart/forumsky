@@ -142,7 +142,44 @@ export function HlsVideo({ playlist, poster, className, 'aria-label': ariaLabel 
     });
   };
 
-  const onVideoPlay = () => setShowControls(true);
+  const onVideoPlay = () => {};
+
+  const toggleFullscreen = async (e: MouseEvent) => {
+    const v = videoRef.current;
+    if (!v) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!document.fullscreenElement) {
+      v.muted = false;
+      try {
+        if ((v as any).webkitEnterFullscreen) {
+          (v as any).webkitEnterFullscreen();
+        } else {
+          await v.requestFullscreen();
+        }
+      } catch (err) {
+        // Fallback for some browsers
+      }
+    } else {
+      if (document.exitFullscreen) {
+        void document.exitFullscreen();
+      }
+    }
+  };
+
+  useEffect(() => {
+    const onFsChange = () => {
+      const isFs = !!document.fullscreenElement;
+      setShowControls(isFs);
+    };
+    document.addEventListener('fullscreenchange', onFsChange);
+    document.addEventListener('webkitfullscreenchange', onFsChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onFsChange);
+      document.removeEventListener('webkitfullscreenchange', onFsChange);
+    };
+  }, []);
 
   const onLoadedMetadata = (e: Event) => {
     const el = e.currentTarget as HTMLVideoElement;
@@ -155,7 +192,7 @@ export function HlsVideo({ playlist, poster, className, 'aria-label': ariaLabel 
     <div class="post-hls-video-wrap" ref={wrapRef}>
       <video
         ref={videoRef}
-        class={`${className ?? ''}${showControls ? '' : ' post-hls-video--has-overlay'}`.trim()}
+        class={`${className ?? ''} post-hls-video--compact`.trim()}
         controls={showControls}
         playsInline
         preload="metadata"
@@ -164,22 +201,8 @@ export function HlsVideo({ playlist, poster, className, 'aria-label': ariaLabel 
         style={aspectCss ? { aspectRatio: aspectCss } : undefined}
         onLoadedMetadata={onLoadedMetadata}
         onPlay={onVideoPlay}
-        onClick={showControls ? undefined : revealAndPlay}
+        onClick={toggleFullscreen}
       />
-      {!showControls && (
-        <button
-          type="button"
-          class="post-hls-video-play-overlay"
-          aria-label={ariaLabel ?? 'Play video'}
-          onClick={revealAndPlay}
-        >
-          <span class="post-hls-video-play-icon" aria-hidden="true">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-              <path d="M8 5v14l11-7L8 5z" />
-            </svg>
-          </span>
-        </button>
-      )}
     </div>
   );
 }
