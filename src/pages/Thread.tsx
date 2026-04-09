@@ -2416,6 +2416,10 @@ function PostBlock({
 
   const quotedEmbed = useMemo(() => getQuotedEmbedFromSegments(segments), [segments]);
   const segmentsNsfw = useMemo(() => segments.some(postHasNsfwLabels), [segments]);
+  const segmentsLabels = useMemo(
+    () => segments.flatMap(s => [...(s.labels ?? []), ...(s.author?.labels ?? [])]),
+    [segments],
+  );
 
   const isSelfAuthor = Boolean(viewerDid && root.author.did === viewerDid);
   const showAvatarFollowPlus = Boolean(
@@ -2828,7 +2832,7 @@ function PostBlock({
                 <div key={seg.uri}>
                   {content}
                   {segMediaCount > 0 && (
-                    <NsfwMediaWrap isNsfw={segmentsNsfw}>
+                    <NsfwMediaWrap isNsfw={segmentsNsfw} labels={segmentsLabels}>
                       {segMediaCount > 1 ? (
                         <div class="post-content-media-stack">
                           {segImages.map((img, i) =>
@@ -2892,7 +2896,7 @@ function PostBlock({
                   )}
                   {segExternal &&
                     (segExtGif ? (
-                      <NsfwMediaWrap isNsfw={segmentsNsfw}>
+                      <NsfwMediaWrap isNsfw={segmentsNsfw} labels={segmentsLabels}>
                         <GifImage
                           thumb={segExtGif.thumb}
                           fullsize={segExtGif.fullsize}
@@ -2901,7 +2905,7 @@ function PostBlock({
                         />
                       </NsfwMediaWrap>
                     ) : (
-                      <NsfwMediaWrap isNsfw={segmentsNsfw}>
+                      <NsfwMediaWrap isNsfw={segmentsNsfw} labels={segmentsLabels}>
                         <a
                           href={segExternal.uri}
                           target="_blank"

@@ -1,5 +1,19 @@
 import type { Label, ProfileView } from '@/api/types';
 
+/** Content-warning label values that belong on the media, not the author profile card. */
+const NSFW_LABEL_VALS = new Set([
+  'sexual', 'nudity', 'porn', 'nsfw', 'adult', 'graphic-media',
+]);
+
+function isNsfwLabelVal(val: string): boolean {
+  const core = val.replace(/^[!]+/, '').toLowerCase().trim();
+  return NSFW_LABEL_VALS.has(core) ||
+    core.includes('sexual') ||
+    core.includes('nsfw') ||
+    core.includes('porn') ||
+    core.includes('graphic-media');
+}
+
 /** Bluesky system label; not useful as a user-facing badge. */
 function isHiddenLabelVal(val: string): boolean {
   const core = val.replace(/^[!]+/, '').toLowerCase();
@@ -24,7 +38,7 @@ export function AuthorFlair({
   const badges: { key: string; text: string; title?: string }[] = [];
   for (const L of [...fromAuthor, ...fromPost]) {
     const val = L.val;
-    if (!val || seen.has(val) || isHiddenLabelVal(val)) continue;
+    if (!val || seen.has(val) || isHiddenLabelVal(val) || isNsfwLabelVal(val)) continue;
     seen.add(val);
     badges.push({
       key: val,

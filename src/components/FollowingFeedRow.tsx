@@ -100,6 +100,10 @@ export function FollowingFeedRow({
   const externalGifSrc =
     external && isNativeExternalEmbed(external) ? getExternalGifPlaybackSources(external) : null;
   const nsfwMedia = useMemo(() => postHasNsfwLabels(post), [post]);
+  const nsfwLabels = useMemo(
+    () => [...(post.labels ?? []), ...(post.author?.labels ?? [])],
+    [post],
+  );
 
   const showAvatarFollowPlus = Boolean(
     onAvatarFollow &&
@@ -305,7 +309,7 @@ export function FollowingFeedRow({
         <div class="post-content">
           {renderPostContent(post.record.text, post.record.facets)}
           {mediaCount > 0 ? (
-            <NsfwMediaWrap isNsfw={nsfwMedia}>
+            <NsfwMediaWrap isNsfw={nsfwMedia} labels={nsfwLabels}>
               {mediaCount > 1 ? <div class="post-content-media-stack">{mediaNodes}</div> : mediaNodes}
             </NsfwMediaWrap>
           ) : null}
@@ -323,7 +327,7 @@ export function FollowingFeedRow({
 
           {external &&
             (externalGifSrc ? (
-              <NsfwMediaWrap isNsfw={nsfwMedia}>
+              <NsfwMediaWrap isNsfw={nsfwMedia} labels={nsfwLabels}>
                 <GifImage
                   thumb={externalGifSrc.thumb}
                   fullsize={externalGifSrc.fullsize}
