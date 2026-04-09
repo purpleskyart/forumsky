@@ -4768,3 +4768,59 @@ button.post-ref-expand-translate-btn {
   gap: 8px;
   margin-top: 10px;
 }
+
+/* ========== Pull to Refresh ========== */
+.ptr-container {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  /* Prevent browser bounce on some mobile browsers so we can control it */
+  overscroll-behavior-y: contain;
+}
+
+.ptr-indicator {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  width: 42px;
+  height: 42px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--divider-strong);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-md);
+  z-index: 5000;
+  pointer-events: none;
+  backdrop-filter: blur(8px);
+}
+
+.ptr-spinner {
+  width: 24px;
+  height: 24px;
+  color: var(--accent);
+}
+
+.ptr-spinner svg {
+  width: 100%;
+  height: 100%;
+  transition: transform 0.1s linear;
+}
+
+.ptr-spinner.ready {
+  color: var(--user-teal);
+}
+
+.ptr-spinner.refreshing svg {
+  animation: ptr-spin 0.8s linear infinite;
+}
+
+@keyframes ptr-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.ptr-content {
+  will-change: transform;
+}
