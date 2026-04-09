@@ -2820,14 +2820,16 @@ button.post-ref-expand-translate-btn {
   font-weight: 600;
   line-height: 1.2;
   color: var(--text-muted);
-  background: transparent;
-  border: none;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--divider-strong);
+  border-radius: var(--radius);
   cursor: pointer;
   box-sizing: border-box;
 }
 .post-like-btn:hover:not(:disabled) {
+  border-color: rgba(233, 30, 140, 0.35);
   color: var(--text-secondary);
-  background: transparent;
+  background: rgba(255, 255, 255, 0.07);
 }
 .post-like-btn:disabled {
   opacity: 0.65;
@@ -2835,9 +2837,12 @@ button.post-ref-expand-translate-btn {
 }
 .post-like-btn--liked {
   color: var(--user-rose);
+  border-color: rgba(214, 51, 132, 0.45);
+  background: rgba(214, 51, 132, 0.12);
 }
 .post-like-btn--liked:hover:not(:disabled) {
   color: var(--accent-hover);
+  border-color: rgba(233, 30, 140, 0.55);
 }
 .post-like-btn-icon {
   font-size: 0.95rem;
@@ -2860,14 +2865,16 @@ button.post-ref-expand-translate-btn {
   font-weight: 600;
   line-height: 1.2;
   color: var(--text-muted);
-  background: transparent;
-  border: none;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--divider-strong);
+  border-radius: var(--radius);
   cursor: pointer;
   box-sizing: border-box;
 }
 .post-downvote-btn:hover:not(:disabled) {
+  border-color: rgba(120, 160, 220, 0.4);
   color: var(--text-secondary);
-  background: transparent;
+  background: rgba(255, 255, 255, 0.07);
 }
 .post-downvote-btn:disabled {
   opacity: 0.65;
@@ -2875,9 +2882,12 @@ button.post-ref-expand-translate-btn {
 }
 .post-downvote-btn--active {
   color: #8eb4e8;
+  border-color: rgba(120, 160, 220, 0.5);
+  background: rgba(100, 140, 200, 0.14);
 }
 .post-downvote-btn--active:hover:not(:disabled) {
   color: #a8c8f0;
+  border-color: rgba(140, 180, 230, 0.55);
 }
 .post-downvote-btn-icon {
   font-size: 0.95rem;
@@ -2904,14 +2914,16 @@ button.post-ref-expand-translate-btn {
   font-weight: 600;
   line-height: 1.2;
   color: var(--text-muted);
-  background: transparent;
-  border: none;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--divider-strong);
+  border-radius: var(--radius);
   cursor: pointer;
   box-sizing: border-box;
 }
 .post-repost-btn:hover:not(:disabled) {
+  border-color: rgba(233, 30, 140, 0.35);
   color: var(--text-secondary);
-  background: transparent;
+  background: rgba(255, 255, 255, 0.07);
 }
 .post-repost-btn:disabled {
   opacity: 0.65;
@@ -2919,9 +2931,12 @@ button.post-ref-expand-translate-btn {
 }
 .post-repost-btn--active {
   color: var(--user-teal);
+  border-color: rgba(0, 206, 209, 0.45);
+  background: rgba(0, 206, 209, 0.1);
 }
 .post-repost-btn--active:hover:not(:disabled) {
   color: var(--user-cyan);
+  border-color: rgba(77, 208, 225, 0.55);
 }
 .post-repost-btn-icon {
   font-size: 0.95rem;
@@ -2976,8 +2991,9 @@ button.post-ref-expand-translate-btn {
   font-weight: 600;
   line-height: 1.2;
   color: var(--text-secondary);
-  background: transparent;
-  border: none;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--divider-strong);
+  border-radius: var(--radius);
   cursor: pointer;
   box-sizing: border-box;
 }
@@ -2993,8 +3009,9 @@ button.post-ref-expand-translate-btn {
   height: 100%;
 }
 .post-share-btn:hover:not(:disabled) {
+  border-color: rgba(233, 30, 140, 0.35);
   color: var(--text);
-  background: transparent;
+  background: rgba(255, 255, 255, 0.07);
 }
 .post-share-btn:disabled {
   opacity: 0.65;
@@ -3027,14 +3044,16 @@ button.post-ref-expand-translate-btn {
   font-weight: 600;
   line-height: 1.2;
   color: var(--text-muted);
-  background: transparent;
-  border: none;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--divider-strong);
+  border-radius: var(--radius);
   cursor: pointer;
   box-sizing: border-box;
 }
 .post-reply-btn--social:hover:not(:disabled) {
+  border-color: rgba(233, 30, 140, 0.35);
   color: var(--text-secondary);
-  background: transparent;
+  background: rgba(255, 255, 255, 0.07);
 }
 .post-reply-btn--social:disabled {
   opacity: 0.65;
