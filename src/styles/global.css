@@ -33,7 +33,7 @@
   --post-card-bg: #1a1a1a;
   --post-sidebar-bg: transparent;
   /* Distance from viewport top when thread author sidebar is stuck */
-  --thread-author-sticky-top: 0px;
+  --thread-author-sticky-top: 64px;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -3799,8 +3799,7 @@ button.post-ref-expand-translate-btn {
 .bottom-nav {
   display: none;
   position: fixed;
-  bottom: 12px;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   left: 0;
   right: 0;
   z-index: 2000;
@@ -3809,7 +3808,7 @@ button.post-ref-expand-translate-btn {
 
 @media all and (display-mode: standalone) {
   .bottom-nav {
-    padding-bottom: max(24px, env(safe-area-inset-bottom, 24px));
+    bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -3828,7 +3827,7 @@ button.post-ref-expand-translate-btn {
 }
 
 .bottom-nav-hidden .bottom-nav-inner {
-  transform: translateY(100%);
+  transform: translateY(calc(100% + 80px));
   opacity: 0;
 }
 
