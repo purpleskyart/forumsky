@@ -84,17 +84,23 @@ export function BottomNav() {
                 onClick={() => {
                   if (user) {
                     navigate(`/u/${user.handle}`);
-                  } else if (item.onClick) {
-                    item.onClick();
+                  } else {
+                    showSignUpDialog.value = false;
+                    showAuthDialog.value = true;
                   }
                 }}
               >
                 {user ? (
                   <Avatar src={user.avatar} alt={user.displayName || user.handle} size={28} />
                 ) : (
-                  <span class="bottom-nav-icon">{item.icon}</span>
+                  <span class="bottom-nav-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                      <polyline points="10 17 15 12 10 7" />
+                      <line x1="15" y1="12" x2="3" y2="12" />
+                    </svg>
+                  </span>
                 )}
-                <span class="bottom-nav-label">{item.label}</span>
               </button>
             );
           }

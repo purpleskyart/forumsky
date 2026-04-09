@@ -3561,9 +3561,6 @@ button.post-ref-expand-translate-btn {
 }
 
 @media (max-width: 600px) {
-  html, body {
-    overflow-x: hidden;
-  }
   :root {
     --thread-author-sticky-top: 40px;
   }
