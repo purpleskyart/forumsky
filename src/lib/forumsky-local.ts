@@ -1,4 +1,5 @@
 import type { StrongRef, Facet } from '@/api/types';
+import { getSubscribedThreadsFromRepo, saveSubscribedThreadsToRepo, getSavedThreadsFromRepo, saveSavedThreadsToRepo } from '@/api/actor';
 
 const PREFIX = 'forumsky_';
 
@@ -24,25 +25,68 @@ function saveJSON(k: string, v: unknown) {
 }
 
 /** Root thread URIs the user bookmarked */
+const SAVED_THREADS_KEY = 'saved_threads';
+
+let cachedRepoSavedThreads: string[] | null = null;
+let savedRepoSyncPromise: Promise<string[]> | null = null;
+
+async function loadSavedThreadsFromRepo(): Promise<string[]> {
+  if (savedRepoSyncPromise) return savedRepoSyncPromise;
+  savedRepoSyncPromise = getSavedThreadsFromRepo();
+  const result = await savedRepoSyncPromise;
+  cachedRepoSavedThreads = result;
+  savedRepoSyncPromise = null;
+  return result;
+}
+
+export async function syncSavedThreadsFromRepo(): Promise<void> {
+  try {
+    const repoSaved = await loadSavedThreadsFromRepo();
+    if (repoSaved.length > 0) {
+      cachedRepoSavedThreads = repoSaved;
+      saveJSON(SAVED_THREADS_KEY, repoSaved);
+    }
+  } catch {
+    // Sync failed, use localStorage
+  }
+}
+
 export function getSavedThreadRootUris(): string[] {
-  return loadJSON<string[]>('saved_threads', []);
+  // If we have cached repo data, use it
+  if (cachedRepoSavedThreads) {
+    return cachedRepoSavedThreads;
+  }
+  // Otherwise fall back to localStorage
+  return loadJSON<string[]>(SAVED_THREADS_KEY, []);
 }
 
 export function isThreadSaved(rootUri: string): boolean {
   return getSavedThreadRootUris().includes(rootUri);
 }
 
-export function toggleSavedThread(rootUri: string): boolean {
+export async function toggleSavedThread(rootUri: string): Promise<boolean> {
   const cur = getSavedThreadRootUris();
   const i = cur.indexOf(rootUri);
   if (i >= 0) {
     cur.splice(i, 1);
-    saveJSON('saved_threads', cur);
-    return false;
+  } else {
+    cur.push(rootUri);
   }
-  cur.push(rootUri);
-  saveJSON('saved_threads', cur);
-  return true;
+
+  // Update localStorage immediately
+  saveJSON(SAVED_THREADS_KEY, cur);
+
+  // Update cache
+  cachedRepoSavedThreads = cur;
+
+  // Sync to repo in background
+  try {
+    await saveSavedThreadsToRepo(cur);
+  } catch {
+    // Sync failed, localStorage has the data
+  }
+
+  return i < 0;
 }
 
 /** Last post URI the user has read through (inclusive), per thread root */
@@ -161,8 +205,6 @@ export function clearLocallyHiddenForThread(threadRootUri: string) {
   setLocallyHiddenPostUris(threadRootUri, []);
   clearLocalHideReasonsForThread(threadRootUri);
 }
-
-import { getSubscribedThreadsFromRepo, saveSubscribedThreadsToRepo } from '@/api/actor';
 
 const SUBSCRIBED_THREADS_KEY = 'subscribed_thread_roots';
 

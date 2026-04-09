@@ -300,7 +300,7 @@ export function Profile(props: ProfileProps) {
         </div>
       </div>
 
-      <div class="panel">
+      <div class="panel panel-following-feed-list">
         {loading && posts.length === 0 ? (
           <div class="loading" style="padding: 24px 0"><div class="spinner" /></div>
         ) : posts.length === 0 ? (

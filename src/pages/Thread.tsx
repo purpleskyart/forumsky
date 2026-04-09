@@ -968,8 +968,8 @@ function ThreadView({
               <button
                 type="button"
                 class="btn btn-sm btn-outline"
-                onClick={() => {
-                  const on = toggleSavedThread(rootPost.uri);
+                onClick={async () => {
+                  const on = await toggleSavedThread(rootPost.uri);
                   setSavedUi(on);
                   showToast(on ? 'Thread saved' : 'Removed from saved');
                 }}

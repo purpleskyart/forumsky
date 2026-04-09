@@ -184,18 +184,18 @@ async function setupSession(session: OAuthSession): Promise<ProfileView> {
 
   rememberAccountDid(profile.did);
 
-  // Sync pinned threads from repo after login
-  try {
-    const { syncPinnedThreadsFromRepo } = await import('@/lib/preferences');
-    void syncPinnedThreadsFromRepo();
-  } catch {
-    // Sync failed, will use localStorage
-  }
-
   // Sync subscribed threads from repo after login
   try {
     const { syncSubscribedThreadsFromRepo } = await import('@/lib/forumsky-local');
     void syncSubscribedThreadsFromRepo();
+  } catch {
+    // Sync failed, will use localStorage
+  }
+
+  // Sync saved threads from repo after login
+  try {
+    const { syncSavedThreadsFromRepo } = await import('@/lib/forumsky-local');
+    void syncSavedThreadsFromRepo();
   } catch {
     // Sync failed, will use localStorage
   }

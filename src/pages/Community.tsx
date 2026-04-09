@@ -6,7 +6,7 @@ import { searchByTag, getTimeline } from '@/api/feed';
 import { FollowingFeedMixPanel } from '@/components/FollowingFeedMixPanel';
 import { postPrimaryHashtagMatches } from '@/lib/thread-merger';
 import {
-  isThreadHidden, hideThread, isThreadPinned, togglePinnedThread,
+  isThreadHidden, hideThread,
   getCommunities, FOLLOWED_COMMUNITY, FOLLOWED_COMMUNITY_TAG,
   getCommunityThreadSort, setCommunityThreadSort,
   getFollowingFeedBlend,
@@ -852,12 +852,6 @@ export function Community({ tag: tagProp }: CommunityProps) {
     void fp(pageRef.current + 1);
   };
 
-  const handlePin = async (uri: string) => {
-    await togglePinnedThread(tag, uri);
-    setPosts([...posts]);
-    showToast(isThreadPinned(tag, uri) ? 'Thread pinned' : 'Thread unpinned');
-  };
-
   const handleHide = (uri: string) => {
     hideThread(uri);
     setPosts(posts.filter(p => p.uri !== uri));
@@ -882,27 +876,13 @@ export function Community({ tag: tagProp }: CommunityProps) {
 
   let displayPosts: PostView[];
   if (!searchNeedle) {
-    const pinnedPosts = sortThreads(
-      visiblePosts.filter(p => isThreadPinned(tag, p.uri)),
-      sortMode,
-    );
-    const regularPosts = sortThreads(
-      visiblePosts.filter(p => !isThreadPinned(tag, p.uri)),
-      sortMode,
-    );
-    displayPosts = [...pinnedPosts, ...regularPosts].filter(p => !isAuthorFiltered(p.author.did));
+    displayPosts = sortThreads(visiblePosts, sortMode).filter(p => !isAuthorFiltered(p.author.did));
   } else {
-    const pinnedMatching = sortThreads(
-      visiblePosts.filter(p => isThreadPinned(tag, p.uri) && matchesSearchText(p)),
-      sortMode,
-    );
-    const unpinnedMatching = visiblePosts.filter(
-      p => !isThreadPinned(tag, p.uri) && matchesSearchText(p),
-    );
-    unpinnedMatching.sort(
+    const matching = visiblePosts.filter(p => matchesSearchText(p));
+    matching.sort(
       (a, b) => (postLoadOrder.get(a.uri) ?? 0) - (postLoadOrder.get(b.uri) ?? 0),
     );
-    displayPosts = [...pinnedMatching, ...unpinnedMatching].filter(p => !isAuthorFiltered(p.author.did));
+    displayPosts = matching.filter(p => !isAuthorFiltered(p.author.did));
   }
 
   const displayPostsRef = useRef<PostView[]>([]);
@@ -1200,8 +1180,6 @@ export function Community({ tag: tagProp }: CommunityProps) {
               {isFollowing ? (
                 <FollowingFeedRow
                   post={post}
-                  pinned={isThreadPinned(tag, post.uri)}
-                  onPin={() => handlePin(post.uri)}
                   onHide={() => handleHide(post.uri)}
                   showUnreadReplies={threadRowUnreadReplies(post)}
                   feedReason={followingFeedReasonByUri[post.uri]}
@@ -1223,8 +1201,6 @@ export function Community({ tag: tagProp }: CommunityProps) {
               ) : (
                 <ThreadRow
                   post={post}
-                  pinned={isThreadPinned(tag, post.uri)}
-                  onPin={() => handlePin(post.uri)}
                   onHide={() => handleHide(post.uri)}
                   showUnreadReplies={threadRowUnreadReplies(post)}
                   feedReason={followingFeedReasonByUri[post.uri]}

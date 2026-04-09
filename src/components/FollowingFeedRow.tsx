@@ -32,11 +32,11 @@ import { formatListDateTime, formatRelativeTime, t } from '@/lib/i18n';
 import { formatProfileJoined, formatProfileStatCount, toneIndexForHandle } from '@/lib/user-display';
 import { isLoggedIn, showAuthDialog } from '@/lib/store';
 import { postHasNsfwLabels } from '@/lib/nsfw-labels';
+import { isThreadSubscribed, toggleSubscribedThreadRoot } from '@/lib/forumsky-local';
+import { showToast } from '@/lib/store';
 
 export interface FollowingFeedRowProps {
   post: PostView;
-  pinned?: boolean;
-  onPin?: () => void;
   onHide?: () => void;
   showUnreadReplies?: boolean;
   feedReason?: FeedViewPost['reason'];
@@ -49,7 +49,7 @@ export interface FollowingFeedRowProps {
   downvoteDisplayCount: number;
   downvoteBusy?: boolean;
   onDownvotePost: (uri: string, cid: string) => void | Promise<void>;
-  /** Same avatar “+ follow” control as thread roots (Following feed / homepage). */
+  /** Same avatar "+" follow control as thread roots (Following feed / homepage). */
   onAvatarFollow?: (authorDid: string) => void | Promise<void>;
   avatarFollowBusyDid?: string | null;
   followingAuthorDids?: Set<string>;
@@ -61,8 +61,6 @@ const stopNav = (e: MouseEvent) => e.stopPropagation();
 
 export function FollowingFeedRow({
   post,
-  pinned,
-  onPin,
   onHide,
   showUnreadReplies,
   feedReason,
@@ -78,6 +76,8 @@ export function FollowingFeedRow({
   followingAuthorDids,
   viewerDid,
 }: FollowingFeedRowProps) {
+  const [subscribed, setSubscribed] = useState(isThreadSubscribed(post.uri));
+
   const repostBy = repostAttributionFromReason(feedReason);
   const customFeedLabel = blendSource?.kind === 'custom' ? blendSource.label : undefined;
   const parsed = parseAtUri(post.uri);
@@ -159,7 +159,7 @@ export function FollowingFeedRow({
 
   return (
     <article
-      class={`following-feed-row post-container username-tone-${tone}${pinned ? ' following-feed-row--pinned' : ''}`}
+      class={`following-feed-row post-container username-tone-${tone}`}
       onClick={onRowClick}
     >
       <div class="post-author-card">
@@ -280,35 +280,29 @@ export function FollowingFeedRow({
                 New replies
               </span>
             )}
-            {pinned && (
-              <span class="following-feed-row-pinned-header" title="Pinned">
-                ★
-              </span>
-            )}
-            {(onPin || onHide) && (
-              <div class="following-feed-row-header-actions" onClick={stopNav}>
-                {onPin && (
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-outline following-feed-row-action-btn"
-                    title={pinned ? 'Unpin thread' : 'Pin thread'}
-                    onClick={() => onPin()}
-                  >
-                    {pinned ? 'Unpin' : 'Pin'}
-                  </button>
-                )}
-                {onHide && (
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-outline following-feed-row-action-btn"
-                    title="Hide this thread from the list"
-                    onClick={() => onHide()}
-                  >
-                    Hide
-                  </button>
-                )}
-              </div>
-            )}
+            <div class="following-feed-row-header-actions" onClick={stopNav}>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline following-feed-row-action-btn"
+                onClick={async () => {
+                  const on = await toggleSubscribedThreadRoot(post.uri);
+                  setSubscribed(on);
+                  showToast(on ? 'Subscribed to thread' : 'Unsubscribed from thread');
+                }}
+              >
+                {subscribed ? 'Unsubscribe' : 'Subscribe'}
+              </button>
+              {onHide && (
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline following-feed-row-action-btn"
+                  title="Hide this thread from the list"
+                  onClick={() => onHide()}
+                >
+                  Hide
+                </button>
+              )}
+            </div>
           </div>
         </div>
 

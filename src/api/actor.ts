@@ -10,84 +10,20 @@ export async function getActorPreferences(): Promise<ActorPreferencesResponse> {
   return xrpcSessionGet<ActorPreferencesResponse>('app.bsky.actor.getPreferences', {});
 }
 
-/** Custom collection for storing ForumSky pinned threads across devices */
-const PINNED_THREADS_COLLECTION = 'app.purplesky.threads.pinned';
-
 /** Custom collection for storing ForumSky subscribed threads across devices */
 const SUBSCRIBED_THREADS_COLLECTION = 'app.purplesky.threads.subscribed';
 
-export interface PinnedThreadsRecord {
-  $type: string;
-  pinnedThreads: Record<string, string[]>;
-}
+/** Custom collection for storing ForumSky saved threads across devices */
+const SAVED_THREADS_COLLECTION = 'app.purplesky.threads.saved';
 
 export interface SubscribedThreadsRecord {
   $type: string;
   subscribedThreads: string[];
 }
 
-/** Get pinned threads from the user's repo */
-export async function getPinnedThreadsFromRepo(): Promise<Record<string, string[]>> {
-  const session = getOAuthSession();
-  if (!session) return {};
-
-  try {
-    const res = await xrpcSessionGet<{
-      records?: Array<{ uri?: string; value?: PinnedThreadsRecord }>;
-    }>('com.atproto.repo.listRecords', {
-      repo: session.did,
-      collection: PINNED_THREADS_COLLECTION,
-      limit: 1,
-    });
-
-    if (res.records && res.records.length > 0 && res.records[0].value) {
-      return res.records[0].value.pinnedThreads || {};
-    }
-    return {};
-  } catch {
-    return {};
-  }
-}
-
-/** Save pinned threads to the user's repo */
-export async function savePinnedThreadsToRepo(pinnedThreads: Record<string, string[]>): Promise<void> {
-  const session = getOAuthSession();
-  if (!session) return;
-
-  try {
-    const existing = await getPinnedThreadsFromRepo();
-    const records = await xrpcSessionGet<{
-      records?: Array<{ uri?: string; value?: PinnedThreadsRecord }>;
-    }>('com.atproto.repo.listRecords', {
-      repo: session.did,
-      collection: PINNED_THREADS_COLLECTION,
-      limit: 1,
-    });
-
-    const record: PinnedThreadsRecord = {
-      $type: PINNED_THREADS_COLLECTION,
-      pinnedThreads,
-    };
-
-    if (records.records && records.records.length > 0 && records.records[0].uri) {
-      const parsed = records.records[0].uri?.split('/') || [];
-      const rkey = parsed[parsed.length - 1];
-      await xrpcPost('com.atproto.repo.putRecord', {
-        repo: session.did,
-        collection: PINNED_THREADS_COLLECTION,
-        rkey,
-        record,
-      });
-    } else {
-      await xrpcPost<CreateRecordResponse>('com.atproto.repo.createRecord', {
-        repo: session.did,
-        collection: PINNED_THREADS_COLLECTION,
-        record,
-      });
-    }
-  } catch {
-    // If sync fails, fall back to localStorage
-  }
+export interface SavedThreadsRecord {
+  $type: string;
+  savedThreads: string[];
 }
 
 /** Get subscribed threads from the user's repo */
@@ -145,6 +81,69 @@ export async function saveSubscribedThreadsToRepo(subscribedThreads: string[]): 
       await xrpcPost<CreateRecordResponse>('com.atproto.repo.createRecord', {
         repo: session.did,
         collection: SUBSCRIBED_THREADS_COLLECTION,
+        record,
+      });
+    }
+  } catch {
+    // If sync fails, fall back to localStorage
+  }
+}
+
+/** Get saved threads from the user's repo */
+export async function getSavedThreadsFromRepo(): Promise<string[]> {
+  const session = getOAuthSession();
+  if (!session) return [];
+
+  try {
+    const res = await xrpcSessionGet<{
+      records?: Array<{ uri?: string; value?: SavedThreadsRecord }>;
+    }>('com.atproto.repo.listRecords', {
+      repo: session.did,
+      collection: SAVED_THREADS_COLLECTION,
+      limit: 1,
+    });
+
+    if (res.records && res.records.length > 0 && res.records[0].value) {
+      return res.records[0].value.savedThreads || [];
+    }
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+/** Save saved threads to the user's repo */
+export async function saveSavedThreadsToRepo(savedThreads: string[]): Promise<void> {
+  const session = getOAuthSession();
+  if (!session) return;
+
+  try {
+    const records = await xrpcSessionGet<{
+      records?: Array<{ uri?: string; value?: SavedThreadsRecord }>;
+    }>('com.atproto.repo.listRecords', {
+      repo: session.did,
+      collection: SAVED_THREADS_COLLECTION,
+      limit: 1,
+    });
+
+    const record: SavedThreadsRecord = {
+      $type: SAVED_THREADS_COLLECTION,
+      savedThreads,
+    };
+
+    if (records.records && records.records.length > 0 && records.records[0].uri) {
+      const parsed = records.records[0].uri?.split('/') || [];
+      const rkey = parsed[parsed.length - 1];
+      await xrpcPost('com.atproto.repo.putRecord', {
+        repo: session.did,
+        collection: SAVED_THREADS_COLLECTION,
+        rkey,
+        record,
+      });
+    } else {
+      await xrpcPost<CreateRecordResponse>('com.atproto.repo.createRecord', {
+        repo: session.did,
+        collection: SAVED_THREADS_COLLECTION,
         record,
       });
     }

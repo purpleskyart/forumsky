@@ -16,8 +16,6 @@ import { t } from '@/lib/i18n';
 
 interface ThreadRowProps {
   post: PostView;
-  pinned?: boolean;
-  onPin?: () => void;
   onHide?: () => void;
   /** Thread root reply activity vs last “mark read” baseline */
   showUnreadReplies?: boolean;
@@ -33,8 +31,6 @@ interface ThreadRowProps {
 
 export function ThreadRow({
   post,
-  pinned,
-  onPin,
   onHide,
   showUnreadReplies,
   lastActivity,
@@ -54,24 +50,14 @@ export function ThreadRow({
   const preview = threadPreviewThumb(post);
 
   const rowClass =
-    `thread-row${pinned ? ' pinned' : ''}${onHide ? ' thread-row--list-actions' : ''}`;
+    `thread-row${onHide ? ' thread-row--list-actions' : ''}`;
 
   return (
     <div class={rowClass}>
       <div class="thread-row-leading">
         <div class="thread-indicator">
-          {pinned ? '\u2605' : '\u2192'}
+          {'\u2192'}
         </div>
-        {onPin && (
-          <button
-            type="button"
-            class="btn btn-sm btn-outline thread-row-pin-btn"
-            title={pinned ? 'Unpin thread' : 'Pin thread'}
-            onClick={(e: Event) => { e.stopPropagation(); e.preventDefault(); onPin(); }}
-          >
-            {pinned ? 'Unpin' : 'Pin'}
-          </button>
-        )}
       </div>
       <div class="thread-info">
         <div class="thread-title-row">

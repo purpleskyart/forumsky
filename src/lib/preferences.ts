@@ -1,5 +1,4 @@
 import type { CommunityThreadSort } from './thread-sort';
-import { getPinnedThreadsFromRepo, savePinnedThreadsToRepo } from '@/api/actor';
 
 const STORAGE_PREFIX = 'forumsky_';
 
@@ -140,71 +139,6 @@ export function getNsfwMediaMode(): NsfwMediaMode {
 
 export function setNsfwMediaMode(mode: NsfwMediaMode) {
   saveJSON('nsfw_media_mode', mode);
-}
-
-// Pinned threads per community - sync to repo when logged in
-let cachedRepoPinnedThreads: Record<string, string[]> | null = null;
-let repoSyncPromise: Promise<Record<string, string[]>> | null = null;
-
-async function loadAllPinnedThreadsFromRepo(): Promise<Record<string, string[]>> {
-  if (repoSyncPromise) return repoSyncPromise;
-  repoSyncPromise = getPinnedThreadsFromRepo();
-  const result = await repoSyncPromise;
-  cachedRepoPinnedThreads = result;
-  repoSyncPromise = null;
-  return result;
-}
-
-export async function syncPinnedThreadsFromRepo(): Promise<void> {
-  try {
-    const repoPinned = await loadAllPinnedThreadsFromRepo();
-    if (Object.keys(repoPinned).length > 0) {
-      cachedRepoPinnedThreads = repoPinned;
-      // Update localStorage with repo data
-      for (const [tag, threads] of Object.entries(repoPinned)) {
-        saveJSON(`pinned_threads_${tag}`, threads);
-      }
-    }
-  } catch {
-    // Sync failed, use localStorage
-  }
-}
-
-export function getPinnedThreads(tag: string): string[] {
-  // If we have cached repo data, use it
-  if (cachedRepoPinnedThreads && cachedRepoPinnedThreads[tag]) {
-    return cachedRepoPinnedThreads[tag];
-  }
-  // Otherwise fall back to localStorage
-  return loadJSON<string[]>(`pinned_threads_${tag}`, []);
-}
-
-export async function togglePinnedThread(tag: string, uri: string): Promise<void> {
-  const pinned = getPinnedThreads(tag);
-  const idx = pinned.indexOf(uri);
-  if (idx >= 0) {
-    pinned.splice(idx, 1);
-  } else {
-    pinned.push(uri);
-  }
-
-  // Update localStorage immediately
-  saveJSON(`pinned_threads_${tag}`, pinned);
-
-  // Update cache
-  if (!cachedRepoPinnedThreads) cachedRepoPinnedThreads = {};
-  cachedRepoPinnedThreads[tag] = pinned;
-
-  // Sync to repo in background
-  try {
-    await savePinnedThreadsToRepo(cachedRepoPinnedThreads);
-  } catch {
-    // Sync failed, localStorage has the data
-  }
-}
-
-export function isThreadPinned(tag: string, uri: string): boolean {
-  return getPinnedThreads(tag).includes(uri);
 }
 
 // --- Home / following feed: timeline + custom feeds with blend weights ---
