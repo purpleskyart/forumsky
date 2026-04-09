@@ -142,6 +142,10 @@ export function HlsVideo({ playlist, poster, className, 'aria-label': ariaLabel 
     });
   };
 
+  const [isHovered, setIsHovered] = useState(false);
+  const onMouseEnter = () => setIsHovered(true);
+  const onMouseLeave = () => setIsHovered(false);
+
   const onVideoPlay = () => {};
 
   const toggleFullscreen = async (e: MouseEvent) => {
@@ -189,11 +193,16 @@ export function HlsVideo({ playlist, poster, className, 'aria-label': ariaLabel 
   };
 
   return (
-    <div class="post-hls-video-wrap" ref={wrapRef}>
+    <div
+      class="post-hls-video-wrap"
+      ref={wrapRef}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
       <video
         ref={videoRef}
         class={`${className ?? ''} post-hls-video--compact`.trim()}
-        controls={showControls}
+        controls={showControls || isHovered}
         playsInline
         preload="metadata"
         poster={poster}
