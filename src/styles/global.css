@@ -33,7 +33,7 @@
   --post-card-bg: #1a1a1a;
   --post-sidebar-bg: rgba(0, 0, 0, 0.2);
   /* Distance from viewport top when thread author sidebar is stuck */
-  --thread-author-sticky-top: 0px;
+  --thread-author-sticky-top: 50px;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -42,7 +42,6 @@ html {
   font-size: 16px;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
-  overflow-x: auto;
 }
 
 body {
@@ -51,8 +50,7 @@ body {
   color: var(--text);
   line-height: 1.5;
   min-height: 100vh;
-  overflow-y: auto;
-  overflow-x: auto;
+  overflow-x: hidden;
   touch-action: manipulation;
   width: 100%;
 }
@@ -96,7 +94,8 @@ input:focus, textarea:focus {
   background: var(--bg-surface);
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 1000;
+  width: 100%;
   border-bottom: 1px solid var(--divider);
 }
 
@@ -3805,6 +3804,9 @@ button.post-ref-expand-translate-btn {
   .header {
     display: none !important;
   }
+  :root {
+    --thread-author-sticky-top: 0px;
+  }
   .main-wrap {
     padding-bottom: calc(74px + env(safe-area-inset-bottom, 12px)) !important;
   }
@@ -3843,6 +3845,9 @@ button.post-ref-expand-translate-btn {
   }
   .header {
     display: none !important;
+  }
+  :root {
+    --thread-author-sticky-top: 0px;
   }
 }
 
