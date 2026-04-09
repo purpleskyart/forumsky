@@ -28,6 +28,7 @@ function isEditableTarget(t: EventTarget | null): boolean {
 import { PullToRefresh } from './PullToRefresh';
 import { Composer } from './Composer';
 import { showGlobalComposer } from '@/lib/store';
+import { setManualScrollRestoration } from '@/lib/scroll-restore';
 
 export function Layout({ children }: LayoutProps) {
   useEffect(() => {
