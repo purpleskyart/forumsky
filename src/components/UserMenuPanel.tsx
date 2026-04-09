@@ -9,7 +9,13 @@ import type { ProfileView } from '@/api/types';
 
 export function UserMenuPanel({ onClose, className = '' }: { onClose: () => void; className?: string }) {
   const user = currentUser.value;
-  const [accounts, setAccounts] = useState<ProfileView[]>([]);
+  const [accounts, setAccounts] = useState<ProfileView[]>(() => {
+    try {
+      const raw = localStorage.getItem('forumsky:account-profiles-cache');
+      if (raw) return JSON.parse(raw) as ProfileView[];
+    } catch { /* ignore */ }
+    return [];
+  });
   const [accountActionBusy, setAccountActionBusy] = useState(false);
 
   useEffect(() => {
@@ -105,9 +111,6 @@ export function UserMenuPanel({ onClose, className = '' }: { onClose: () => void
                 </span>
                 <span class="header-user-menu-account-handle">@{acc.handle}</span>
               </span>
-              {acc.did === user.did && (
-                <span class="header-user-menu-account-badge">Active</span>
-              )}
             </button>
           ))}
         </div>

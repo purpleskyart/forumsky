@@ -29,8 +29,8 @@ export interface CommunityConfig {
 
 export const FOLLOWED_COMMUNITY: CommunityConfig = {
   tag: FOLLOWED_COMMUNITY_TAG,
-  name: 'Followed users',
-  description: 'Posts from accounts you follow on Bluesky',
+  name: 'Following',
+  description: '',
   category: 'Following',
 };
 

@@ -20,6 +20,10 @@ interface ThreadRowProps {
   onHide?: () => void;
   /** Thread root reply activity vs last “mark read” baseline */
   showUnreadReplies?: boolean;
+  /** Activity timestamp (repost or reply) */
+  lastActivity?: string;
+  /** Author of the last activity */
+  lastActivityAuthor?: ProfileView;
   /** Timeline/feed reason (Following: repost attribution, etc.) */
   feedReason?: FeedViewPost['reason'];
   /** Following mix: set when post was taken from a custom feed (not default timeline). */
@@ -32,6 +36,8 @@ export function ThreadRow({
   onPin,
   onHide,
   showUnreadReplies,
+  lastActivity,
+  lastActivityAuthor,
   feedReason,
   blendSource,
 }: ThreadRowProps) {
@@ -41,7 +47,9 @@ export function ThreadRow({
   const href = parsed ? threadUrl(post.author.handle || post.author.did, parsed.rkey) : '#';
   const title = postThreadListTitle(post);
   const replyCount = post.replyCount ?? 0;
-  const dateStr = formatListDateTime(post.indexedAt);
+  const activityDate = lastActivity || post.indexedAt;
+  const activityAuthor = lastActivityAuthor || post.author;
+  const dateStr = formatListDateTime(activityDate);
   const preview = threadPreviewThumb(post);
 
   const rowClass =
@@ -141,14 +149,14 @@ export function ThreadRow({
       <div class="thread-last-reply">
         <div class="lr-date">{dateStr}</div>
         <div class="lr-user">
-          Last Reply by{' '}
+          Last Activity by{' '}
           <a
-            href={hrefForAppPath(`/u/${post.author.handle}`)}
+            href={hrefForAppPath(`/u/${activityAuthor.handle}`)}
             class="lr-user"
             {...SPA_ANCHOR_SHIELD}
-            onClick={spaNavigateClick(`/u/${post.author.handle}`)}
+            onClick={spaNavigateClick(`/u/${activityAuthor.handle}`)}
           >
-            {post.author.displayName || post.author.handle}
+            {activityAuthor.displayName || activityAuthor.handle}
           </a>
         </div>
         {onHide && (

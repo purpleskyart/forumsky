@@ -162,6 +162,10 @@ export function GifImage({
           class="post-gif-img"
           decoding="async"
           draggable={false}
+          style={{ 
+            aspectRatio: aspectRatio ? `${aspectRatio.width} / ${aspectRatio.height}` : undefined,
+            backgroundColor: 'var(--bg-elevated)',
+          }}
         />
       )}
 
@@ -184,6 +188,10 @@ export function GifImage({
           alt={alt}
           decoding="async"
           draggable={false}
+          style={{ 
+            aspectRatio: aspectRatio ? `${aspectRatio.width} / ${aspectRatio.height}` : undefined,
+            backgroundColor: 'var(--bg-elevated)',
+          }}
         />
       )}
 
@@ -193,7 +201,10 @@ export function GifImage({
           <canvas
             ref={canvasRef}
             class="post-gif-canvas"
-            style={frozen ? undefined : { display: 'none' }}
+            style={{ 
+              display: frozen ? 'block' : 'none',
+              aspectRatio: aspectRatio ? `${aspectRatio.width} / ${aspectRatio.height}` : undefined,
+            }}
             aria-hidden="true"
           />
         </>

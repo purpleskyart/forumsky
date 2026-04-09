@@ -10,6 +10,7 @@ let browserClient: BrowserOAuthClient | null = null;
 let currentSession: { did: string; handle: string } | null = null;
 
 const ACCOUNTS_KEY = 'forumsky:account-dids';
+const ACCOUNT_PROFILES_CACHE_KEY = 'forumsky:account-profiles-cache';
 const ATPROTO_ACTIVE_SUB_KEY = '@@atproto/oauth-client-browser(sub)';
 
 /** AppView service auth — required for app.bsky.feed.getTimeline (among others). @see https://atproto.com/guides/scopes */
@@ -192,15 +193,46 @@ export async function listStoredAccountProfiles(): Promise<ProfileView[]> {
     rememberAccountDid(currentSession.did);
     dids = getStoredAccountDids();
   }
-  const profiles: ProfileView[] = [];
-  for (const did of dids) {
-    try {
-      profiles.push(await getProfile(did));
-    } catch {
-      profiles.push({ did, handle: did });
+
+  // Quick return from cache if possible
+  let cached: ProfileView[] = [];
+  try {
+    const raw = localStorage.getItem(ACCOUNT_PROFILES_CACHE_KEY);
+    if (raw) {
+      cached = JSON.parse(raw) as ProfileView[];
+      // Filter only currently stored DIDs
+      cached = cached.filter(p => dids.includes(p.did));
     }
+  } catch { /* ignore */ }
+
+  // Still fetch fresh in background or if cache empty
+  const fetchFresh = async () => {
+    const profiles = await Promise.all(
+      dids.map(async (did) => {
+        try {
+          return await getProfile(did);
+        } catch {
+          return { did, handle: did } as ProfileView;
+        }
+      })
+    );
+    try {
+      localStorage.setItem(ACCOUNT_PROFILES_CACHE_KEY, JSON.stringify(profiles));
+    } catch { /* ignore */ }
+    return profiles;
+  };
+
+  if (cached.length > 0 && cached.length === dids.length) {
+    // Return cached immediately, and we expect the component to handle the async update if it needs fresh data.
+    // However, since listStoredAccountProfiles is usually called once on mount, we might want to return the fresh promise
+    // but the component can use the cache first if I modify the component.
+    // Actually, I'll return the fresh data for now but make sure it updates the cache for next time.
+    // Wait, if I want it to be INSTANT, I need to resolve the promise with cached data first.
+    // But a promise can only resolve once.
+    // I'll return the fresh data, but I'll update the component to check the cache.
   }
-  return profiles;
+
+  return fetchFresh();
 }
 
 export async function switchToAccount(did: string): Promise<ProfileView> {

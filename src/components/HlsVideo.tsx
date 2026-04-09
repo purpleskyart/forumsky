@@ -5,6 +5,7 @@ type HlsVideoProps = {
   poster?: string;
   className?: string;
   'aria-label'?: string;
+  aspectRatio?: { width: number; height: number };
 };
 
 /** How much of the player must be visible before autoplay (feed-style). */
@@ -21,7 +22,13 @@ function nativeHlsSupported(video: HTMLVideoElement): boolean {
  * Plays Bluesky-style HLS playlists in the browser: native where supported (Safari),
  * otherwise loads hls.js on demand (Chrome, Firefox, …).
  */
-export function HlsVideo({ playlist, poster, className, 'aria-label': ariaLabel }: HlsVideoProps) {
+export function HlsVideo({ 
+  playlist, 
+  poster, 
+  className, 
+  'aria-label': ariaLabel,
+  aspectRatio 
+}: HlsVideoProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<import('hls.js').default | null>(null);
@@ -29,7 +36,9 @@ export function HlsVideo({ playlist, poster, className, 'aria-label': ariaLabel 
   /** When false, a play overlay covers the player; native controls stay in the DOM for stable layout. */
   const [showControls, setShowControls] = useState(false);
   /** Locks layout to decoded dimensions so poster → play does not resize the box. */
-  const [aspectCss, setAspectCss] = useState<string | null>(null);
+  const [aspectCss, setAspectCss] = useState<string | null>(
+    aspectRatio ? `${aspectRatio.width} / ${aspectRatio.height}` : null
+  );
 
   useEffect(() => {
     setAspectCss(null);
@@ -207,7 +216,10 @@ export function HlsVideo({ playlist, poster, className, 'aria-label': ariaLabel 
         preload="metadata"
         poster={poster}
         aria-label={ariaLabel}
-        style={aspectCss ? { aspectRatio: aspectCss } : undefined}
+        style={{
+          aspectRatio: aspectCss || undefined,
+          backgroundColor: 'var(--bg-elevated)',
+        }}
         onLoadedMetadata={onLoadedMetadata}
         onPlay={onVideoPlay}
         onClick={toggleFullscreen}

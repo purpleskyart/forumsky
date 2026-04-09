@@ -40,6 +40,10 @@ export interface FollowingFeedRowProps {
   onHide?: () => void;
   showUnreadReplies?: boolean;
   feedReason?: FeedViewPost['reason'];
+  /** Most recent activity timestamp (repost or reply) */
+  lastActivity?: string;
+  /** Individual who performed the last activity */
+  lastActivityAuthor?: ProfileView;
   blendSource?: FeedBlendSourceMeta;
   downvoteRecordUri?: string;
   downvoteDisplayCount: number;
@@ -62,6 +66,8 @@ export function FollowingFeedRow({
   onHide,
   showUnreadReplies,
   feedReason,
+  lastActivity,
+  lastActivityAuthor,
   blendSource,
   downvoteRecordUri,
   downvoteDisplayCount,
@@ -79,8 +85,10 @@ export function FollowingFeedRow({
   const threadPath = href !== '#' ? href : undefined;
   const handle = post.author.handle;
   const displayName = post.author.displayName || handle;
-  const dateStr = formatListDateTime(post.indexedAt);
-  const relativeTimeStr = formatRelativeTime(post.indexedAt);
+  const activityDate = lastActivity || post.indexedAt;
+  const activityAuthor = lastActivityAuthor || post.author;
+  const dateStr = formatListDateTime(activityDate);
+  const relativeTimeStr = formatRelativeTime(activityDate);
   const replyCount = post.replyCount ?? 0;
   const tone = toneIndexForHandle(handle);
 
@@ -124,6 +132,7 @@ export function FollowingFeedRow({
               className="post-content-media following-feed-row-media"
               src={img.fullsize || img.thumb}
               alt={img.alt ?? ''}
+              aspectRatio={img.aspectRatio}
             />
           ),
         )}
@@ -132,6 +141,7 @@ export function FollowingFeedRow({
             key={`${vid.playlist}-${i}`}
             playlist={vid.playlist}
             poster={vid.thumbnail}
+            aspectRatio={vid.aspectRatio}
             className="post-content-media following-feed-row-media"
             aria-label={vid.alt || 'Video'}
           />
@@ -204,7 +214,7 @@ export function FollowingFeedRow({
           <div class="following-feed-row-header-line">
             <time
               class="post-header-date following-feed-row-post-time"
-              dateTime={post.indexedAt}
+              dateTime={activityDate}
               title={dateStr}
             >
               <span class="post-header-date-relative">{relativeTimeStr}</span>

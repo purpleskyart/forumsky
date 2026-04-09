@@ -345,6 +345,24 @@ export function Community({ tag: tagProp }: CommunityProps) {
     return m;
   }, [isFollowing, followingPool]);
 
+  const followingFeedActivityByUri = useMemo((): Record<string, string> => {
+    if (!isFollowing) return {};
+    const m: Record<string, string> = {};
+    for (const it of followingPool) {
+      if (it.lastActivity) m[it.post.uri] = it.lastActivity;
+    }
+    return m;
+  }, [isFollowing, followingPool]);
+
+  const followingFeedActivityAuthorByUri = useMemo((): Record<string, ProfileView> => {
+    if (!isFollowing) return {};
+    const m: Record<string, ProfileView> = {};
+    for (const it of followingPool) {
+      if (it.lastActivityAuthor) m[it.post.uri] = it.lastActivityAuthor;
+    }
+    return m;
+  }, [isFollowing, followingPool]);
+
   useEffect(() => {
     if (!isFollowing || !user?.did) {
       setFeedFollowingDids(new Set());
@@ -1031,9 +1049,9 @@ export function Community({ tag: tagProp }: CommunityProps) {
       <div class="community-header-row">
         <div class="community-header-left">
           <div class="community-title">{communityName}</div>
-          {(communityConfig?.description || isFollowing) && (
+          {!isFollowing && communityConfig?.description && (
             <div class="community-title-desc">
-              {isFollowing ? FOLLOWED_COMMUNITY.description : communityConfig?.description}
+              {communityConfig.description}
             </div>
           )}
         </div>
@@ -1161,6 +1179,8 @@ export function Community({ tag: tagProp }: CommunityProps) {
                   onHide={() => handleHide(post.uri)}
                   showUnreadReplies={threadRowUnreadReplies(post)}
                   feedReason={followingFeedReasonByUri[post.uri]}
+                  lastActivity={followingFeedActivityByUri[post.uri]}
+                  lastActivityAuthor={followingFeedActivityAuthorByUri[post.uri]}
                   blendSource={followingBlendSourceByUri[post.uri]}
                   downvoteRecordUri={feedMyDownvotes[post.uri]}
                   downvoteDisplayCount={Math.max(
@@ -1182,6 +1202,8 @@ export function Community({ tag: tagProp }: CommunityProps) {
                   onHide={() => handleHide(post.uri)}
                   showUnreadReplies={threadRowUnreadReplies(post)}
                   feedReason={followingFeedReasonByUri[post.uri]}
+                  lastActivity={followingFeedActivityByUri[post.uri]}
+                  lastActivityAuthor={followingFeedActivityAuthorByUri[post.uri]}
                   blendSource={followingBlendSourceByUri[post.uri]}
                 />
               )}

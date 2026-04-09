@@ -58,9 +58,28 @@ export function feedPostsToRootItems(
 ): FeedRootItem[] {
   const out: FeedRootItem[] = [];
   for (const it of items) {
-    const p = it.post;
-    if (!isRootPost(p)) continue;
-    out.push({ post: p, reason: it.reason, blendSource });
+    // If it's a reply, use the root post as the thread anchor.
+    // If it's a root post, use it directly.
+    const threadRoot = it.reply?.root || it.post;
+    
+    // For Following feed, we want to allow replies to bump threads.
+    // However, some feeds/sources might not want this. ForumSky usually treats Following as a forum-style feed of threads.
+    
+    // We only include it if the resulting threadRoot is actually a root post 
+    // (sometimes root could be missing or we want to filter to primary hashtags in other views).
+    if (!isRootPost(threadRoot)) continue;
+
+    // The activity timestamp is either the repost time, the reply time, or the post's own index time.
+    const activity = it.reason?.indexedAt || it.post.indexedAt;
+    const activityAuthor = it.reason?.by || it.post.author;
+
+    out.push({ 
+      post: threadRoot, 
+      reason: it.reason, 
+      blendSource, 
+      lastActivity: activity,
+      lastActivityAuthor: activityAuthor,
+    });
   }
   return out;
 }

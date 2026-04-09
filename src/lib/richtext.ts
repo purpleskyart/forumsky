@@ -227,6 +227,7 @@ export interface QuotedVideoEmbed {
   playlist: string;
   thumbnail?: string;
   alt?: string;
+  aspectRatio?: { width: number; height: number };
 }
 
 export interface QuotedAggregatedMedia {
@@ -241,10 +242,12 @@ function pushVideoFromView(v: EmbedView, into: QuotedVideoEmbed[]): void {
   if (typeof playlist !== 'string' || playlist.length === 0) return;
   const thumbnail = (v as { thumbnail?: string }).thumbnail;
   const alt = (v as { alt?: string }).alt;
+  const aspectRatio = (v as { aspectRatio?: { width: number; height: number } }).aspectRatio;
   into.push({
     playlist,
     thumbnail: typeof thumbnail === 'string' ? thumbnail : undefined,
     alt: typeof alt === 'string' ? alt : undefined,
+    aspectRatio: aspectRatio && typeof aspectRatio === 'object' ? aspectRatio : undefined,
   });
 }
 

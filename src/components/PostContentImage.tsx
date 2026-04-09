@@ -8,10 +8,12 @@ export function PostContentImage({
   src,
   alt,
   className = 'post-content-media',
+  aspectRatio,
 }: {
   src: string;
   alt: string;
   className?: string;
+  aspectRatio?: { width: number; height: number };
 }) {
   const [open, setOpen] = useState(false);
 
@@ -41,7 +43,11 @@ export function PostContentImage({
         decoding="async"
         tabIndex={0}
         aria-label={alt ? `View larger: ${alt}` : 'View larger image'}
-        style={{ cursor: 'zoom-in' }}
+        style={{ 
+          cursor: 'zoom-in',
+          aspectRatio: aspectRatio ? `${aspectRatio.width} / ${aspectRatio.height}` : undefined,
+          backgroundColor: 'var(--bg-elevated)',
+        }}
         onClick={(e: MouseEvent) => {
           e.preventDefault();
           e.stopPropagation();

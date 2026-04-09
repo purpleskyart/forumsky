@@ -168,6 +168,8 @@ export interface FeedRootItem {
   post: PostView;
   reason?: FeedViewPost['reason'];
   blendSource?: FeedBlendSourceMeta;
+  lastActivity?: string;
+  lastActivityAuthor?: ProfileView;
 }
 
 export interface SearchPostsResponse {

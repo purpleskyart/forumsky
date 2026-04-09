@@ -4198,19 +4198,33 @@ button.post-ref-expand-translate-btn {
 }
 .post-external-card {
   display: flex;
-  gap: 12px;
+  flex-direction: column;
+  gap: 0;
   margin-top: 10px;
-  padding: 10px 12px;
+  padding: 0;
   border: 1px solid var(--divider);
   border-radius: var(--radius-md);
   background: var(--bg-elevated);
   text-decoration: none;
   color: inherit;
   max-width: 480px;
+  overflow: hidden;
 }
 .post-external-card:hover { border-color: var(--accent); }
-.post-external-card-media { flex-shrink: 0; }
-.post-external-card-body { min-width: 0; }
+.post-external-card-media {
+  width: 100%;
+}
+.post-external-card-media img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1.91 / 1;
+  object-fit: cover;
+  display: block;
+}
+.post-external-card-body {
+  padding: 10px 12px;
+  min-width: 0;
+}
 .post-external-card-host {
   font-size: 0.72rem;
   text-transform: uppercase;

@@ -5,10 +5,11 @@ export type CommunityThreadSort = 'recent' | 'replies' | 'likes' | 'author';
 export function sortFeedRootItems(items: FeedRootItem[], mode: CommunityThreadSort): FeedRootItem[] {
   const arr = [...items];
   if (mode === 'recent') {
-    return arr.sort(
-      (a, b) =>
-        new Date(b.post.indexedAt).getTime() - new Date(a.post.indexedAt).getTime(),
-    );
+    return arr.sort((a, b) => {
+      const ta = new Date(a.lastActivity || a.post.indexedAt).getTime();
+      const tb = new Date(b.lastActivity || b.post.indexedAt).getTime();
+      return tb - ta;
+    });
   }
   if (mode === 'replies') {
     return arr.sort((a, b) => (b.post.replyCount ?? 0) - (a.post.replyCount ?? 0));

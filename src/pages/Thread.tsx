@@ -2290,11 +2290,14 @@ function PostBlock({
   onThreadAvatarFollow?: (authorDid: string) => void | Promise<void>;
 }) {
   const threadTrCtx = useContext(ThreadTranslationContext);
-  const allImages = segments.flatMap(s => getPostImages(s));
-  const allVideos = segments.flatMap(s => getQuotedPostAggregatedMedia(s).videos);
-  const external = getPostExternal(root);
-  const externalGifSrc =
-    external && isNativeExternalEmbed(external) ? getExternalGifPlaybackSources(external) : null;
+  // Per-segment media: compute once, render inline with each segment's text
+  const perSegmentMedia = useMemo(() => segments.map(seg => {
+    const images = getPostImages(seg);
+    const { videos } = getQuotedPostAggregatedMedia(seg);
+    const ext = getPostExternal(seg);
+    const extGif = ext && isNativeExternalEmbed(ext) ? getExternalGifPlaybackSources(ext) : null;
+    return { images, videos, external: ext, externalGifSrc: extGif };
+  }), [segments]);
   const handle = root.author.handle;
   const displayName = root.author.displayName || handle;
   const tone = toneIndexForHandle(handle);
@@ -2413,37 +2416,6 @@ function PostBlock({
 
   const quotedEmbed = useMemo(() => getQuotedEmbedFromSegments(segments), [segments]);
   const segmentsNsfw = useMemo(() => segments.some(postHasNsfwLabels), [segments]);
-
-  const mediaCount = allImages.length + allVideos.length;
-  const mediaNodes =
-    mediaCount > 0 ? (
-      <Fragment>
-        {allImages.map((img, i) =>
-          isGifImage(img) ? (
-            <GifImageFromEmbed
-              key={i}
-              img={img}
-              className="post-content-media post-content-media--gif"
-            />
-          ) : (
-            <PostContentImage
-              key={i}
-              src={img.fullsize || img.thumb}
-              alt={img.alt ?? ''}
-            />
-          ),
-        )}
-        {allVideos.map((vid, i) => (
-          <HlsVideo
-            key={`${vid.playlist}-${i}`}
-            playlist={vid.playlist}
-            poster={vid.thumbnail}
-            className="post-content-media"
-            aria-label={vid.alt || 'Video'}
-          />
-        ))}
-      </Fragment>
-    ) : null;
 
   const isSelfAuthor = Boolean(viewerDid && root.author.did === viewerDid);
   const showAvatarFollowPlus = Boolean(
@@ -2844,17 +2816,130 @@ function PostBlock({
               ))}
             </div>
           ) : (
-            segments.map(seg => {
+            segments.map((seg, segIdx) => {
               const content = renderPostContent(seg.record.text, seg.record.facets);
-              return <div key={seg.uri}>{content}</div>;
+              const segMedia = perSegmentMedia[segIdx];
+              const segImages = segMedia?.images ?? [];
+              const segVideos = segMedia?.videos ?? [];
+              const segExternal = segMedia?.external ?? null;
+              const segExtGif = segMedia?.externalGifSrc ?? null;
+              const segMediaCount = segImages.length + segVideos.length;
+              return (
+                <div key={seg.uri}>
+                  {content}
+                  {segMediaCount > 0 && (
+                    <NsfwMediaWrap isNsfw={segmentsNsfw}>
+                      {segMediaCount > 1 ? (
+                        <div class="post-content-media-stack">
+                          {segImages.map((img, i) =>
+                            isGifImage(img) ? (
+                              <GifImageFromEmbed
+                                key={i}
+                                img={img}
+                                className="post-content-media post-content-media--gif"
+                              />
+                            ) : (
+                              <PostContentImage
+                                key={i}
+                                src={img.fullsize || img.thumb}
+                                alt={img.alt ?? ''}
+                                aspectRatio={img.aspectRatio}
+                              />
+                            ),
+                          )}
+                          {segVideos.map((vid, i) => (
+                            <HlsVideo
+                              key={`${vid.playlist}-${i}`}
+                              playlist={vid.playlist}
+                              poster={vid.thumbnail}
+                              aspectRatio={vid.aspectRatio}
+                              className="post-content-media"
+                              aria-label={vid.alt || 'Video'}
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <Fragment>
+                          {segImages.map((img, i) =>
+                            isGifImage(img) ? (
+                              <GifImageFromEmbed
+                                key={i}
+                                img={img}
+                                className="post-content-media post-content-media--gif"
+                              />
+                            ) : (
+                              <PostContentImage
+                                key={i}
+                                src={img.fullsize || img.thumb}
+                                alt={img.alt ?? ''}
+                                aspectRatio={img.aspectRatio}
+                              />
+                            ),
+                          )}
+                          {segVideos.map((vid, i) => (
+                            <HlsVideo
+                              key={`${vid.playlist}-${i}`}
+                              playlist={vid.playlist}
+                              poster={vid.thumbnail}
+                              aspectRatio={vid.aspectRatio}
+                              className="post-content-media"
+                              aria-label={vid.alt || 'Video'}
+                            />
+                          ))}
+                        </Fragment>
+                      )}
+                    </NsfwMediaWrap>
+                  )}
+                  {segExternal &&
+                    (segExtGif ? (
+                      <NsfwMediaWrap isNsfw={segmentsNsfw}>
+                        <GifImage
+                          thumb={segExtGif.thumb}
+                          fullsize={segExtGif.fullsize}
+                          alt=""
+                          className="post-external-gif"
+                        />
+                      </NsfwMediaWrap>
+                    ) : (
+                      <NsfwMediaWrap isNsfw={segmentsNsfw}>
+                        <a
+                          href={segExternal.uri}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="post-external-card"
+                        >
+                          {segExternal.thumb && (
+                            <div class="post-external-card-media">
+                              <img
+                                class="post-external-thumb"
+                                src={segExternal.thumb}
+                                alt=""
+                                loading="lazy"
+                              />
+                            </div>
+                          )}
+                          <div class="post-external-card-body">
+                            <div class="post-external-card-host">
+                              {(() => {
+                                try {
+                                  return new URL(segExternal.uri).hostname;
+                                } catch {
+                                  return 'Link';
+                                }
+                              })()}
+                            </div>
+                            <div class="post-external-title">{segExternal.title || segExternal.uri}</div>
+                            {segExternal.description ? (
+                              <div class="post-external-desc">{segExternal.description}</div>
+                            ) : null}
+                          </div>
+                        </a>
+                      </NsfwMediaWrap>
+                    ))}
+                </div>
+              );
             })
           )}
-
-          {mediaCount > 0 ? (
-            <NsfwMediaWrap isNsfw={segmentsNsfw}>
-              {mediaCount > 1 ? <div class="post-content-media-stack">{mediaNodes}</div> : mediaNodes}
-            </NsfwMediaWrap>
-          ) : null}
 
           {quotedEmbed?.kind === 'post' && <QuotedPostEmbedCard quoted={quotedEmbed.post} />}
           {quotedEmbed?.kind === 'notFound' && (
@@ -2897,53 +2982,6 @@ function PostBlock({
           {quotedEmbed?.kind === 'detached' && (
             <p class="post-quoted-embed-fallback">Quoted post is no longer available.</p>
           )}
-
-          {external &&
-            (externalGifSrc ? (
-              <NsfwMediaWrap isNsfw={segmentsNsfw}>
-                <GifImage
-                  thumb={externalGifSrc.thumb}
-                  fullsize={externalGifSrc.fullsize}
-                  alt=""
-                  className="post-external-gif"
-                />
-              </NsfwMediaWrap>
-            ) : (
-              <NsfwMediaWrap isNsfw={segmentsNsfw}>
-                <a
-                  href={external.uri}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="post-external-card"
-                >
-                  {external.thumb && (
-                    <div class="post-external-card-media">
-                      <img
-                        class="post-external-thumb"
-                        src={external.thumb}
-                        alt=""
-                        loading="lazy"
-                      />
-                    </div>
-                  )}
-                  <div class="post-external-card-body">
-                    <div class="post-external-card-host">
-                      {(() => {
-                        try {
-                          return new URL(external.uri).hostname;
-                        } catch {
-                          return 'Link';
-                        }
-                      })()}
-                    </div>
-                    <div class="post-external-title">{external.title || external.uri}</div>
-                    {external.description ? (
-                      <div class="post-external-desc">{external.description}</div>
-                    ) : null}
-                  </div>
-                </a>
-              </NsfwMediaWrap>
-            ))}
         </div>
         <div class="post-footer">
           <div class="post-actions">

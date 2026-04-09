@@ -75,9 +75,6 @@ export function QuotedPostEmbedCard({ quoted }: { quoted: PostView }) {
             <span class="post-quoted-embed-handle"> @{handle}</span>
           </span>
         </div>
-        <blockquote class="post-quoted-embed-quote">
-          {renderPostContent(displayPost.record.text, displayPost.record.facets)}
-        </blockquote>
         {(() => {
           const mediaCount = agg.images.length + agg.videos.length;
           const mediaNodes = mediaCount > 0 ? (
@@ -95,6 +92,7 @@ export function QuotedPostEmbedCard({ quoted }: { quoted: PostView }) {
                     className="post-content-media post-quoted-embed-media"
                     src={img.fullsize || img.thumb}
                     alt={img.alt ?? ''}
+                    aspectRatio={img.aspectRatio}
                   />
                 ),
               )}
@@ -103,6 +101,7 @@ export function QuotedPostEmbedCard({ quoted }: { quoted: PostView }) {
                   key={`vid-${i}`}
                   playlist={vid.playlist}
                   poster={vid.thumbnail}
+                  aspectRatio={vid.aspectRatio}
                   className="post-content-media post-quoted-embed-media post-quoted-embed-interactive"
                   aria-label={vid.alt || 'Video from quoted post'}
                 />
@@ -157,16 +156,21 @@ export function QuotedPostEmbedCard({ quoted }: { quoted: PostView }) {
           if (mediaCount === 0 && !externalNode) return null;
 
           return (
-            <NsfwMediaWrap isNsfw={quotedNsfw}>
-              {mediaCount > 1 ? (
-                <div class="post-content-media-stack">{mediaNodes}</div>
-              ) : (
-                mediaNodes
-              )}
-              {externalNode}
-            </NsfwMediaWrap>
+            <div style="margin-bottom: 8px">
+              <NsfwMediaWrap isNsfw={quotedNsfw}>
+                {mediaCount > 1 ? (
+                  <div class="post-content-media-stack">{mediaNodes}</div>
+                ) : (
+                  mediaNodes
+                )}
+                {externalNode}
+              </NsfwMediaWrap>
+            </div>
           );
         })()}
+        <blockquote class="post-quoted-embed-quote">
+          {renderPostContent(displayPost.record.text, displayPost.record.facets)}
+        </blockquote>
       </div>
     </div>
   );
