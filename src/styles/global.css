@@ -3773,11 +3773,11 @@ button.post-ref-expand-translate-btn {
     padding-top: 8px;
   }
   .post-footer {
-    gap: 8px;
-    padding: 8px 0 8px 10px;
+    gap: 6px;
+    padding: 8px 0 8px 6px;
   }
   .post-actions {
-    gap: 6px;
+    gap: 4px;
     flex-wrap: wrap;
   }
   .post-reply-btn--social,
@@ -3785,9 +3785,10 @@ button.post-ref-expand-translate-btn {
   .post-repost-btn,
   .post-downvote-btn,
   .post-share-btn {
-    padding: 4px 8px;
+    padding: 3px 6px;
     font-size: 0.72rem;
     min-height: 28px;
+    gap: 4px;
   }
   .post-reply-btn-icon,
   .post-like-btn-icon,
