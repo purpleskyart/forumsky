@@ -3896,6 +3896,8 @@ button.post-ref-expand-translate-btn {
 
 .bottom-nav-profile .avatar {
   margin: 0;
+  border-radius: 50%;
+  overflow: hidden;
 }
 
 .pwa-toast {
