@@ -32,8 +32,8 @@
   --user-violet: #b794f6;
   --post-card-bg: #1a1a1a;
   --post-sidebar-bg: rgba(0, 0, 0, 0.2);
-  /* Distance from viewport top when thread author sidebar is stuck (below site header) */
-  --thread-author-sticky-top: 48px;
+  /* Distance from viewport top when thread author sidebar is stuck */
+  --thread-author-sticky-top: 0px;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -3562,7 +3562,7 @@ button.post-ref-expand-translate-btn {
 
 @media (max-width: 600px) {
   :root {
-    --thread-author-sticky-top: 40px;
+    --thread-author-sticky-top: 0px;
   }
   .header-banner {
     padding: 4px 0;
