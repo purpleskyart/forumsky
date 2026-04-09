@@ -31,7 +31,7 @@
   --user-cyan: #4dd0e1;
   --user-violet: #b794f6;
   --post-card-bg: #1a1a1a;
-  --post-sidebar-bg: transparent;
+  --post-sidebar-bg: rgba(0, 0, 0, 0.2);
   /* Distance from viewport top when thread author sidebar is stuck */
   --thread-author-sticky-top: 64px;
 }
@@ -1890,7 +1890,7 @@ input:focus, textarea:focus {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  background: transparent;
+  background: rgba(0, 0, 0, 0.12);
   border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
   /* visible: overflow:hidden clips post-footer dropdowns (repost menu) */
   overflow: visible;
@@ -1901,7 +1901,7 @@ input:focus, textarea:focus {
   justify-content: space-between;
   align-items: center;
   gap: 10px;
-  padding: 3px 0 3px 10px;
+  padding: 3px 10px;
   font-size: 0.76rem;
   color: var(--text-muted);
   background: rgba(0, 0, 0, 0.2);
@@ -2423,7 +2423,7 @@ a.post-overflow-menu-item {
 }
 
 .post-content {
-  padding: 14px 0 14px 6px;
+  padding: 14px 14px 14px 6px;
   flex: 1;
   line-height: 1.65;
   font-size: 0.93rem;
@@ -2715,7 +2715,7 @@ video.post-hls-video--has-overlay {
   justify-content: flex-start;
   align-items: center;
   gap: 12px;
-  padding: 10px 0 10px 6px;
+  padding: 10px 10px 10px 6px;
   font-size: 0.78rem;
   background: transparent;
 }
@@ -3617,7 +3617,7 @@ button.post-ref-expand-translate-btn {
     flex-direction: column;
     align-items: center;
     text-align: center;
-    padding: 8px 6px 8px 0;
+    padding: 8px 6px;
     gap: 4px;
   }
   .post-author-card .avatar {
