@@ -1,16 +1,17 @@
 import { useState, useEffect, useMemo } from 'preact/hooks';
 import { searchPosts, parseAtUri } from '@/api/feed';
+import { searchActors } from '@/api/actor';
 import { listAllFollowingDids } from '@/api/graph-follows';
 import { currentUser, showToast } from '@/lib/store';
 import { hrefForAppPath } from '@/lib/app-base-path';
-import { threadUrl, navigate, SPA_ANCHOR_SHIELD, spaNavigateClick } from '@/lib/router';
+import { threadUrl, navigate, SPA_ANCHOR_SHIELD, spaNavigateClick, profileUrl } from '@/lib/router';
 import { formatThreadTitlePreviewLine } from '@/lib/thread-title';
-import type { PostView } from '@/api/types';
+import type { PostView, ProfileView } from '@/api/types';
 
-type Scope = 'global' | 'following' | 'me';
+type Scope = 'global' | 'following' | 'me' | 'users';
 
 function readScope(s: string | null): Scope {
-  if (s === 'following' || s === 'me') return s;
+  if (s === 'following' || s === 'me' || s === 'users') return s;
   return 'global';
 }
 
@@ -23,6 +24,7 @@ export function Search() {
   const [q, setQ] = useState(initialQ);
   const [scope, setScope] = useState<Scope>(initialScope);
   const [posts, setPosts] = useState<PostView[]>([]);
+  const [users, setUsers] = useState<ProfileView[]>([]);
   const [loading, setLoading] = useState(false);
   const [followingSet, setFollowingSet] = useState<Set<string>>(new Set());
 
@@ -50,19 +52,28 @@ export function Search() {
     const run = async () => {
       if (!searchQuery) {
         setPosts([]);
+        setUsers([]);
         return;
       }
       setLoading(true);
       try {
-        const res = await searchPosts(searchQuery, { limit: 50, sort: 'latest' });
-        let list = res.posts.filter(p => !p.record.reply);
-        if (scope === 'following' && followingSet.size > 0) {
-          list = list.filter(p => followingSet.has(p.author.did));
+        if (scope === 'users') {
+          const actorResults = await searchActors(searchQuery, { limit: 50 });
+          setUsers(actorResults);
+          setPosts([]);
+        } else {
+          const res = await searchPosts(searchQuery, { limit: 50, sort: 'latest' });
+          let list = res.posts.filter(p => !p.record.reply);
+          if (scope === 'following' && followingSet.size > 0) {
+            list = list.filter(p => followingSet.has(p.author.did));
+          }
+          setPosts(list);
+          setUsers([]);
         }
-        setPosts(list);
       } catch (e) {
         showToast(e instanceof Error ? e.message : 'Search failed');
         setPosts([]);
+        setUsers([]);
       } finally {
         setLoading(false);
       }
@@ -109,6 +120,7 @@ export function Search() {
             onChange={(e: Event) => setScope((e.target as HTMLSelectElement).value as Scope)}
           >
             <option value="global">All</option>
+            <option value="users">Users</option>
             <option value="following" disabled={!user?.did}>
               From people you follow
             </option>
@@ -131,6 +143,31 @@ export function Search() {
           <div class="loading">
             <div class="spinner" />
           </div>
+        ) : scope === 'users' ? (
+          users.length === 0 ? (
+            <div class="empty">
+              <p>{searchQuery ? 'No matching users found.' : 'Enter a query to search for users.'}</p>
+            </div>
+          ) : (
+            <ul class="search-results-list">
+              {users.map(u => (
+                <li key={u.did} class="search-results-item">
+                  <a
+                    href={hrefForAppPath(profileUrl(u.handle))}
+                    class="search-results-title"
+                    {...SPA_ANCHOR_SHIELD}
+                    onClick={spaNavigateClick(profileUrl(u.handle))}
+                  >
+                    {u.displayName || u.handle}
+                  </a>
+                  <div class="search-results-meta">
+                    @{u.handle}
+                    {u.description && ` · ${u.description.slice(0, 50)}${u.description.length > 50 ? '...' : ''}`}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )
         ) : posts.length === 0 ? (
           <div class="empty">
             <p>{searchQuery ? 'No matching thread roots found.' : 'Enter a query to search.'}</p>

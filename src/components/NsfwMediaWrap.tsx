@@ -6,11 +6,11 @@ import type { Label } from '@/api/types';
 /** Extract the first human-readable NSFW label value from a list of labels. */
 function nsfwLabelText(labels?: Label[]): string | null {
   if (!labels?.length) return null;
-  const nsfwVals = ['sexual', 'nudity', 'porn', 'nsfw', 'adult', 'graphic-media'];
+  const nsfwVals = ['sexual', 'nudity', 'nsfw', 'adult', 'graphic-media'];
   for (const L of labels) {
     const val = L.val?.replace(/^[!]+/, '').toLowerCase().trim();
     if (!val) continue;
-    if (nsfwVals.includes(val) || val.includes('sexual') || val.includes('nsfw') || val.includes('porn') || val.includes('graphic-media')) {
+    if (nsfwVals.includes(val) || val.includes('sexual') || val.includes('nsfw') || val.includes('graphic-media')) {
       return val.replace(/-/g, ' ');
     }
   }
@@ -75,7 +75,10 @@ export function NsfwMediaWrap({
       <div class="nsfw-media-blur-overlay">
         <div class="nsfw-media-blur-overlay-content">
           <div class="nsfw-media-blur-text">
-            {labelText ? `Blurred post because its: ${labelText}` : 'Blurred sensitive content'}
+            Blurred sensitive content
+            {labelText && (
+              <div class="nsfw-media-label">{labelText}</div>
+            )}
           </div>
           <button
             type="button"

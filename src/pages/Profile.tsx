@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useLayoutEffect } from 'preact/hooks';
+import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'preact/hooks';
 import { Avatar } from '@/components/Avatar';
 import { ThreadRow } from '@/components/ThreadRow';
 import { getProfile } from '@/api/actor';
@@ -27,20 +27,56 @@ export function Profile(props: ProfileProps) {
   const [profile, setProfile] = useState<ProfileView | null>(null);
   const [posts, setPosts] = useState<PostView[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
   const [kbRow, setKbRow] = useState(0);
   const [kbRowOutlineActive, setKbRowOutlineActive] = useState(false);
   const [followBusy, setFollowBusy] = useState(false);
+  const [cursor, setCursor] = useState<string | undefined>(undefined);
+  const [hasMore, setHasMore] = useState(true);
   const postsRef = useRef<PostView[]>([]);
   const kbRowRef = useRef(0);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
   postsRef.current = posts;
   kbRowRef.current = kbRow;
 
   const me = currentUser.value;
 
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore || !cursor) return;
+    setLoadingMore(true);
+    try {
+      const feedRes = await getAuthorFeed(handle, { limit: 30, cursor: cursor as string, filter: 'posts_no_replies' });
+      setPosts(prev => [...prev, ...feedRes.feed.map(f => f.post)]);
+      setCursor(feedRes.cursor);
+      setHasMore(!!feedRes.cursor);
+    } catch (err) {
+      console.error('Failed to load more posts:', err);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [handle, cursor, hasMore, loadingMore]);
+
+  useEffect(() => {
+    if (!loadMoreRef.current || !hasMore) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          loadMore();
+        }
+      },
+      { rootMargin: '320px', threshold: 0 }
+    );
+    observer.observe(loadMoreRef.current);
+    return () => observer.disconnect();
+  }, [hasMore, loadMore]);
+
   useEffect(() => {
     if (!handle) return;
     setKbRowOutlineActive(false);
+    setPosts([]);
+    setCursor(undefined);
+    setHasMore(true);
     let cancelled = false;
     const load = async () => {
       setLoading(true);
@@ -54,6 +90,8 @@ export function Profile(props: ProfileProps) {
         if (cancelled) return;
         setProfile(profileRes);
         setPosts(feedRes.feed.map(f => f.post));
+        setCursor(feedRes.cursor);
+        setHasMore(!!feedRes.cursor);
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load profile');
       } finally {
@@ -274,15 +312,26 @@ export function Profile(props: ProfileProps) {
         ) : posts.length === 0 ? (
           <div class="empty"><p>No threads yet</p></div>
         ) : (
-          posts.map((post, i) => (
-            <div
-              key={post.uri}
-              id={`profile-feed-kb-${i}`}
-              class={kbRowOutlineActive && i === kbRow ? 'thread-row-kb-focus' : undefined}
-            >
-              <ThreadRow post={post} />
-            </div>
-          ))
+          <>
+            {posts.map((post, i) => (
+              <div
+                key={post.uri}
+                id={`profile-feed-kb-${i}`}
+                class={kbRowOutlineActive && i === kbRow ? 'thread-row-kb-focus' : undefined}
+              >
+                <ThreadRow post={post} />
+              </div>
+            ))}
+            {hasMore && (
+              <div ref={loadMoreRef} style="padding: 16px; text-align: center;">
+                {loadingMore ? (
+                  <div class="spinner" />
+                ) : (
+                  <span style="color: var(--text-muted); font-size: 0.85rem;">Loading more posts...</span>
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

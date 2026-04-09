@@ -45,7 +45,7 @@ export function navigateBack() {
   }
 }
 
-export function searchUrl(query: string, scope: 'global' | 'following' | 'me' = 'global'): string {
+export function searchUrl(query: string, scope: 'global' | 'following' | 'me' | 'users' = 'global'): string {
   const p = new URLSearchParams();
   if (query.trim()) p.set('q', query.trim());
   p.set('scope', scope);

@@ -3,8 +3,8 @@ import type { Label, PostView } from '@/api/types';
 function labelValIndicatesNsfw(val: string): boolean {
   const c = val.replace(/^[!]+/, '').toLowerCase().trim();
   if (!c) return false;
-  if (['adult', 'sexual', 'nudity', 'porn', 'nsfw'].includes(c)) return true;
-  if (c.includes('sexual') || c.includes('nsfw') || c.includes('porn')) return true;
+  if (['adult', 'sexual', 'nudity', 'nsfw'].includes(c)) return true;
+  if (c.includes('sexual') || c.includes('nsfw')) return true;
   if (c === 'graphic-media' || c.includes('graphic-media')) return true;
   return false;
 }

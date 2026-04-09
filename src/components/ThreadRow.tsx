@@ -1,4 +1,5 @@
 import { NsfwMediaWrap } from '@/components/NsfwMediaWrap';
+import { HlsVideo } from '@/components/HlsVideo';
 import { hrefForAppPath } from '@/lib/app-base-path';
 import { postHasNsfwLabels } from '@/lib/nsfw-labels';
 import { threadUrl, SPA_ANCHOR_SHIELD, spaNavigateClick } from '@/lib/router';
@@ -95,7 +96,16 @@ export function ThreadRow({
             >
               <span class="thread-thumb-wrap">
                 <NsfwMediaWrap isNsfw={postHasNsfwLabels(post)} compact>
-                  <img src={preview.url} alt="" class="thread-thumb" loading="lazy" decoding="async" />
+                  {preview.isVideo ? (
+                    <HlsVideo
+                      playlist={preview.url}
+                      poster={preview.poster}
+                      className="thread-thumb"
+                      aria-label={preview.alt}
+                    />
+                  ) : (
+                    <img src={preview.url} alt="" class="thread-thumb" loading="lazy" decoding="async" />
+                  )}
                 </NsfwMediaWrap>
                 {preview.extraCount > 0 && (
                   <span class="thread-thumb-more">+{preview.extraCount}</span>

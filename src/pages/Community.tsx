@@ -251,13 +251,39 @@ export function Community({ tag: tagProp }: CommunityProps) {
 
   /** Restore scroll when loadingMore completes (load more scenario). */
   const prevLoadingMoreRef = useRef(loadingMore);
+  const scrollYBeforeLoadMoreRef = useRef(0);
+  const wasAtBottomBeforeLoadMoreRef = useRef(false);
   useEffect(() => {
     const wasLoadingMore = prevLoadingMoreRef.current;
     prevLoadingMoreRef.current = loadingMore;
+    
+    // Save scroll state before loading more
+    if (!wasLoadingMore && loadingMore) {
+      scrollYBeforeLoadMoreRef.current = window.scrollY;
+      wasAtBottomBeforeLoadMoreRef.current = window.scrollY + window.innerHeight >= document.body.scrollHeight - 100;
+    }
+    
     if (wasLoadingMore && !loadingMore) {
-      restoreScrollNow();
-      const t1 = window.setTimeout(() => restoreScrollNow(), 350);
-      const t2 = window.setTimeout(() => restoreScrollNow(), 700);
+      // If user was at bottom before load, scroll to new bottom after content loads
+      if (wasAtBottomBeforeLoadMoreRef.current) {
+        window.scrollTo({ top: document.body.scrollHeight, left: 0, behavior: 'auto' });
+      } else {
+        restoreScrollNow();
+      }
+      const t1 = window.setTimeout(() => {
+        if (wasAtBottomBeforeLoadMoreRef.current) {
+          window.scrollTo({ top: document.body.scrollHeight, left: 0, behavior: 'auto' });
+        } else {
+          restoreScrollNow();
+        }
+      }, 350);
+      const t2 = window.setTimeout(() => {
+        if (wasAtBottomBeforeLoadMoreRef.current) {
+          window.scrollTo({ top: document.body.scrollHeight, left: 0, behavior: 'auto' });
+        } else {
+          restoreScrollNow();
+        }
+      }, 700);
       return () => {
         window.clearTimeout(t1);
         window.clearTimeout(t2);

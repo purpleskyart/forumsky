@@ -297,6 +297,73 @@ input:focus, textarea:focus {
   background: rgba(214, 51, 132, 0.08);
 }
 
+.header-search-suggestions {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 280;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 8px 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.header-search-suggestion-section {
+  padding: 4px 0;
+}
+
+.header-search-suggestion-section-header {
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.header-search-suggestion-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.header-search-suggestion-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.header-search-suggestion-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.header-search-suggestion-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.header-search-suggestion-name {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.header-search-suggestion-handle {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
 @media (max-width: 720px) {
   .header-search-scope-trigger-label {
     display: none;
@@ -844,6 +911,23 @@ input:focus, textarea:focus {
   line-height: 1.4;
   max-width: 280px;
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.nsfw-media-label {
+  display: inline-block;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.15);
+  border: 1px solid #fbbf24;
+  border-radius: 2px;
+  letter-spacing: 0.02em;
 }
 .nsfw-media-placeholder {
   display: flex;
@@ -1362,6 +1446,9 @@ input:focus, textarea:focus {
   font-size: 0.9rem;
   color: var(--text-secondary);
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .thread-last-reply {

@@ -459,9 +459,11 @@ export interface ThreadPreviewThumb {
   url: string;
   alt: string;
   extraCount: number;
+  isVideo?: boolean;
+  poster?: string;
 }
 
-/** First image or external link thumb for thread list / saved-thread previews. */
+/** First image, video, or external link thumb for thread list / saved-thread previews. */
 export function threadPreviewThumb(post: PostView): ThreadPreviewThumb | null {
   const images = getPostImages(post);
   if (images.length > 0) {
@@ -470,6 +472,17 @@ export function threadPreviewThumb(post: PostView): ThreadPreviewThumb | null {
       url: first.thumb || first.fullsize,
       alt: first.alt || 'Thread image',
       extraCount: images.length - 1,
+    };
+  }
+  const { videos } = getQuotedPostAggregatedMedia(post);
+  if (videos.length > 0) {
+    const first = videos[0];
+    return {
+      url: first.playlist,
+      alt: first.alt || 'Thread video',
+      extraCount: videos.length - 1,
+      isVideo: true,
+      poster: first.thumbnail,
     };
   }
   const ext = getPostExternal(post);

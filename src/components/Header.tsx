@@ -1,31 +1,34 @@
-import { useState, useEffect, useRef } from 'preact/hooks';
+import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
 import { Avatar } from '@/components/Avatar';
 import { showAuthDialog, showSignUpDialog, currentUser, isLoggedIn, showToast, sessionRestorePending } from '@/lib/store';
 import { hrefForAppPath } from '@/lib/app-base-path';
-import { navigate, communityUrl, searchUrl, SPA_ANCHOR_SHIELD } from '@/lib/router';
+import { navigate, communityUrl, searchUrl, SPA_ANCHOR_SHIELD, threadUrl, profileUrl } from '@/lib/router';
 import { refreshGraphPolicy } from '@/lib/graph-policy';
 import { UserMenuPanel } from '@/components/UserMenuPanel';
-import type { ProfileView } from '@/api/types';
+import { searchActors } from '@/api/actor';
+import { searchPosts, parseAtUri } from '@/api/feed';
+import type { ProfileView, PostView } from '@/api/types';
 
 const HEADER_SEARCH_DEST_KEY = 'forumsky.headerSearchDestination';
 
-type HeaderSearchDestination = 'community' | 'global' | 'following' | 'me';
+type HeaderSearchDestination = 'community' | 'global' | 'following' | 'me' | 'users';
 
 const SEARCH_DEST_LABELS: Record<HeaderSearchDestination, string> = {
   community: 'Communities',
   global: 'All',
   following: 'Following',
   me: 'My posts',
+  users: 'Users',
 };
 
-/** Menu order: All first, then Communities, then signed-in scopes. */
-const SEARCH_DEST_MENU_ORDER: HeaderSearchDestination[] = ['global', 'community', 'following', 'me'];
+/** Menu order: All first, then Communities, then Users, then signed-in scopes. */
+const SEARCH_DEST_MENU_ORDER: HeaderSearchDestination[] = ['global', 'community', 'users', 'following', 'me'];
 
 function readStoredSearchDestination(): HeaderSearchDestination {
   if (typeof window === 'undefined') return 'global';
   try {
     const v = localStorage.getItem(HEADER_SEARCH_DEST_KEY);
-    if (v === 'global' || v === 'following' || v === 'me' || v === 'community') return v;
+    if (v === 'global' || v === 'following' || v === 'me' || v === 'community' || v === 'users') return v;
   } catch {
     /* ignore */
   }
@@ -50,11 +53,25 @@ export function Header() {
   const searchScopeRef = useRef<HTMLDivElement>(null);
   const [searchScopeOpen, setSearchScopeOpen] = useState(false);
   const [searchDestination, setSearchDestination] = useState<HeaderSearchDestination>(readStoredSearchDestination);
+  const [searchInput, setSearchInput] = useState('');
+  const [searchSuggestions, setSearchSuggestions] = useState<{ users: ProfileView[]; posts: PostView[] }>({ users: [], posts: [] });
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const bumpUi = () => setUiTick(t => t + 1);
 
   useEffect(() => {
-    if (!userMenuOpen && !searchScopeOpen) return;
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!userMenuOpen && !searchScopeOpen && !showSuggestions) return;
     const onDocPointer = (e: Event) => {
       const t = e.target as Node;
       if (userMenuOpen && userMenuRef.current && !userMenuRef.current.contains(t)) {
@@ -63,11 +80,15 @@ export function Header() {
       if (searchScopeOpen && searchScopeRef.current && !searchScopeRef.current.contains(t)) {
         setSearchScopeOpen(false);
       }
+      if (showSuggestions && suggestionsRef.current && !suggestionsRef.current.contains(t)) {
+        setShowSuggestions(false);
+      }
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setUserMenuOpen(false);
         setSearchScopeOpen(false);
+        setShowSuggestions(false);
       }
     };
     document.addEventListener('pointerdown', onDocPointer);
@@ -76,7 +97,7 @@ export function Header() {
       document.removeEventListener('pointerdown', onDocPointer);
       document.removeEventListener('keydown', onKey);
     };
-  }, [userMenuOpen, searchScopeOpen]);
+  }, [userMenuOpen, searchScopeOpen, showSuggestions]);
 
 
 
@@ -99,6 +120,9 @@ export function Header() {
     const q = input.value.trim();
     if (!q) return;
 
+    setShowSuggestions(false);
+    setSearchInput('');
+
     if (searchDestination === 'community') {
       if (q.startsWith('#') || q.match(/^[a-z0-9_-]+$/i)) {
         navigate(communityUrl(q.replace(/^#/, '')));
@@ -117,6 +141,47 @@ export function Header() {
     const scope = searchDestination === 'global' ? 'global' : searchDestination;
     navigate(searchUrl(q, scope));
     input.value = '';
+  };
+
+  const onSearchInputChange = useCallback(async (value: string) => {
+    setSearchInput(value);
+    
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+
+    if (value.trim().length < 2) {
+      setSearchSuggestions({ users: [], posts: [] });
+      setShowSuggestions(false);
+      return;
+    }
+
+    searchDebounceRef.current = setTimeout(async () => {
+      try {
+        const [users, postsRes] = await Promise.all([
+          searchActors(value, { limit: 5 }),
+          searchPosts(value, { limit: 5, sort: 'latest' }),
+        ]);
+        setSearchSuggestions({ users, posts: postsRes.posts.filter(p => !p.record.reply).slice(0, 5) });
+        setShowSuggestions(true);
+      } catch {
+        setSearchSuggestions({ users: [], posts: [] });
+      }
+    }, 300);
+  }, []);
+
+  const onSuggestionClick = (type: 'user' | 'post', item: ProfileView | PostView) => {
+    setShowSuggestions(false);
+    setSearchInput('');
+    if (type === 'user') {
+      navigate(profileUrl((item as ProfileView).handle));
+    } else {
+      const post = item as PostView;
+      const parsed = parseAtUri(post.uri);
+      if (parsed) {
+        navigate(threadUrl(post.author.handle || post.author.did, parsed.rkey));
+      }
+    }
   };
 
   return (
@@ -152,10 +217,13 @@ export function Header() {
             <form class="header-search-area" onSubmit={onSearch}>
               <div class="header-search-inner" ref={searchScopeRef}>
                 <input
+                  ref={searchInputRef}
                   type="search"
                   class="header-search-field"
                   placeholder="Search"
                   enterKeyHint="search"
+                  value={searchInput}
+                  onInput={(e: Event) => onSearchInputChange((e.target as HTMLInputElement).value)}
                   aria-label={`Search (${SEARCH_DEST_LABELS[searchDestination]})`}
                 />
                 <button
@@ -169,6 +237,7 @@ export function Header() {
                     e.preventDefault();
                     setSearchScopeOpen(o => !o);
                     setUserMenuOpen(false);
+                    setShowSuggestions(false);
                   }}
                 >
                   <span class="header-search-scope-trigger-label" aria-hidden>
@@ -218,6 +287,47 @@ export function Header() {
                         </button>
                       );
                     })}
+                  </div>
+                )}
+                {showSuggestions && (searchSuggestions.users.length > 0 || searchSuggestions.posts.length > 0) && (
+                  <div class="header-search-suggestions" ref={suggestionsRef}>
+                    {searchSuggestions.users.length > 0 && (
+                      <div class="header-search-suggestion-section">
+                        <div class="header-search-suggestion-section-header">Users</div>
+                        {searchSuggestions.users.map(u => (
+                          <button
+                            key={u.did}
+                            type="button"
+                            class="header-search-suggestion-item"
+                            onClick={() => onSuggestionClick('user', u)}
+                          >
+                            <Avatar src={u.avatar} alt={u.displayName || u.handle} size={24} />
+                            <span class="header-search-suggestion-text">
+                              <span class="header-search-suggestion-name">{u.displayName || u.handle}</span>
+                              <span class="header-search-suggestion-handle">@{u.handle}</span>
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {searchSuggestions.posts.length > 0 && (
+                      <div class="header-search-suggestion-section">
+                        <div class="header-search-suggestion-section-header">Posts</div>
+                        {searchSuggestions.posts.map(p => (
+                          <button
+                            key={p.uri}
+                            type="button"
+                            class="header-search-suggestion-item"
+                            onClick={() => onSuggestionClick('post', p)}
+                          >
+                            <span class="header-search-suggestion-text">
+                              <span class="header-search-suggestion-name">{p.author.displayName || p.author.handle}</span>
+                              <span class="header-search-suggestion-handle">@{p.author.handle}</span>
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
