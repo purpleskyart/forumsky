@@ -1682,7 +1682,7 @@ input:focus, textarea:focus {
   max-width: 168px;
   min-width: 0;
   flex-shrink: 0;
-  padding: 14px 10px 16px;
+  padding: 14px 4px 16px 0;
   text-align: center;
   background: var(--post-sidebar-bg);
   border-radius: var(--radius-lg) 0 0 var(--radius-lg);
@@ -1901,7 +1901,7 @@ input:focus, textarea:focus {
   justify-content: space-between;
   align-items: center;
   gap: 10px;
-  padding: 3px 14px;
+  padding: 3px 10px;
   font-size: 0.76rem;
   color: var(--text-muted);
   background: rgba(0, 0, 0, 0.2);
@@ -2423,7 +2423,7 @@ a.post-overflow-menu-item {
 }
 
 .post-content {
-  padding: 14px 16px;
+  padding: 14px 14px 14px 6px;
   flex: 1;
   line-height: 1.65;
   font-size: 0.93rem;
@@ -2715,7 +2715,7 @@ video.post-hls-video--has-overlay {
   justify-content: flex-start;
   align-items: center;
   gap: 12px;
-  padding: 10px 14px;
+  padding: 10px 10px 10px 6px;
   font-size: 0.78rem;
   background: transparent;
 }
@@ -3760,6 +3760,7 @@ button.post-ref-expand-translate-btn {
   .post-reply-btn--social,
   .post-like-btn,
   .post-repost-btn,
+  .post-downvote-btn,
   .post-share-btn {
     padding: 4px 8px;
     font-size: 0.72rem;
@@ -3768,6 +3769,7 @@ button.post-ref-expand-translate-btn {
   .post-reply-btn-icon,
   .post-like-btn-icon,
   .post-repost-btn-icon,
+  .post-downvote-btn-icon,
   .post-share-btn-icon {
     width: 16px;
     height: 16px;
@@ -3856,8 +3858,18 @@ button.post-ref-expand-translate-btn {
 .bottom-nav-item:hover,
 .bottom-nav-item:focus-visible {
   color: var(--text);
-  background: rgba(255, 255, 255, 0.06);
+  background: transparent;
 }
+
+.bottom-nav-item--active {
+  color: var(--accent);
+}
+
+.bottom-nav-item--active .bottom-nav-icon {
+  transform: scale(1.1);
+  transition: transform 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+
 
 .bottom-nav-icon {
   display: flex;
@@ -3899,6 +3911,75 @@ button.post-ref-expand-translate-btn {
   border-radius: 50%;
   overflow: hidden;
 }
+
+.bottom-nav-profile .avatar.avatar--active {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.global-composer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fadeIn 0.2s ease;
+}
+
+.global-composer-inner {
+  width: 100%;
+  max-width: 650px;
+  background: var(--bg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalPop 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.15);
+}
+
+.global-composer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.global-composer-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.global-composer-inner .composer {
+  padding: 16px;
+  overflow-y: auto;
+}
+
+@keyframes modalPop {
+  from { opacity: 0; transform: scale(0.9) translateY(20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@media (max-width: 600px) {
+  .global-composer-overlay {
+    padding: 0;
+    align-items: flex-start;
+  }
+  .global-composer-inner {
+    max-height: 100vh;
+    border-radius: 0;
+    height: 100%;
+  }
+}
+
 
 .pwa-toast {
   position: fixed;

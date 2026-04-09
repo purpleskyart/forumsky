@@ -45,3 +45,6 @@ export function applyNsfwMediaMode(mode: NsfwMediaMode) {
   setNsfwMediaMode(mode);
   nsfwMediaMode.value = mode;
 }
+
+export const showGlobalComposer = signal(false);
+export const globalComposerCommunity = signal<string | undefined>(undefined);

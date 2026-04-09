@@ -25,6 +25,8 @@ function isEditableTarget(t: EventTarget | null): boolean {
   return t.isContentEditable;
 }
 
+import { Composer } from './Composer';
+
 export function Layout({ children }: LayoutProps) {
   useEffect(() => {
     import('@/api/auth')
@@ -34,6 +36,7 @@ export function Layout({ children }: LayoutProps) {
           currentUser.value = profile;
           void refreshGraphPolicy();
         } else {
+          setManualScrollRestoration();
           clearGraphPolicy();
         }
       })
@@ -54,7 +57,11 @@ export function Layout({ children }: LayoutProps) {
       if (isEditableTarget(e.target)) {
         if (e.key === 'Escape') {
           e.preventDefault();
-          (e.target as HTMLElement).blur();
+          if (showGlobalComposer.value) {
+            showGlobalComposer.value = false;
+          } else {
+            (e.target as HTMLElement).blur();
+          }
         }
         return;
       }
@@ -84,6 +91,23 @@ export function Layout({ children }: LayoutProps) {
       </div>
       <OutboxRetryBar />
       <BottomNav />
+      {showGlobalComposer.value && (
+        <div class="global-composer-overlay">
+          <div class="global-composer-inner">
+            <div class="global-composer-header">
+              <h3>New Post</h3>
+              <button class="btn btn-icon" onClick={() => { showGlobalComposer.value = false; }}>
+                <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+            <Composer
+              onPost={() => { showGlobalComposer.value = false; }}
+              onCancel={() => { showGlobalComposer.value = false; }}
+              draftKey="global-composer"
+            />
+          </div>
+        </div>
+      )}
       <AuthDialog />
       <SignUpDialog />
       <Toast />

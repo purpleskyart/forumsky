@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'preact/hooks';
 import { navigate } from '@/lib/router';
-import { currentUser, isLoggedIn, showAuthDialog, showSignUpDialog } from '@/lib/store';
+import { currentUser, isLoggedIn, showAuthDialog, showSignUpDialog, currentRoute, showGlobalComposer } from '@/lib/store';
 import { Avatar } from '@/components/Avatar';
 import { UserMenuPanel } from '@/components/UserMenuPanel';
 
 interface NavItem {
   href?: string;
   label: string;
-  icon: preact.JSX.Element | null;
+  icon: (active: boolean) => preact.JSX.Element | null;
   requiresAuth?: boolean;
   isProfile?: boolean;
   requiresLogout?: boolean;
@@ -18,18 +18,39 @@ const NAV_ITEMS: NavItem[] = [
   {
     href: '/',
     label: 'Home',
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    icon: (active) => (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
         <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
         <polyline points="9 22 9 12 15 12 15 22" />
       </svg>
     ),
   },
   {
+    href: '/search',
+    label: 'Search',
+    icon: (active) => (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <circle cx="11" cy="11" r="8" />
+        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+      </svg>
+    ),
+  },
+  {
+    label: 'Post',
+    requiresAuth: true,
+    onClick: () => { showGlobalComposer.value = true; },
+    icon: (active) => (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+      </svg>
+    ),
+  },
+  {
     href: '/communities',
     label: 'Communities',
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    icon: (active) => (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
         <circle cx="9" cy="7" r="4" />
         <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
@@ -41,8 +62,8 @@ const NAV_ITEMS: NavItem[] = [
     href: '/activity',
     label: 'Activity',
     requiresAuth: true,
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    icon: (active) => (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
         <path d="M13.73 21a2 2 0 0 1-3.46 0" />
       </svg>
@@ -52,7 +73,7 @@ const NAV_ITEMS: NavItem[] = [
     href: '/settings',
     label: 'Settings',
     isProfile: true,
-    icon: null,
+    icon: () => null,
   },
 ];
 
@@ -61,6 +82,7 @@ export function BottomNav() {
   const [visible, setVisible] = useState(true);
   const user = currentUser.value;
   const loggedIn = isLoggedIn.value;
+  const route = currentRoute.value;
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
@@ -88,7 +110,10 @@ export function BottomNav() {
           if (item.requiresAuth && !loggedIn) return null;
           if (item.requiresLogout && loggedIn) return null;
 
+          const isActive = item.href ? (item.href === '/' ? route.path === '/' : route.path.startsWith(item.href)) : false;
+
           if (item.isProfile) {
+            const isUserActive = route.path === `/u/${user?.handle}`;
             return (
               <div key={item.href || `profile-${index}`} class="bottom-nav-profile-wrap" ref={userMenuRef}>
                 {userMenuOpen && (
@@ -99,7 +124,7 @@ export function BottomNav() {
                 )}
                 <button
                   type="button"
-                  class="bottom-nav-item bottom-nav-profile"
+                  class={`bottom-nav-item bottom-nav-profile${isUserActive ? ' bottom-nav-item--active' : ''}`}
                   aria-label={item.label}
                   aria-expanded={userMenuOpen}
                   aria-haspopup="menu"
@@ -114,10 +139,15 @@ export function BottomNav() {
                   }}
                 >
                   {user ? (
-                    <Avatar src={user.avatar} alt={user.displayName || user.handle} size={28} />
+                    <Avatar
+                      src={user.avatar}
+                      alt={user.displayName || user.handle}
+                      size={28}
+                      className={isUserActive ? 'avatar--active' : ''}
+                    />
                   ) : (
                     <span class="bottom-nav-icon">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={isActive ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                         <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
                         <polyline points="10 17 15 12 10 7" />
                         <line x1="15" y1="12" x2="3" y2="12" />
@@ -139,7 +169,7 @@ export function BottomNav() {
                 title={item.label}
                 onClick={item.onClick}
               >
-                <span class="bottom-nav-icon">{item.icon}</span>
+                <span class="bottom-nav-icon">{item.icon(false)}</span>
                 <span class="bottom-nav-label">{item.label}</span>
               </button>
             );
@@ -149,12 +179,12 @@ export function BottomNav() {
             <a
               key={item.href || `link-${index}`}
               href={item.href}
-              class="bottom-nav-item"
+              class={`bottom-nav-item${isActive ? ' bottom-nav-item--active' : ''}`}
               aria-label={item.label}
               title={item.label}
               onClick={(e) => handleNav(e, item.href)}
             >
-              <span class="bottom-nav-icon">{item.icon}</span>
+              <span class="bottom-nav-icon">{item.icon(isActive)}</span>
               <span class="bottom-nav-label">{item.label}</span>
             </a>
           );
