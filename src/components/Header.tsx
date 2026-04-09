@@ -127,7 +127,15 @@ export function Header() {
             href={hrefForAppPath('/')}
             class="header-brand"
             {...SPA_ANCHOR_SHIELD}
-            onClick={(e: Event) => { e.preventDefault(); navigate('/'); }}
+            onClick={(e: Event) => {
+              e.preventDefault();
+              if (window.location.pathname === '/' || window.location.pathname === '') {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              } else {
+                navigate('/');
+                window.scrollTo({ top: 0 });
+              }
+            }}
           >
             ForumSky
           </a>
