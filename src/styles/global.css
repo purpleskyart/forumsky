@@ -828,6 +828,22 @@ input:focus, textarea:focus {
 }
 .nsfw-media-reveal-btn {
   flex-shrink: 0;
+  color: white !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+.nsfw-media-reveal-btn:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+}
+.nsfw-media-blur-text {
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: white;
+  text-align: center;
+  line-height: 1.4;
+  max-width: 280px;
+  margin: 0 auto;
 }
 .nsfw-media-placeholder {
   display: flex;
@@ -1177,7 +1193,7 @@ input:focus, textarea:focus {
 .thread-list-header {
   display: flex;
   align-items: center;
-  padding: 6px 12px;
+  padding: 6px 8px;
   font-size: 0.75rem;
   color: var(--text-muted);
   box-shadow: inset 0 -1px 0 var(--divider);
@@ -2840,7 +2856,7 @@ button.post-ref-expand-translate-btn {
   justify-content: center;
   gap: 6px;
   min-height: 32px;
-  padding: 6px 12px;
+  padding: 6px 8px;
   font-size: 0.8rem;
   font-weight: 600;
   line-height: 1.2;
@@ -2885,7 +2901,7 @@ button.post-ref-expand-translate-btn {
   justify-content: center;
   gap: 6px;
   min-height: 32px;
-  padding: 6px 12px;
+  padding: 6px 8px;
   font-size: 0.8rem;
   font-weight: 600;
   line-height: 1.2;
@@ -2934,7 +2950,7 @@ button.post-ref-expand-translate-btn {
   justify-content: center;
   gap: 6px;
   min-height: 32px;
-  padding: 6px 12px;
+  padding: 6px 8px;
   font-size: 0.8rem;
   font-weight: 600;
   line-height: 1.2;
@@ -3049,7 +3065,7 @@ button.post-ref-expand-translate-btn {
   align-items: center;
 }
 .post-reply-btn {
-  padding: 6px 12px;
+  padding: 6px 8px;
   font-size: 0.8rem;
   font-weight: 600;
   line-height: 1.2;
@@ -3064,7 +3080,7 @@ button.post-ref-expand-translate-btn {
   justify-content: center;
   gap: 6px;
   min-height: 32px;
-  padding: 6px 12px;
+  padding: 6px 8px;
   font-size: 0.8rem;
   font-weight: 600;
   line-height: 1.2;
@@ -3663,6 +3679,15 @@ button.post-ref-expand-translate-btn {
     text-align: center;
     padding: 8px 6px 8px 0;
     gap: 4px;
+    position: sticky;
+    top: calc(var(--thread-author-sticky-top) + env(safe-area-inset-top, 0px));
+    max-height: calc(
+      100vh - var(--thread-author-sticky-top) - 12px - env(safe-area-inset-top, 0px)
+    );
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    z-index: 1;
   }
   .post-author-card .avatar {
     width: 44px;
@@ -3828,6 +3853,58 @@ button.post-ref-expand-translate-btn {
   }
   .main-wrap {
     padding-bottom: calc(74px + env(safe-area-inset-bottom, 12px)) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .main-wrap {
+    padding: 10px 6px 10px 0;
+  }
+  .toast {
+    bottom: calc(74px + env(safe-area-inset-bottom, 12px));
+  }
+  .bottom-nav-item--post {
+    display: none;
+  }
+}
+
+.floating-post-btn {
+  display: none;
+  position: fixed;
+  bottom: calc(84px + env(safe-area-inset-bottom, 12px));
+  right: 16px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
+  color: white;
+  cursor: pointer;
+  z-index: 2001;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.floating-post-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.floating-post-btn:active {
+  transform: scale(0.95);
+}
+
+.floating-post-btn svg {
+  width: 24px;
+  height: 24px;
+}
+
+@media (max-width: 480px) {
+  .floating-post-btn {
+    display: flex;
   }
 }
 

@@ -109,7 +109,8 @@ export function FollowingFeedRow({
     onAvatarFollow &&
       viewerDid &&
       post.author.did !== viewerDid &&
-      !(followingAuthorDids?.has(post.author.did) ?? false),
+      followingAuthorDids &&
+      !followingAuthorDids.has(post.author.did),
   );
 
   const onRowClick = (e: MouseEvent) => {

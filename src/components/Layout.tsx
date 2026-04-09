@@ -9,6 +9,7 @@ import { Toast } from './Toast';
 import { OutboxRetryBar } from './OutboxRetryBar';
 import { OfflineBanner } from './OfflineBanner';
 import { ReloadPrompt } from './ReloadPrompt';
+import { FloatingPostButton } from './FloatingPostButton';
 import { authInitDone, currentUser, isLoggedIn, sessionRestorePending } from '@/lib/store';
 import { clearGraphPolicy, refreshGraphPolicy } from '@/lib/graph-policy';
 import { appPathname } from '@/lib/app-base-path';
@@ -94,6 +95,7 @@ export function Layout({ children }: LayoutProps) {
       </PullToRefresh>
       <OutboxRetryBar />
       <BottomNav />
+      <FloatingPostButton />
       {showGlobalComposer.value && (
         <div class="global-composer-overlay">
           <div class="global-composer-inner">

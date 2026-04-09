@@ -74,9 +74,9 @@ export function NsfwMediaWrap({
       </div>
       <div class="nsfw-media-blur-overlay">
         <div class="nsfw-media-blur-overlay-content">
-          {labelText && (
-            <span class="nsfw-media-label-badge">{labelText}</span>
-          )}
+          <div class="nsfw-media-blur-text">
+            {labelText ? `Blurred post because its: ${labelText}` : 'Blurred sensitive content'}
+          </div>
           <button
             type="button"
             class="btn btn-outline btn-sm nsfw-media-reveal-btn"

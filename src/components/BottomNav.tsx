@@ -179,7 +179,7 @@ export function BottomNav() {
               <button
                 key={`action-${index}`}
                 type="button"
-                class="bottom-nav-item"
+                class="bottom-nav-item bottom-nav-item--post"
                 aria-label={item.label}
                 title={item.label}
                 onClick={item.onClick}
