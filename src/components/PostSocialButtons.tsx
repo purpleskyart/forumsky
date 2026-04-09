@@ -52,16 +52,16 @@ export function PostShareButton({
   const [busy, setBusy] = useState(false);
 
   const onShare = async () => {
-    const primary = bskyPostWebUrl(post);
-    let fallback = '';
+    let forumskyUrl = '';
     if (typeof window !== 'undefined') {
       if (forumskyPath) {
-        fallback = `${window.location.origin}${forumskyPath}`;
+        forumskyUrl = `${window.location.origin}${forumskyPath}`;
       } else if (postNumber != null) {
-        fallback = `${window.location.origin}${window.location.pathname}#thread-post-${postNumber}`;
+        forumskyUrl = `${window.location.origin}${window.location.pathname}#thread-post-${postNumber}`;
       }
     }
-    const url = primary || fallback;
+    const primary = forumskyUrl || bskyPostWebUrl(post);
+    const url = primary;
     if (!url) {
       showToast('Could not build link');
       return;

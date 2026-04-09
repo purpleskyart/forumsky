@@ -233,6 +233,38 @@ export function Community({ tag: tagProp }: CommunityProps) {
     };
   }, [loading]);
 
+  /** Restore scroll when returning to page with valid snapshot (e.g., back from thread). */
+  const prevValidSnapshotRef = useRef(validSnapshot);
+  useEffect(() => {
+    const hadValidSnapshot = !!prevValidSnapshotRef.current;
+    prevValidSnapshotRef.current = validSnapshot;
+    if (hadValidSnapshot && validSnapshot) {
+      restoreScrollNow();
+      const t1 = window.setTimeout(() => restoreScrollNow(), 350);
+      const t2 = window.setTimeout(() => restoreScrollNow(), 700);
+      return () => {
+        window.clearTimeout(t1);
+        window.clearTimeout(t2);
+      };
+    }
+  }, [validSnapshot]);
+
+  /** Restore scroll when loadingMore completes (load more scenario). */
+  const prevLoadingMoreRef = useRef(loadingMore);
+  useEffect(() => {
+    const wasLoadingMore = prevLoadingMoreRef.current;
+    prevLoadingMoreRef.current = loadingMore;
+    if (wasLoadingMore && !loadingMore) {
+      restoreScrollNow();
+      const t1 = window.setTimeout(() => restoreScrollNow(), 350);
+      const t2 = window.setTimeout(() => restoreScrollNow(), 700);
+      return () => {
+        window.clearTimeout(t1);
+        window.clearTimeout(t2);
+      };
+    }
+  }, [loadingMore]);
+
   async function pullFilteredRoots(
     communityTag: string,
     sort: 'latest' | 'top',

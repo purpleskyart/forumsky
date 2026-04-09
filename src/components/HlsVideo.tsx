@@ -156,7 +156,7 @@ export function HlsVideo({ playlist, poster, className, 'aria-label': ariaLabel 
       <video
         ref={videoRef}
         class={`${className ?? ''}${showControls ? '' : ' post-hls-video--has-overlay'}`.trim()}
-        controls
+        controls={showControls}
         playsInline
         preload="metadata"
         poster={poster}

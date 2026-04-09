@@ -3561,6 +3561,9 @@ button.post-ref-expand-translate-btn {
 }
 
 @media (max-width: 600px) {
+  html, body {
+    overflow-x: hidden;
+  }
   :root {
     --thread-author-sticky-top: 40px;
   }
@@ -3650,6 +3653,17 @@ button.post-ref-expand-translate-btn {
     display: none;
   }
   .thread-row { padding: 6px 10px; }
+  .thread-list-header {
+    gap: 8px;
+  }
+  .thread-list-header > div:nth-child(2) {
+    width: 40px;
+    text-align: center;
+  }
+  .thread-list-header > div:nth-child(3) {
+    width: 50px;
+    text-align: right;
+  }
   .thread-replies { width: 40px; }
   .thread-last-reply { display: none; }
   .thread-row--list-actions .thread-last-reply {
@@ -3670,8 +3684,12 @@ button.post-ref-expand-translate-btn {
   }
   .community-title { font-size: 1.1rem; }
   .post-content .post-content-media,
-  .post-hls-video-wrap {
+  .post-hls-video-wrap,
+  .post-quoted-embed-media,
+  .post-quoted-embed img {
     max-width: 100%;
+    width: 100%;
+    height: auto;
   }
   .post-quoted-embed {
     padding: 8px 10px;
@@ -3696,10 +3714,27 @@ button.post-ref-expand-translate-btn {
   }
   .post-quoted-embed-external {
     max-width: 100%;
+    width: 100%;
   }
   .post-quoted-embed-external img {
     max-width: 100%;
+    width: 100%;
     height: auto;
+  }
+  .post-external-card {
+    max-width: 100%;
+    flex-direction: column;
+  }
+  .post-external-card-media {
+    width: 100%;
+    flex-shrink: 0;
+  }
+  .post-external-card-media img {
+    width: 100%;
+    height: auto;
+  }
+  .post-external-card-body {
+    padding-top: 8px;
   }
   .post-footer {
     gap: 8px;

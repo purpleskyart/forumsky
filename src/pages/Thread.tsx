@@ -1698,7 +1698,10 @@ function ReferencedPostPeek({
       ? 'Could not load this post.'
       : 'Loading…';
 
+  const isTouchDevice = typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches;
+
   const showPostSnippetCard =
+    !isTouchDevice &&
     targetUri !== threadRootUri &&
     postSnippetHover &&
     (targetPost || loadError || !targetInThread);
@@ -1919,13 +1922,6 @@ function ReferencedPostPeek({
           onClick={onQuoteClick}
           aria-expanded={unfurled}
           aria-label={childQuoteAria}
-          onMouseEnter={() => {
-            setPostSnippetHover(true);
-          }}
-          onMouseMove={() => {
-            if (postSnippetHover) computeTooltipPosition();
-          }}
-          onMouseLeave={() => setPostSnippetHover(false)}
         >
           {labelInner}
         </button>
