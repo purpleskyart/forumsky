@@ -1001,12 +1001,12 @@ function ThreadView({
               <button
                 type="button"
                 class="btn btn-sm btn-outline"
-                onClick={() => {
-                  const on = toggleSubscribedThreadRoot(rootPost.uri);
+                onClick={async () => {
+                  const on = await toggleSubscribedThreadRoot(rootPost.uri);
                   setSubscribedUi(on);
                   showToast(
                     on
-                      ? 'Subscribed — filter Activity to “Subscribed threads” to focus on these.'
+                      ? 'Subscribed — filter Activity to "Subscribed threads" to focus on these.'
                       : 'Unsubscribed from this thread',
                   );
                 }}

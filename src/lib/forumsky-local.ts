@@ -162,9 +162,40 @@ export function clearLocallyHiddenForThread(threadRootUri: string) {
   clearLocalHideReasonsForThread(threadRootUri);
 }
 
+import { getSubscribedThreadsFromRepo, saveSubscribedThreadsToRepo } from '@/api/actor';
+
 const SUBSCRIBED_THREADS_KEY = 'subscribed_thread_roots';
 
+let cachedRepoSubscribedThreads: string[] | null = null;
+let subscribedRepoSyncPromise: Promise<string[]> | null = null;
+
+async function loadSubscribedThreadsFromRepo(): Promise<string[]> {
+  if (subscribedRepoSyncPromise) return subscribedRepoSyncPromise;
+  subscribedRepoSyncPromise = getSubscribedThreadsFromRepo();
+  const result = await subscribedRepoSyncPromise;
+  cachedRepoSubscribedThreads = result;
+  subscribedRepoSyncPromise = null;
+  return result;
+}
+
+export async function syncSubscribedThreadsFromRepo(): Promise<void> {
+  try {
+    const repoSubscribed = await loadSubscribedThreadsFromRepo();
+    if (repoSubscribed.length > 0) {
+      cachedRepoSubscribedThreads = repoSubscribed;
+      saveJSON(SUBSCRIBED_THREADS_KEY, repoSubscribed);
+    }
+  } catch {
+    // Sync failed, use localStorage
+  }
+}
+
 export function getSubscribedThreadRoots(): string[] {
+  // If we have cached repo data, use it
+  if (cachedRepoSubscribedThreads) {
+    return cachedRepoSubscribedThreads;
+  }
+  // Otherwise fall back to localStorage
   return loadJSON<string[]>(SUBSCRIBED_THREADS_KEY, []);
 }
 
@@ -173,17 +204,29 @@ export function isThreadSubscribed(rootUri: string): boolean {
 }
 
 /** @returns new subscribed state */
-export function toggleSubscribedThreadRoot(rootUri: string): boolean {
+export async function toggleSubscribedThreadRoot(rootUri: string): Promise<boolean> {
   const cur = getSubscribedThreadRoots();
   const i = cur.indexOf(rootUri);
   if (i >= 0) {
     cur.splice(i, 1);
-    saveJSON(SUBSCRIBED_THREADS_KEY, cur);
-    return false;
+  } else {
+    cur.push(rootUri);
   }
-  cur.push(rootUri);
+
+  // Update localStorage immediately
   saveJSON(SUBSCRIBED_THREADS_KEY, cur);
-  return true;
+
+  // Update cache
+  cachedRepoSubscribedThreads = cur;
+
+  // Sync to repo in background
+  try {
+    await saveSubscribedThreadsToRepo(cur);
+  } catch {
+    // Sync failed, localStorage has the data
+  }
+
+  return i < 0;
 }
 
 const COMMUNITY_LAST_VISIT_KEY = 'community_last_left_at';

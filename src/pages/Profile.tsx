@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'preact/hooks';
 import { Avatar } from '@/components/Avatar';
-import { ThreadRow } from '@/components/ThreadRow';
+import { FollowingFeedRow } from '@/components/FollowingFeedRow';
 import { getProfile } from '@/api/actor';
 import { getAuthorFeed, parseAtUri } from '@/api/feed';
 import { followActor, unfollowByRecordUri } from '@/api/graph-follows';
@@ -32,7 +32,7 @@ export function Profile(props: ProfileProps) {
   const [kbRow, setKbRow] = useState(0);
   const [kbRowOutlineActive, setKbRowOutlineActive] = useState(false);
   const [followBusy, setFollowBusy] = useState(false);
-  const [cursor, setCursor] = useState<string | undefined>(undefined);
+  const [cursor, setCursor] = useState<string>('');
   const [hasMore, setHasMore] = useState(true);
   const postsRef = useRef<PostView[]>([]);
   const kbRowRef = useRef(0);
@@ -43,12 +43,12 @@ export function Profile(props: ProfileProps) {
   const me = currentUser.value;
 
   const loadMore = useCallback(async () => {
-    if (loadingMore || !hasMore || !cursor) return;
+    if (loadingMore || !hasMore || !cursor || !handle) return;
     setLoadingMore(true);
     try {
-      const feedRes = await getAuthorFeed(handle, { limit: 30, cursor: cursor as string, filter: 'posts_no_replies' });
+      const feedRes = await getAuthorFeed(handle!, { limit: 30, filter: 'posts_no_replies' });
       setPosts(prev => [...prev, ...feedRes.feed.map(f => f.post)]);
-      setCursor(feedRes.cursor);
+      setCursor(feedRes.cursor || '');
       setHasMore(!!feedRes.cursor);
     } catch (err) {
       console.error('Failed to load more posts:', err);
@@ -75,7 +75,7 @@ export function Profile(props: ProfileProps) {
     if (!handle) return;
     setKbRowOutlineActive(false);
     setPosts([]);
-    setCursor(undefined);
+    setCursor('');
     setHasMore(true);
     let cancelled = false;
     const load = async () => {
@@ -84,13 +84,13 @@ export function Profile(props: ProfileProps) {
       try {
         const sessionKey = me?.did ?? '_guest';
         const [profileRes, feedRes] = await Promise.all([
-          swr(`profile_${handle}_${sessionKey}`, () => getProfile(handle), 120_000),
-          swr(`feed_${handle}`, () => getAuthorFeed(handle, { limit: 30, filter: 'posts_no_replies' }), 60_000),
+          swr(`profile_${handle}_${sessionKey}`, () => getProfile(handle!), 120_000),
+          swr(`feed_${handle}`, () => getAuthorFeed(handle!, { limit: 30, filter: 'posts_no_replies' }), 60_000),
         ]);
         if (cancelled) return;
         setProfile(profileRes);
         setPosts(feedRes.feed.map(f => f.post));
-        setCursor(feedRes.cursor);
+        setCursor(feedRes.cursor || '');
         setHasMore(!!feedRes.cursor);
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load profile');
@@ -301,12 +301,6 @@ export function Profile(props: ProfileProps) {
       </div>
 
       <div class="panel">
-        <div class="panel-header">Threads by {profile ? (profile.displayName || profile.handle) : `@${handle}`}</div>
-        <div class="thread-list-header">
-          <div style="flex:1">Thread</div>
-          <div style="width:60px;text-align:center">Replies</div>
-          <div style="width:160px;text-align:right">Date</div>
-        </div>
         {loading && posts.length === 0 ? (
           <div class="loading" style="padding: 24px 0"><div class="spinner" /></div>
         ) : posts.length === 0 ? (
@@ -314,13 +308,12 @@ export function Profile(props: ProfileProps) {
         ) : (
           <>
             {posts.map((post, i) => (
-              <div
+              <FollowingFeedRow
                 key={post.uri}
-                id={`profile-feed-kb-${i}`}
-                class={kbRowOutlineActive && i === kbRow ? 'thread-row-kb-focus' : undefined}
-              >
-                <ThreadRow post={post} />
-              </div>
+                post={post}
+                downvoteDisplayCount={0}
+                onDownvotePost={() => {}}
+              />
             ))}
             {hasMore && (
               <div ref={loadMoreRef} style="padding: 16px; text-align: center;">
