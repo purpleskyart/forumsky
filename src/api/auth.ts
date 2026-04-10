@@ -53,36 +53,23 @@ function getLoopbackClientMetadata() {
   return atprotoLoopbackClientMetadata(clientId);
 }
 
-interface OAuthClientMetadata {
-  client_id: string;
-  client_name: string;
-  client_uri: string;
-  redirect_uris: string[];
-  grant_types: string[];
-  response_types: string[];
-  scope: string;
-  application_type: string;
-  dpop_bound_access_tokens: boolean;
-  token_endpoint_auth_method: string;
-}
-
-function getClientMetadata(): OAuthClientMetadata {
+function getClientMetadata() {
   if (isLocalhost()) {
-    return getLoopbackClientMetadata() as OAuthClientMetadata;
+    return getLoopbackClientMetadata();
   }
   const root = appDeploymentRoot();
   return {
     client_id: `${root}/client-metadata.json`,
     client_name: 'ForumSky',
     client_uri: root,
-    redirect_uris: [`${root}/`],
-    grant_types: ['authorization_code', 'refresh_token'],
-    response_types: ['code'],
+    redirect_uris: [`${root}/`] as [string, ...string[]],
+    grant_types: ['authorization_code', 'refresh_token'] as ['authorization_code', 'refresh_token', ...('authorization_code' | 'refresh_token')[]],
+    response_types: ['code'] as ['code', ...('code')[]],
     scope: oauthScope(),
     application_type: 'web',
     dpop_bound_access_tokens: true,
     token_endpoint_auth_method: 'none',
-  };
+  } as const;
 }
 
 async function getClient(): Promise<BrowserOAuthClient> {
