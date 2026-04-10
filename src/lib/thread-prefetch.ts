@@ -48,7 +48,7 @@ function persistCache(): void {
 export async function prefetchThread(uri: string): Promise<void> {
   if (PREFETCH_CACHE.has(uri)) {
     const cached = PREFETCH_CACHE.get(uri);
-    if (Date.now() - cached.timestamp < PREFETCH_TTL) {
+    if (cached && Date.now() - cached.timestamp < PREFETCH_TTL) {
       return; // Already cached and fresh
     }
   }

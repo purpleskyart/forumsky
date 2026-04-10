@@ -1,21 +1,15 @@
 import { render } from 'preact';
 import { App } from './app';
 import './styles/global.css';
-import { registerSW } from 'virtual:pwa-register';
-import { SWR_INTERVAL_MS } from './lib/constants';
 
-registerSW({
-  immediate: true,
-  onRegistered(registration) {
-    if (!registration) return;
-    const checkForUpdate = () => {
-      void registration.update();
-    };
-    window.setInterval(checkForUpdate, SWR_INTERVAL_MS);
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') checkForUpdate();
-    });
-  },
-});
+console.log('[ForumSky] main.tsx loaded');
+console.log('[ForumSky] App component:', App);
 
-render(<App />, document.getElementById('app')!);
+try {
+  const appElement = document.getElementById('app');
+  console.log('[ForumSky] app element:', appElement);
+  render(<App />, appElement!);
+  console.log('[ForumSky] render completed');
+} catch (error) {
+  console.error('[ForumSky] Render error:', error);
+}
