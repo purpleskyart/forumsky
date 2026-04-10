@@ -7,8 +7,8 @@ export default defineConfig({
   // GitHub project pages: set GITHUB_PAGES_BASE=/repo-name/ when building (omit for custom domain at /).
   base: process.env.GITHUB_PAGES_BASE || '/',
   define: {
-    // Automatically inject build date for version tracking
-    'import.meta.env.VITE_BUILD_DATE': JSON.stringify(new Date().toISOString().slice(0, 10)),
+    // Automatically inject build timestamp for version tracking
+    'import.meta.env.VITE_BUILD_TIMESTAMP': JSON.stringify(new Date().toISOString()),
   },
   plugins: [
     preact(),

@@ -4,7 +4,9 @@ import { applyNsfwMediaMode, nsfwMediaMode } from '@/lib/store';
 import type { NsfwMediaMode } from '@/lib/preferences';
 
 // Version automatically updates on each build using build timestamp
-const FORUMSKY_VERSION = import.meta.env.VITE_BUILD_DATE || new Date().toISOString().slice(0, 10);
+const buildTimestamp = import.meta.env.VITE_BUILD_TIMESTAMP || new Date().toISOString();
+const buildDate = new Date(buildTimestamp);
+const FORUMSKY_VERSION = buildDate.toLocaleDateString() + ' ' + buildDate.toLocaleTimeString();
 
 export function Settings() {
   const mode = nsfwMediaMode.value;
