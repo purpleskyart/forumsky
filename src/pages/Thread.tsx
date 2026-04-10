@@ -1090,7 +1090,6 @@ function ThreadView({
           segments={forumPost.segments}
           root={forumPost.root}
           postNumber={1}
-          allSegments
           threadRootUri={rootPost.uri}
           threadIndex={threadIndex}
           mergedTextForPostNumber={mergedTextForPostNumber}
@@ -1589,7 +1588,7 @@ function ReferencedPostPeek({
   const [loadError, setLoadError] = useState(false);
   /** Parent (&gt;&gt;handle) line: show replied-to text immediately; child reply links stay collapsed until clicked. */
   const [unfurled, setUnfurled] = useState(() => layout === 'parent');
-  const [postSnippetHover, setPostSnippetHover] = useState(false);
+  const [postSnippetHover] = useState(false);
   const [tooltipPos, setTooltipPos] = useState<{
     top: number;
     left: number;
@@ -2248,7 +2247,6 @@ function PostBlock({
   segments,
   root,
   postNumber,
-  allSegments,
   threadRootUri,
   threadIndex,
   mergedTextForPostNumber,
@@ -2270,7 +2268,6 @@ function PostBlock({
   segments: PostView[];
   root: PostView;
   postNumber: number;
-  allSegments?: boolean;
   threadRootUri?: string;
   threadIndex?: ThreadPostIndex;
   mergedTextForPostNumber?: (postNum: number) => string | null;
@@ -2810,7 +2807,7 @@ function PostBlock({
             <div class="post-translation-plain">
               {cachedTranslationMain.split(/\n{2,}/).map((para, i) => (
                 <p key={i}>
-                  {para.split('\n').map((line, j, arr) => (
+                  {para.split('\n').map((line, j) => (
                     <Fragment key={j}>
                       {j > 0 ? <br /> : null}
                       {line}

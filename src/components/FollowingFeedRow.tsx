@@ -86,7 +86,6 @@ export function FollowingFeedRow({
   const handle = post.author.handle;
   const displayName = post.author.displayName || handle;
   const activityDate = lastActivity || post.indexedAt;
-  const activityAuthor = lastActivityAuthor || post.author;
   const dateStr = formatListDateTime(activityDate);
   const relativeTimeStr = formatRelativeTime(activityDate);
   const replyCount = post.replyCount ?? 0;

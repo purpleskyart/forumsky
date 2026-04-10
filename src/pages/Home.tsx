@@ -4,7 +4,6 @@ import {
   getCommunities,
   type CommunityConfig,
   addCommunity,
-  removeCommunity,
   resetCommunities,
   FOLLOWED_COMMUNITY,
 } from '@/lib/preferences';

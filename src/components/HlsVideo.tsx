@@ -141,19 +141,18 @@ export function HlsVideo({
     };
   }, [playlist]);
 
-  const revealAndPlay = (e: MouseEvent) => {
-    e.stopPropagation();
-    const v = videoRef.current;
-    if (v) v.muted = false;
-    setShowControls(true);
-    queueMicrotask(() => {
-      void videoRef.current?.play().catch(() => {});
-    });
-  };
-
   const [isHovered, setIsHovered] = useState(false);
   const onMouseEnter = () => setIsHovered(true);
   const onMouseLeave = () => setIsHovered(false);
+
+  // Pan/zoom state for mobile fullscreen
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [panX, setPanX] = useState(0);
+  const [panY, setPanY] = useState(0);
+  const [isZooming, setIsZooming] = useState(false);
+  const [isPanning, setIsPanning] = useState(false);
+  const touchStartRef = useRef<{ x: number; y: number; distance: number } | null>(null);
 
   const onVideoPlay = () => {};
 
@@ -184,7 +183,14 @@ export function HlsVideo({
   useEffect(() => {
     const onFsChange = () => {
       const isFs = !!document.fullscreenElement;
+      setIsFullscreen(isFs);
       setShowControls(isFs);
+      // Reset zoom/pan when exiting fullscreen
+      if (!isFs) {
+        setZoom(1);
+        setPanX(0);
+        setPanY(0);
+      }
     };
     document.addEventListener('fullscreenchange', onFsChange);
     document.addEventListener('webkitfullscreenchange', onFsChange);
@@ -193,6 +199,66 @@ export function HlsVideo({
       document.removeEventListener('webkitfullscreenchange', onFsChange);
     };
   }, []);
+
+  // Touch handlers for pinch-to-zoom and pan
+  const getTouchDistance = (touches: TouchList): number => {
+    if (touches.length < 2) return 0;
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  const onTouchStart = (e: TouchEvent) => {
+    const v = videoRef.current;
+    if (!v || !isFullscreen) return;
+
+    if (e.touches.length === 2) {
+      // Pinch to zoom
+      setIsZooming(true);
+      touchStartRef.current = {
+        x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+        y: (e.touches[0].clientY + e.touches[1].clientY) / 2,
+        distance: getTouchDistance(e.touches),
+      };
+    } else if (e.touches.length === 1 && zoom > 1) {
+      // Pan
+      setIsPanning(true);
+      touchStartRef.current = {
+        x: e.touches[0].clientX - panX,
+        y: e.touches[0].clientY - panY,
+        distance: 0,
+      };
+    }
+  };
+
+  const onTouchMove = (e: TouchEvent) => {
+    const v = videoRef.current;
+    if (!v || !isFullscreen) return;
+
+    if (isZooming && e.touches.length === 2 && touchStartRef.current) {
+      // Handle pinch zoom
+      const currentDistance = getTouchDistance(e.touches);
+      const scale = currentDistance / touchStartRef.current.distance;
+      const newZoom = Math.min(Math.max(zoom * scale, 1), 4);
+      setZoom(newZoom);
+      touchStartRef.current.distance = currentDistance;
+    } else if (isPanning && e.touches.length === 1 && touchStartRef.current) {
+      // Handle pan
+      e.preventDefault();
+      const newX = e.touches[0].clientX - touchStartRef.current.x;
+      const newY = e.touches[0].clientY - touchStartRef.current.y;
+      setPanX(newX);
+      setPanY(newY);
+    }
+  };
+
+  const onTouchEnd = (e: TouchEvent) => {
+    setIsZooming(false);
+    setIsPanning(false);
+    if (e.touches.length === 0) {
+      touchStartRef.current = null;
+    }
+  };
 
   const onLoadedMetadata = (e: Event) => {
     const el = e.currentTarget as HTMLVideoElement;
@@ -219,10 +285,16 @@ export function HlsVideo({
         style={{
           aspectRatio: aspectCss || undefined,
           backgroundColor: 'var(--bg-elevated)',
+          transform: isFullscreen ? `translate(${panX}px, ${panY}px) scale(${zoom})` : 'none',
+          transformOrigin: 'center center',
+          transition: isZooming || isPanning ? 'none' : 'transform 0.2s ease-out',
         }}
         onLoadedMetadata={onLoadedMetadata}
         onPlay={onVideoPlay}
         onClick={toggleFullscreen}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
       />
     </div>
   );

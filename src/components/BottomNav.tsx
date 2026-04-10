@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'preact/hooks';
 import { navigate } from '@/lib/router';
-import { currentUser, isLoggedIn, showAuthDialog, showSignUpDialog, currentRoute, showGlobalComposer } from '@/lib/store';
+import { currentUser, isLoggedIn, showAuthDialog, showSignUpDialog, currentRoute } from '@/lib/store';
 import { Avatar } from '@/components/Avatar';
 import { UserMenuPanel } from '@/components/UserMenuPanel';
 
@@ -68,7 +68,7 @@ const NAV_ITEMS: NavItem[] = [
 
 
 export function BottomNav() {
-  const [visible, setVisible] = useState(true);
+  const [visible] = useState(true);
   const user = currentUser.value;
   const loggedIn = isLoggedIn.value;
   const route = currentRoute.value;

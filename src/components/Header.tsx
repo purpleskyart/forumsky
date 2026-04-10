@@ -3,7 +3,6 @@ import { Avatar } from '@/components/Avatar';
 import { showAuthDialog, showSignUpDialog, currentUser, isLoggedIn, showToast, sessionRestorePending } from '@/lib/store';
 import { hrefForAppPath } from '@/lib/app-base-path';
 import { navigate, communityUrl, searchUrl, SPA_ANCHOR_SHIELD, threadUrl, profileUrl } from '@/lib/router';
-import { refreshGraphPolicy } from '@/lib/graph-policy';
 import { UserMenuPanel } from '@/components/UserMenuPanel';
 import { searchActors } from '@/api/actor';
 import { searchPosts, parseAtUri } from '@/api/feed';
@@ -59,8 +58,6 @@ export function Header() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const bumpUi = () => setUiTick(t => t + 1);
 
   useEffect(() => {
     return () => {

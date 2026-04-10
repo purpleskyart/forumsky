@@ -307,7 +307,7 @@ export function Profile(props: ProfileProps) {
           <div class="empty"><p>No threads yet</p></div>
         ) : (
           <>
-            {posts.map((post, i) => (
+            {posts.map((post) => (
               <FollowingFeedRow
                 key={post.uri}
                 post={post}
