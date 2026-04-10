@@ -22,7 +22,7 @@ import { Settings } from './pages/Settings';
 import { FOLLOWED_COMMUNITY_TAG } from '@/lib/preferences';
 import { browserHistory } from '@/lib/app-base-path';
 import { navigate } from './lib/router';
-import { authInitDone, currentUser, sessionRestorePending } from './lib/store';
+import { authInitDone, currentUser } from './lib/store';
 
 function FollowedFeedRoute() {
   return <Community tag={FOLLOWED_COMMUNITY_TAG} />;
@@ -32,15 +32,6 @@ function FollowedFeedRoute() {
 function RootRoute() {
   if (authInitDone.value && currentUser.value) {
     return <FollowedFeedRoute />;
-  }
-  if (sessionRestorePending()) {
-    return (
-      <div class="panel" style={{ padding: '48px 24px', display: 'flex', justifyContent: 'center' }}>
-        <div class="loading">
-          <div class="spinner" />
-        </div>
-      </div>
-    );
   }
   return <Home />;
 }

@@ -56,6 +56,8 @@ export const isLoading = signal(false);
 /** Filled after sign-in via refreshGraphPolicy() */
 export const mutedDids = signal<Set<string>>(new Set());
 export const blockedDids = signal<Set<string>>(new Set());
+/** Filled on auth init - users the current user follows. Null means not loaded yet. */
+export const followingDids = signal<Set<string> | null>(null);
 
 /** Sensitive / adult-labeled media: show, blur until revealed, or hide (stored in localStorage). */
 export const nsfwMediaMode = signal<NsfwMediaMode>(getNsfwMediaMode());

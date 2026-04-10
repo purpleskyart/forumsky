@@ -83,7 +83,7 @@ import {
 } from '@/lib/router';
 import { formatThreadTitlePreviewLine } from '@/lib/thread-title';
 import { t } from '@/lib/i18n';
-import { isLoggedIn, showAuthDialog, currentUser, showToast, mutedDids, blockedDids } from '@/lib/store';
+import { isLoggedIn, showAuthDialog, currentUser, showToast, mutedDids, blockedDids, followingDids } from '@/lib/store';
 import { blockActor, muteActor } from '@/api/graph';
 import { refreshGraphPolicy } from '@/lib/graph-policy';
 import {
@@ -101,7 +101,7 @@ import {
 } from '@/lib/forumsky-local';
 import { reportPost } from '@/api/moderation';
 import { deletePost, createDownvote, deleteDownvote, listMyDownvotes } from '@/api/post';
-import { followActor, listAllFollowingDids } from '@/api/graph-follows';
+import { followActor } from '@/api/graph-follows';
 import { XRPCError } from '@/api/xrpc';
 import type { PostView, StrongRef, ThreadViewPost } from '@/api/types';
 import type { ComponentChildren } from 'preact';
@@ -438,21 +438,10 @@ function ThreadView({
   /** Consume ?reply=1 / ?quote=1 once per thread navigation (following feed → composer). */
   const composeFromQueryConsumedRef = useRef(false);
   const replyCountAnnounceRef = useRef(-1);
-  const [threadFollowingDids, setThreadFollowingDids] = useState<Set<string>>(() => new Set());
   const [avatarFollowBusyDid, setAvatarFollowBusyDid] = useState<string | null>(null);
   const threadViewerDid = currentUser.value?.did;
-
-  useEffect(() => {
-    if (!threadViewerDid) {
-      setThreadFollowingDids(new Set());
-      return;
-    }
-    let cancelled = false;
-    void listAllFollowingDids().then(set => {
-      if (!cancelled) setThreadFollowingDids(set);
-    });
-    return () => { cancelled = true; };
-  }, [threadViewerDid, thread.forumPost.root.uri]);
+  // Use global followingDids signal for instant availability
+  const threadFollowingDids = followingDids.value;
 
   const handleThreadAvatarFollow = useCallback(async (authorDid: string) => {
     const meDid = currentUser.value?.did;
@@ -463,7 +452,7 @@ function ThreadView({
     setAvatarFollowBusyDid(authorDid);
     try {
       await followActor(meDid, authorDid);
-      setThreadFollowingDids(prev => new Set(prev).add(authorDid));
+      followingDids.value = new Set(followingDids.value ?? []).add(authorDid);
     } catch (e) {
       showToast(e instanceof XRPCError ? e.message : 'Could not follow');
     } finally {
@@ -1422,7 +1411,7 @@ function ThreadNestedCommentBranch({
   downvoteCountOptimisticDelta: Record<string, number>;
   downvoteLoadingUri: string | null;
   onDownvotePost: (uri: string, cid: string) => void | Promise<void>;
-  threadFollowingDids: Set<string>;
+  threadFollowingDids: Set<string> | null;
   avatarFollowBusyDid: string | null;
   onThreadAvatarFollow: (authorDid: string) => void | Promise<void>;
 }) {
@@ -2355,7 +2344,7 @@ function PostBlock({
   downvoteDisplayCount?: number;
   onDownvotePost?: (uri: string, cid: string) => void | Promise<void>;
   downvoteBusy?: boolean;
-  threadFollowingDids?: Set<string>;
+  threadFollowingDids?: Set<string> | null;
   avatarFollowBusyDid?: string | null;
   onThreadAvatarFollow?: (authorDid: string) => void | Promise<void>;
 }) {
@@ -2495,7 +2484,8 @@ function PostBlock({
   const showAvatarFollowPlus = Boolean(
     onThreadAvatarFollow &&
       !isSelfAuthor &&
-      !(threadFollowingDids?.has(root.author.did) ?? false),
+      threadFollowingDids != null &&
+      !threadFollowingDids.has(root.author.did),
   );
 
   return (

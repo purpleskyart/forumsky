@@ -152,16 +152,6 @@ export function Activity() {
     ? items.filter(n => notificationMatchesSubscribedThreads(n, subscribedRoots))
     : items;
 
-  if (sessionRestorePending()) {
-    return (
-      <div class="panel" style={{ padding: '48px 24px', display: 'flex', justifyContent: 'center' }}>
-        <div class="loading">
-          <div class="spinner" />
-        </div>
-      </div>
-    );
-  }
-
   if (!isLoggedIn.value) {
     return (
       <div>

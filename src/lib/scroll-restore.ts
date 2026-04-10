@@ -79,7 +79,7 @@ export function restoreScrollNow(): void {
   const y = readSavedScroll(key);
   if (y == null) return;
 
-  ignoreScrollPersistUntil = performance.now() + 600;
+  ignoreScrollPersistUntil = performance.now() + 2000;
 
   const apply = () => window.scrollTo({ top: y, left: 0, behavior: 'auto' });
   apply();
@@ -89,6 +89,8 @@ export function restoreScrollNow(): void {
   });
   window.setTimeout(apply, 100);
   window.setTimeout(apply, 300);
+  window.setTimeout(apply, 1000);
+  window.setTimeout(apply, 2000);
 }
 
 /** Call after the router URL changes (back/forward or in-app navigation). */
@@ -117,7 +119,7 @@ export function setManualScrollRestoration(): void {
 export function attachPopstateScrollGuard(): () => void {
   if (typeof window === 'undefined') return () => {};
   const onPop = () => {
-    ignoreScrollPersistUntil = performance.now() + 500;
+    ignoreScrollPersistUntil = performance.now() + 2000;
   };
   window.addEventListener('popstate', onPop, true);
   return () => window.removeEventListener('popstate', onPop, true);

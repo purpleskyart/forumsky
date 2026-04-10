@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'preact/hooks';
+import { useState, useEffect, useRef, useCallback, useLayoutEffect, useMemo } from 'preact/hooks';
 import { Avatar } from '@/components/Avatar';
 import { FollowingFeedRow } from '@/components/FollowingFeedRow';
 import { getProfile } from '@/api/actor';
 import { getAuthorFeed, parseAtUri } from '@/api/feed';
-import { followActor, unfollowByRecordUri, listAllFollowingDids } from '@/api/graph-follows';
+import { followActor, unfollowByRecordUri } from '@/api/graph-follows';
 import { XRPCError } from '@/api/xrpc';
 import { swr, removeCacheEntry } from '@/lib/cache';
 import { appPathname, hrefForAppPath } from '@/lib/app-base-path';
@@ -11,9 +11,9 @@ import { dominantVisibleListRowIndex } from '@/lib/dominant-visible-row';
 import { navigate, threadUrl, SPA_ANCHOR_SHIELD } from '@/lib/router';
 import { parseProfileRoutePath } from '@/lib/spa-route-params';
 import { useRouter } from 'preact-router';
-import { currentUser, showAuthDialog, showToast } from '@/lib/store';
+import { currentUser, showAuthDialog, showToast, followingDids } from '@/lib/store';
 import { restoreScrollNow } from '@/lib/scroll-restore';
-import type { ProfileView, PostView } from '@/api/types';
+import type { ProfileView, PostView, FeedViewPost } from '@/api/types';
 
 interface ProfileProps {
   handle?: string;
@@ -26,7 +26,8 @@ export function Profile(props: ProfileProps) {
   const m = routeCtx.matches as Record<string, string | undefined> | null | undefined;
   const handle = props.handle ?? m?.handle ?? fromPath.handle;
   const [profile, setProfile] = useState<ProfileView | null>(null);
-  const [posts, setPosts] = useState<PostView[]>([]);
+  const [feedItems, setFeedItems] = useState<FeedViewPost[]>([]);
+  const [filter, setFilter] = useState<'posts' | 'replies' | 'all'>('posts');
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
@@ -34,8 +35,8 @@ export function Profile(props: ProfileProps) {
   const [kbRowOutlineActive, setKbRowOutlineActive] = useState(false);
   const [followBusy, setFollowBusy] = useState(false);
   const [cursor, setCursor] = useState<string>('');
+  const posts = useMemo(() => feedItems.map(f => f.post), [feedItems]);
   const [hasMore, setHasMore] = useState(true);
-  const [profileFollowingDids, setProfileFollowingDids] = useState<Set<string>>(() => new Set());
   const [profileAvatarFollowBusyDid, setProfileAvatarFollowBusyDid] = useState<string | null>(null);
   const postsRef = useRef<PostView[]>([]);
   const kbRowRef = useRef(0);
@@ -45,12 +46,20 @@ export function Profile(props: ProfileProps) {
 
   const me = currentUser.value;
 
+  const getFilterParam = useCallback((f: typeof filter): string => {
+    switch (f) {
+      case 'replies': return 'posts_with_replies';
+      case 'all': return 'posts_with_media'; // Use posts_with_media to get everything including reposts
+      default: return 'posts_no_replies';
+    }
+  }, []);
+
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore || !cursor || !handle) return;
     setLoadingMore(true);
     try {
-      const feedRes = await getAuthorFeed(handle!, { limit: 30, filter: 'posts_no_replies' });
-      setPosts(prev => [...prev, ...feedRes.feed.map(f => f.post)]);
+      const feedRes = await getAuthorFeed(handle!, { limit: 30, filter: getFilterParam(filter), cursor });
+      setFeedItems(prev => [...prev, ...feedRes.feed]);
       setCursor(feedRes.cursor || '');
       setHasMore(!!feedRes.cursor);
     } catch (err) {
@@ -58,7 +67,7 @@ export function Profile(props: ProfileProps) {
     } finally {
       setLoadingMore(false);
     }
-  }, [handle, cursor, hasMore, loadingMore]);
+  }, [handle, cursor, hasMore, loadingMore, filter, getFilterParam]);
 
   useEffect(() => {
     if (!loadMoreRef.current || !hasMore) return;
@@ -112,7 +121,7 @@ export function Profile(props: ProfileProps) {
   useEffect(() => {
     if (!handle) return;
     setKbRowOutlineActive(false);
-    setPosts([]);
+    setFeedItems([]);
     setCursor('');
     setHasMore(true);
     let cancelled = false;
@@ -121,13 +130,14 @@ export function Profile(props: ProfileProps) {
       setError('');
       try {
         const sessionKey = me?.did ?? '_guest';
+        const filterParam = getFilterParam(filter);
         const [profileRes, feedRes] = await Promise.all([
           swr(`profile_${handle}_${sessionKey}`, () => getProfile(handle!), 120_000),
-          swr(`feed_${handle}`, () => getAuthorFeed(handle!, { limit: 30, filter: 'posts_no_replies' }), 60_000),
+          swr(`feed_${handle}_${filterParam}`, () => getAuthorFeed(handle!, { limit: 30, filter: filterParam }), 60_000),
         ]);
         if (cancelled) return;
         setProfile(profileRes);
-        setPosts(feedRes.feed.map(f => f.post));
+        setFeedItems(feedRes.feed);
         setCursor(feedRes.cursor || '');
         setHasMore(!!feedRes.cursor);
       } catch (err) {
@@ -138,23 +148,12 @@ export function Profile(props: ProfileProps) {
     };
     load();
     return () => { cancelled = true; };
-  }, [handle, me?.did]);
+  }, [handle, me?.did, filter, getFilterParam]);
 
   useEffect(() => {
     setKbRow(i => Math.min(i, Math.max(0, posts.length - 1)));
   }, [posts.length]);
 
-  useEffect(() => {
-    if (!me?.did) {
-      setProfileFollowingDids(new Set());
-      return;
-    }
-    let cancelled = false;
-    void listAllFollowingDids().then(set => {
-      if (!cancelled) setProfileFollowingDids(set);
-    });
-    return () => { cancelled = true; };
-  }, [me?.did]);
 
   const handleProfileAvatarFollow = useCallback(async (authorDid: string) => {
     const meDid = currentUser.value?.did;
@@ -165,7 +164,7 @@ export function Profile(props: ProfileProps) {
     setProfileAvatarFollowBusyDid(authorDid);
     try {
       await followActor(meDid, authorDid);
-      setProfileFollowingDids(prev => new Set(prev).add(authorDid));
+      followingDids.value = new Set(followingDids.value ?? []).add(authorDid);
     } catch (e) {
       showToast(e instanceof XRPCError ? e.message : 'Could not follow');
     } finally {
@@ -367,6 +366,34 @@ export function Profile(props: ProfileProps) {
         </div>
       </div>
 
+      <div class="panel">
+        <div class="panel-body" style="padding: 12px 16px; border-bottom: 1px solid var(--border)">
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button
+              type="button"
+              class={`btn btn-sm ${filter === 'posts' ? 'btn-primary' : 'btn-outline'}`}
+              onClick={() => setFilter('posts')}
+            >
+              Posts
+            </button>
+            <button
+              type="button"
+              class={`btn btn-sm ${filter === 'replies' ? 'btn-primary' : 'btn-outline'}`}
+              onClick={() => setFilter('replies')}
+            >
+              Posts & Replies
+            </button>
+            <button
+              type="button"
+              class={`btn btn-sm ${filter === 'all' ? 'btn-primary' : 'btn-outline'}`}
+              onClick={() => setFilter('all')}
+            >
+              All (with Reposts)
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div class="panel panel-following-feed-list">
         {loading && posts.length === 0 ? (
           <div class="loading" style="padding: 24px 0"><div class="spinner" /></div>
@@ -374,25 +401,29 @@ export function Profile(props: ProfileProps) {
           <div class="empty"><p>No threads yet</p></div>
         ) : (
           <>
-            {posts.map((post) => (
+            {feedItems.map((item) => (
               <FollowingFeedRow
-                key={post.uri}
-                post={post}
+                key={item.post.uri}
+                post={item.post}
+                feedReason={item.reason}
                 downvoteDisplayCount={0}
                 onDownvotePost={() => {}}
                 onAvatarFollow={handleProfileAvatarFollow}
                 avatarFollowBusyDid={profileAvatarFollowBusyDid}
-                followingAuthorDids={profileFollowingDids}
+                followingAuthorDids={followingDids.value}
                 viewerDid={me?.did}
               />
             ))}
             {hasMore && (
-              <div ref={loadMoreRef} style="padding: 16px; text-align: center;">
-                {loadingMore ? (
-                  <div class="spinner" />
-                ) : (
-                  <span style="color: var(--text-muted); font-size: 0.85rem;">Loading more posts...</span>
-                )}
+              <div ref={loadMoreRef} class="feed-load-more-wrap" style="padding: 16px; text-align: center;">
+                <button
+                  type="button"
+                  class="btn btn-outline feed-load-more-btn"
+                  disabled={loadingMore}
+                  onClick={() => loadMore()}
+                >
+                  {loadingMore ? 'Loading\u2026' : 'Load more'}
+                </button>
               </div>
             )}
           </>

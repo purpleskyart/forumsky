@@ -36,6 +36,7 @@ export function useVirtualList(options: VirtualListOptions): VirtualListResult {
   const containerRef = useRef<HTMLElement | null>(null);
   const [visibleRange, setVisibleRange] = useState({ start: 0, end: Math.min(itemCount - 1, 10) });
   const [containerHeight, setContainerHeight] = useState(fixedHeight || 0);
+  const prevItemCountRef = useRef(itemCount);
   
   // Update container height when ref changes or on resize
   useEffect(() => {
@@ -92,6 +93,33 @@ export function useVirtualList(options: VirtualListOptions): VirtualListResult {
   
   // Recalculate when dependencies change
   useEffect(() => {
+    const container = containerRef.current;
+    if (!container) {
+      calculateVisibleRange();
+      return;
+    }
+
+    const prevItemCount = prevItemCountRef.current;
+    const newItemCount = itemCount;
+    const itemsAdded = newItemCount - prevItemCount;
+
+    // If new items were appended and user is near bottom, preserve scroll position
+    if (itemsAdded > 0 && prevItemCount > 0) {
+      const scrollTop = container.scrollTop;
+      const scrollHeight = container.scrollHeight;
+      const clientHeight = container.clientHeight;
+      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+
+      // If user is within 200px of bottom, maintain position relative to bottom
+      if (distanceFromBottom < 200) {
+        // Calculate new scroll position to maintain same distance from bottom
+        const newScrollHeight = newItemCount * itemHeight;
+        const newScrollTop = newScrollHeight - distanceFromBottom - clientHeight;
+        container.scrollTop = Math.max(0, newScrollTop);
+      }
+    }
+
+    prevItemCountRef.current = newItemCount;
     calculateVisibleRange();
   }, [itemCount, itemHeight, calculateVisibleRange]);
   

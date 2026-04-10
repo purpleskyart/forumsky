@@ -1,4 +1,5 @@
-import { useRef, useEffect, useState } from 'preact/hooks';
+import { useRef, useEffect, useState, useCallback } from 'preact/hooks';
+import { createPortal } from 'preact/compat';
 
 type HlsVideoProps = {
   playlist: string;
@@ -31,7 +32,9 @@ export function HlsVideo({
 }: HlsVideoProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const lightboxVideoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<import('hls.js').default | null>(null);
+  const lightboxHlsRef = useRef<import('hls.js').default | null>(null);
   const isInViewRef = useRef(false);
   /** When false, a play overlay covers the player; native controls stay in the DOM for stable layout. */
   const [showControls, setShowControls] = useState(false);
@@ -145,6 +148,84 @@ export function HlsVideo({
   const onMouseEnter = () => setIsHovered(true);
   const onMouseLeave = () => setIsHovered(false);
 
+  // Lightbox state
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const closeLightbox = useCallback(() => setLightboxOpen(false), []);
+
+  // Handle escape key to close lightbox
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeLightbox();
+    };
+    window.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [lightboxOpen, closeLightbox]);
+
+  // Load HLS for lightbox video when it opens
+  useEffect(() => {
+    const video = lightboxVideoRef.current;
+    if (!video || !lightboxOpen || !playlist) return;
+
+    if (nativeHlsSupported(video)) {
+      video.src = playlist;
+      video.muted = false;
+      void video.play().catch(() => {});
+      return () => {
+        video.removeAttribute('src');
+        video.load();
+      };
+    }
+
+    let cancelled = false;
+
+    void import('hls.js').then(({ default: Hls }) => {
+      if (cancelled) return;
+      const el = lightboxVideoRef.current;
+      if (!el) return;
+
+      if (!Hls.isSupported()) return;
+
+      const instance = new Hls({
+        enableWorker: true,
+        lowLatencyMode: false,
+      });
+      lightboxHlsRef.current = instance;
+      instance.loadSource(playlist);
+      instance.attachMedia(el);
+      el.muted = false;
+      void el.play().catch(() => {});
+      instance.on(Hls.Events.ERROR, (_event, data) => {
+        if (!data.fatal) return;
+        switch (data.type) {
+          case Hls.ErrorTypes.NETWORK_ERROR:
+            instance.startLoad();
+            break;
+          case Hls.ErrorTypes.MEDIA_ERROR:
+            instance.recoverMediaError();
+            break;
+          default:
+            instance.destroy();
+            if (lightboxHlsRef.current === instance) lightboxHlsRef.current = null;
+            break;
+        }
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      lightboxHlsRef.current?.destroy();
+      lightboxHlsRef.current = null;
+      video.removeAttribute('src');
+      video.load();
+    };
+  }, [lightboxOpen, playlist]);
+
   // Pan/zoom state for mobile fullscreen
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [zoom, setZoom] = useState(1);
@@ -156,28 +237,10 @@ export function HlsVideo({
 
   const onVideoPlay = () => {};
 
-  const toggleFullscreen = async (e: MouseEvent) => {
-    const v = videoRef.current;
-    if (!v) return;
+  const openLightbox = (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-
-    if (!document.fullscreenElement) {
-      v.muted = false;
-      try {
-        if ((v as any).webkitEnterFullscreen) {
-          (v as any).webkitEnterFullscreen();
-        } else {
-          await v.requestFullscreen();
-        }
-      } catch (err) {
-        // Fallback for some browsers
-      }
-    } else {
-      if (document.exitFullscreen) {
-        void document.exitFullscreen();
-      }
-    }
+    setLightboxOpen(true);
   };
 
   useEffect(() => {
@@ -268,34 +331,70 @@ export function HlsVideo({
   };
 
   return (
-    <div
-      class="post-hls-video-wrap"
-      ref={wrapRef}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
-    >
-      <video
-        ref={videoRef}
-        class={`${className ?? ''} post-hls-video--compact`.trim()}
-        controls={showControls || isHovered}
-        playsInline
-        preload="metadata"
-        poster={poster}
-        aria-label={ariaLabel}
-        style={{
-          aspectRatio: aspectCss || undefined,
-          backgroundColor: 'var(--bg-elevated)',
-          transform: isFullscreen ? `translate(${panX}px, ${panY}px) scale(${zoom})` : 'none',
-          transformOrigin: 'center center',
-          transition: isZooming || isPanning ? 'none' : 'transform 0.2s ease-out',
-        }}
-        onLoadedMetadata={onLoadedMetadata}
-        onPlay={onVideoPlay}
-        onClick={toggleFullscreen}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-      />
-    </div>
+    <>
+      <div
+        class="post-hls-video-wrap"
+        ref={wrapRef}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
+      >
+        <video
+          ref={videoRef}
+          class={`${className ?? ''} post-hls-video--compact`.trim()}
+          controls={showControls || isHovered}
+          playsInline
+          preload="metadata"
+          poster={poster}
+          aria-label={ariaLabel}
+          style={{
+            aspectRatio: aspectCss || undefined,
+            backgroundColor: 'var(--bg-elevated)',
+            transform: isFullscreen ? `translate(${panX}px, ${panY}px) scale(${zoom})` : 'none',
+            transformOrigin: 'center center',
+            transition: isZooming || isPanning ? 'none' : 'transform 0.2s ease-out',
+            cursor: 'zoom-in',
+          }}
+          onLoadedMetadata={onLoadedMetadata}
+          onPlay={onVideoPlay}
+          onClick={openLightbox}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        />
+      </div>
+      {lightboxOpen &&
+        createPortal(
+          <div
+            class="media-lightbox-backdrop"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Enlarged video"
+            onClick={closeLightbox}
+          >
+            <button
+              type="button"
+              class="media-lightbox-close"
+              aria-label="Close"
+              onClick={(e: MouseEvent) => {
+                e.stopPropagation();
+                closeLightbox();
+              }}
+            >
+              ×
+            </button>
+            <video
+              ref={lightboxVideoRef}
+              class="media-lightbox-video"
+              poster={poster}
+              controls
+              playsInline
+              preload="metadata"
+              aria-label={ariaLabel}
+              onClick={(e: MouseEvent) => e.stopPropagation()}
+            />
+          </div>,
+          document.body,
+        )}
+    </>
   );
 }

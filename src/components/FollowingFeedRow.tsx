@@ -53,7 +53,7 @@ export interface FollowingFeedRowProps {
   /** Same avatar "+" follow control as thread roots (Following feed / homepage). */
   onAvatarFollow?: (authorDid: string) => void | Promise<void>;
   avatarFollowBusyDid?: string | null;
-  followingAuthorDids?: Set<string>;
+  followingAuthorDids?: Set<string> | null;
   viewerDid?: string;
 }
 
@@ -109,7 +109,7 @@ export function FollowingFeedRow({
     onAvatarFollow &&
       viewerDid &&
       post.author.did !== viewerDid &&
-      followingAuthorDids &&
+      followingAuthorDids != null &&
       !followingAuthorDids.has(post.author.did),
   );
   const [showExactTime, setShowExactTime] = useState(false);
