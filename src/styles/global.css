@@ -4305,6 +4305,99 @@ button.post-ref-expand-translate-btn {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* Skeleton screens for loading states */
+.thread-skeleton {
+  padding: 16px;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.thread-skeleton-header {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.skeleton-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--divider);
+  flex-shrink: 0;
+}
+.skeleton-header-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.skeleton-title {
+  height: 20px;
+  background: var(--divider);
+  border-radius: 4px;
+  width: 60%;
+}
+.skeleton-subtitle {
+  height: 16px;
+  background: var(--divider);
+  border-radius: 4px;
+  width: 40%;
+}
+.thread-skeleton-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.skeleton-line {
+  height: 16px;
+  background: var(--divider);
+  border-radius: 4px;
+  width: 100%;
+}
+.skeleton-line--short {
+  width: 60%;
+}
+.thread-skeleton-actions {
+  display: flex;
+  gap: 24px;
+}
+.skeleton-action {
+  width: 24px;
+  height: 24px;
+  background: var(--divider);
+  border-radius: 4px;
+}
+
+/* Page transitions */
+.page-transition-enter {
+  animation: pageSlideIn 0.3s ease-out;
+}
+.page-transition-exit {
+  animation: pageSlideOut 0.2s ease-in;
+}
+@keyframes pageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes pageSlideOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
 .empty { text-align: center; padding: 40px; color: var(--text-muted); }
 .empty p { margin-top: 8px; font-size: 0.85rem; }
 
@@ -4391,14 +4484,14 @@ button.post-ref-expand-translate-btn {
   display: flex;
   flex-direction: column;
   gap: 0;
-  margin-top: 10px;
+  margin-top: 6px;
   padding: 0;
   border: 1px solid var(--divider);
   border-radius: var(--radius-md);
   background: var(--bg-elevated);
   text-decoration: none;
   color: inherit;
-  max-width: 480px;
+  max-width: 100%;
   overflow: hidden;
 }
 .post-external-card:hover { border-color: var(--accent); }
@@ -4413,7 +4506,7 @@ button.post-ref-expand-translate-btn {
   display: block;
 }
 .post-external-card-body {
-  padding: 10px 12px;
+  padding: 4px 6px;
   min-width: 0;
 }
 .post-external-card-host {

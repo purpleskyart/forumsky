@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'preact/hooks';
+import { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'preact/hooks';
 import { Avatar } from '@/components/Avatar';
 import { FollowingFeedRow } from '@/components/FollowingFeedRow';
 import { getProfile } from '@/api/actor';
 import { getAuthorFeed, parseAtUri } from '@/api/feed';
-import { followActor, unfollowByRecordUri } from '@/api/graph-follows';
+import { followActor, unfollowByRecordUri, listAllFollowingDids } from '@/api/graph-follows';
 import { XRPCError } from '@/api/xrpc';
 import { swr, removeCacheEntry } from '@/lib/cache';
 import { appPathname, hrefForAppPath } from '@/lib/app-base-path';
@@ -12,6 +12,7 @@ import { navigate, threadUrl, SPA_ANCHOR_SHIELD } from '@/lib/router';
 import { parseProfileRoutePath } from '@/lib/spa-route-params';
 import { useRouter } from 'preact-router';
 import { currentUser, showAuthDialog, showToast } from '@/lib/store';
+import { restoreScrollNow } from '@/lib/scroll-restore';
 import type { ProfileView, PostView } from '@/api/types';
 
 interface ProfileProps {
@@ -34,6 +35,8 @@ export function Profile(props: ProfileProps) {
   const [followBusy, setFollowBusy] = useState(false);
   const [cursor, setCursor] = useState<string>('');
   const [hasMore, setHasMore] = useState(true);
+  const [profileFollowingDids, setProfileFollowingDids] = useState<Set<string>>(() => new Set());
+  const [profileAvatarFollowBusyDid, setProfileAvatarFollowBusyDid] = useState<string | null>(null);
   const postsRef = useRef<PostView[]>([]);
   const kbRowRef = useRef(0);
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -71,6 +74,41 @@ export function Profile(props: ProfileProps) {
     return () => observer.disconnect();
   }, [hasMore, loadMore]);
 
+  /** Restore scroll when loadingMore completes (load more scenario). */
+  const prevLoadingMoreRef = useRef(loadingMore);
+  const scrollYBeforeLoadMoreRef = useRef(0);
+  const wasAtBottomBeforeLoadMoreRef = useRef(false);
+  useEffect(() => {
+    const wasLoadingMore = prevLoadingMoreRef.current;
+    prevLoadingMoreRef.current = loadingMore;
+
+    // Save scroll state before loading more
+    if (!wasLoadingMore && loadingMore) {
+      scrollYBeforeLoadMoreRef.current = window.scrollY;
+      wasAtBottomBeforeLoadMoreRef.current = window.scrollY + window.innerHeight >= document.body.scrollHeight - 100;
+    }
+
+    if (wasLoadingMore && !loadingMore) {
+      // If user was at bottom before load, smoothly scroll to new bottom after content loads
+      if (wasAtBottomBeforeLoadMoreRef.current) {
+        window.scrollTo({ top: document.body.scrollHeight, left: 0, behavior: 'auto' });
+      } else {
+        restoreScrollNow();
+      }
+      // Only one additional restoration attempt to reduce jumping
+      const t = window.setTimeout(() => {
+        if (wasAtBottomBeforeLoadMoreRef.current) {
+          window.scrollTo({ top: document.body.scrollHeight, left: 0, behavior: 'auto' });
+        } else {
+          restoreScrollNow();
+        }
+      }, 200);
+      return () => {
+        window.clearTimeout(t);
+      };
+    }
+  }, [loadingMore]);
+
   useEffect(() => {
     if (!handle) return;
     setKbRowOutlineActive(false);
@@ -105,6 +143,35 @@ export function Profile(props: ProfileProps) {
   useEffect(() => {
     setKbRow(i => Math.min(i, Math.max(0, posts.length - 1)));
   }, [posts.length]);
+
+  useEffect(() => {
+    if (!me?.did) {
+      setProfileFollowingDids(new Set());
+      return;
+    }
+    let cancelled = false;
+    void listAllFollowingDids().then(set => {
+      if (!cancelled) setProfileFollowingDids(set);
+    });
+    return () => { cancelled = true; };
+  }, [me?.did]);
+
+  const handleProfileAvatarFollow = useCallback(async (authorDid: string) => {
+    const meDid = currentUser.value?.did;
+    if (!meDid) {
+      showAuthDialog.value = true;
+      return;
+    }
+    setProfileAvatarFollowBusyDid(authorDid);
+    try {
+      await followActor(meDid, authorDid);
+      setProfileFollowingDids(prev => new Set(prev).add(authorDid));
+    } catch (e) {
+      showToast(e instanceof XRPCError ? e.message : 'Could not follow');
+    } finally {
+      setProfileAvatarFollowBusyDid(null);
+    }
+  }, []);
 
   useEffect(() => {
     const onPointerDown = () => {
@@ -313,6 +380,10 @@ export function Profile(props: ProfileProps) {
                 post={post}
                 downvoteDisplayCount={0}
                 onDownvotePost={() => {}}
+                onAvatarFollow={handleProfileAvatarFollow}
+                avatarFollowBusyDid={profileAvatarFollowBusyDid}
+                followingAuthorDids={profileFollowingDids}
+                viewerDid={me?.did}
               />
             ))}
             {hasMore && (

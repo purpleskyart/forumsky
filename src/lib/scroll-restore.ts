@@ -79,7 +79,7 @@ export function restoreScrollNow(): void {
   const y = readSavedScroll(key);
   if (y == null) return;
 
-  ignoreScrollPersistUntil = performance.now() + 400;
+  ignoreScrollPersistUntil = performance.now() + 600;
 
   const apply = () => window.scrollTo({ top: y, left: 0, behavior: 'auto' });
   apply();
@@ -87,8 +87,8 @@ export function restoreScrollNow(): void {
     apply();
     requestAnimationFrame(apply);
   });
-  window.setTimeout(apply, 50);
-  window.setTimeout(apply, 200);
+  window.setTimeout(apply, 100);
+  window.setTimeout(apply, 300);
 }
 
 /** Call after the router URL changes (back/forward or in-app navigation). */

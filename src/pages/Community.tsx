@@ -256,37 +256,30 @@ export function Community({ tag: tagProp }: CommunityProps) {
   useEffect(() => {
     const wasLoadingMore = prevLoadingMoreRef.current;
     prevLoadingMoreRef.current = loadingMore;
-    
+
     // Save scroll state before loading more
     if (!wasLoadingMore && loadingMore) {
       scrollYBeforeLoadMoreRef.current = window.scrollY;
       wasAtBottomBeforeLoadMoreRef.current = window.scrollY + window.innerHeight >= document.body.scrollHeight - 100;
     }
-    
+
     if (wasLoadingMore && !loadingMore) {
-      // If user was at bottom before load, scroll to new bottom after content loads
+      // If user was at bottom before load, smoothly scroll to new bottom after content loads
       if (wasAtBottomBeforeLoadMoreRef.current) {
         window.scrollTo({ top: document.body.scrollHeight, left: 0, behavior: 'auto' });
       } else {
         restoreScrollNow();
       }
-      const t1 = window.setTimeout(() => {
+      // Only one additional restoration attempt to reduce jumping
+      const t = window.setTimeout(() => {
         if (wasAtBottomBeforeLoadMoreRef.current) {
           window.scrollTo({ top: document.body.scrollHeight, left: 0, behavior: 'auto' });
         } else {
           restoreScrollNow();
         }
-      }, 350);
-      const t2 = window.setTimeout(() => {
-        if (wasAtBottomBeforeLoadMoreRef.current) {
-          window.scrollTo({ top: document.body.scrollHeight, left: 0, behavior: 'auto' });
-        } else {
-          restoreScrollNow();
-        }
-      }, 700);
+      }, 200);
       return () => {
-        window.clearTimeout(t1);
-        window.clearTimeout(t2);
+        window.clearTimeout(t);
       };
     }
   }, [loadingMore]);

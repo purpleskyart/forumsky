@@ -13,6 +13,8 @@ import { Avatar } from '@/components/Avatar';
 import { AuthorFlair } from '@/components/AuthorFlair';
 import { Composer } from '@/components/Composer';
 import { QuotedPostEmbedCard } from '@/components/QuotedPostEmbedCard';
+import { ThreadSkeleton } from '@/components/ThreadSkeleton';
+import { getCachedThread } from '@/lib/thread-prefetch';
 import {
   bskyPostWebUrl,
   PostDownvoteButton,
@@ -95,7 +97,6 @@ import {
   toggleSubscribedThreadRoot,
   isThreadSubscribed,
 } from '@/lib/forumsky-local';
-import { dominantVisibleThreadPostNumber } from '@/lib/dominant-visible-row';
 import { reportPost } from '@/api/moderation';
 import { deletePost, createDownvote, deleteDownvote, listMyDownvotes } from '@/api/post';
 import { followActor, listAllFollowingDids } from '@/api/graph-follows';
@@ -329,7 +330,15 @@ export function Thread(props: ThreadProps) {
           did = resolved.did;
         }
         const uri = getPostUri(did, rkey);
-        const res = await swr(`thread_${uri}`, () => getPostThread(uri), 30_000);
+        
+        // Check cache first for optimistic navigation
+        const cached = getCachedThread(uri);
+        if (cached && isThreadViewPost(cached.thread)) {
+          setThread(mergeThread(cached.thread));
+          setLoading(false);
+        }
+        
+        const res = await swr(`thread_${uri}`, () => getPostThread(uri, 50, 5), 30_000);
         if (cancelled) return;
         if (!isThreadViewPost(res.thread)) {
           setError('Thread not found');
@@ -348,7 +357,7 @@ export function Thread(props: ThreadProps) {
 
   if (!actor || !rkey) return <div class="empty"><p>Invalid thread</p></div>;
 
-  if (loading) return <div class="loading"><div class="spinner" /></div>;
+  if (loading && !thread) return <ThreadSkeleton />;
   if (error) return <div class="empty"><p style="color:var(--danger)">{error}</p></div>;
   if (!thread) return <div class="empty"><p>Thread not found</p></div>;
 
@@ -815,9 +824,8 @@ function ThreadView({
       if (down || up) {
         e.preventDefault();
         setKbOutlineActive(true);
-        const anchor = dominantVisibleThreadPostNumber(maxKbPostNum, kbFocusPostRef.current);
         setKbFocusPost(
-          Math.min(maxKbPostNum, Math.max(1, anchor + (down ? 1 : -1))),
+          Math.min(maxKbPostNum, Math.max(1, kbFocusPostRef.current + (down ? 1 : -1))),
         );
         return;
       }

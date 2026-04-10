@@ -1,5 +1,6 @@
 import { NsfwMediaWrap } from '@/components/NsfwMediaWrap';
 import { HlsVideo } from '@/components/HlsVideo';
+import { prefetchThread } from '@/lib/thread-prefetch';
 import { hrefForAppPath } from '@/lib/app-base-path';
 import { postHasNsfwLabels } from '@/lib/nsfw-labels';
 import { threadUrl, SPA_ANCHOR_SHIELD, spaNavigateClick } from '@/lib/router';
@@ -53,7 +54,11 @@ export function ThreadRow({
     `thread-row${onHide ? ' thread-row--list-actions' : ''}`;
 
   return (
-    <div class={rowClass}>
+    <div class={rowClass} onMouseEnter={() => {
+      if (href !== '#') {
+        void prefetchThread(post.uri);
+      }
+    }}>
       <div class="thread-row-leading">
         <div class="thread-indicator">
           {'\u2192'}

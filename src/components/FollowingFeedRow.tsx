@@ -2,6 +2,7 @@ import { Fragment } from 'preact';
 import { useMemo, useState } from 'preact/hooks';
 import { Avatar } from '@/components/Avatar';
 import { AuthorFlair } from '@/components/AuthorFlair';
+import { prefetchThread } from '@/lib/thread-prefetch';
 import {
   PostDownvoteButton,
   PostLikeButton,
@@ -160,6 +161,11 @@ export function FollowingFeedRow({
     <article
       class={`following-feed-row post-container username-tone-${tone}`}
       onClick={onRowClick}
+      onMouseEnter={() => {
+        if (threadPath) {
+          void prefetchThread(post.uri);
+        }
+      }}
     >
       <div class="post-author-card">
         <Avatar

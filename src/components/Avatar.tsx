@@ -21,7 +21,7 @@ export function Avatar({ src, alt = '', size = 80, className = '', followPlus }:
   const avatarInner = (
     <div class="avatar">
       {src ? (
-        <img src={src} alt={alt} width={size} height={size} />
+        <img src={src} alt={alt} width={size} height={size} referrerpolicy="no-referrer" crossorigin="anonymous" />
       ) : (
         <div
           style={{

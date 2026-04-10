@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useState } from 'preact/hooks';
 import { Router, Route } from 'preact-router';
 import type { RouterOnChangeArgs } from 'preact-router';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -19,7 +19,7 @@ import { Activity } from './pages/Activity';
 import { SavedThreads } from './pages/SavedThreads';
 import { Drafts } from './pages/Drafts';
 import { Settings } from './pages/Settings';
-import { FOLLOWED_COMMUNITY_TAG } from './lib/preferences';
+import { FOLLOWED_COMMUNITY_TAG } from '@/lib/preferences';
 import { browserHistory } from '@/lib/app-base-path';
 import { navigate } from './lib/router';
 import { authInitDone, currentUser, sessionRestorePending } from './lib/store';
@@ -58,6 +58,8 @@ function onRouterChange(_args: RouterOnChangeArgs) {
 }
 
 export function App() {
+  const [transitionKey, setTransitionKey] = useState(0);
+  
   useEffect(() => {
     setManualScrollRestoration();
     const detachPop = attachPopstateScrollGuard();
@@ -70,23 +72,30 @@ export function App() {
     };
   }, []);
 
+  const handleRouteChange = (args: RouterOnChangeArgs) => {
+    setTransitionKey(prev => prev + 1);
+    onRouterChange(args);
+  };
+
   return (
     <Layout>
       <ErrorBoundary>
-        <Router history={browserHistory} onChange={onRouterChange}>
-        <Route path="/" component={RootRoute} />
-        <Route path="/communities" component={Home} />
-        <Route path="/followed" component={RedirectFollowedUrlsToHome} />
-        <Route path="/c/_followed" component={RedirectFollowedUrlsToHome} />
-        <Route path="/c/:tag" component={Community} />
-        <Route path="/t/:actor/:rkey" component={Thread} />
-        <Route path="/u/:handle" component={Profile} />
-        <Route path="/search" component={Search} />
-        <Route path="/activity" component={Activity} />
-        <Route path="/saved" component={SavedThreads} />
-        <Route path="/drafts" component={Drafts} />
-        <Route path="/settings" component={Settings} />
-        </Router>
+        <div class={`page-transition-enter`} key={transitionKey}>
+          <Router history={browserHistory} onChange={handleRouteChange}>
+          <Route path="/" component={RootRoute} />
+          <Route path="/communities" component={Home} />
+          <Route path="/followed" component={RedirectFollowedUrlsToHome} />
+          <Route path="/c/_followed" component={RedirectFollowedUrlsToHome} />
+          <Route path="/c/:tag" component={Community} />
+          <Route path="/t/:actor/:rkey" component={Thread} />
+          <Route path="/u/:handle" component={Profile} />
+          <Route path="/search" component={Search} />
+          <Route path="/activity" component={Activity} />
+          <Route path="/saved" component={SavedThreads} />
+          <Route path="/drafts" component={Drafts} />
+          <Route path="/settings" component={Settings} />
+          </Router>
+        </div>
       </ErrorBoundary>
     </Layout>
   );

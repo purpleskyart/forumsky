@@ -30,6 +30,21 @@ export default defineConfig({
               expiration: { maxEntries: 500, maxAgeSeconds: 86400 * 30 },
             },
           },
+          {
+            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'images',
+              expiration: { maxEntries: 200, maxAgeSeconds: 86400 * 60 },
+            },
+          },
+          {
+            urlPattern: /\.(?:js|css)$/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'static-resources',
+            },
+          },
         ],
       },
     }),
@@ -42,8 +57,19 @@ export default defineConfig({
     minify: 'terser',
     rollupOptions: {
       output: {
-        manualChunks: {
-          oauth: ['@atproto/oauth-client-browser'],
+        manualChunks: (id) => {
+          // Split oauth library
+          if (id.includes('@atproto/oauth-client-browser')) {
+            return 'oauth';
+          }
+          // Split thread-related code
+          if (id.includes('/pages/Thread')) {
+            return 'thread';
+          }
+          // Split feed-related code
+          if (id.includes('/api/feed')) {
+            return 'feed';
+          }
         },
       },
     },
