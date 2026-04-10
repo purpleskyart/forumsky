@@ -699,7 +699,7 @@ export function Composer({
                   <ul class="segment-image-strip" aria-label={`Images on post ${i + 1}`}>
                     {imgs.map(a => (
                       <li key={a.id} class="composer-image-thumb segment-image-thumb">
-                        <img src={a.previewUrl} alt="" />
+                        <img src={a.previewUrl} alt="" aria-hidden="true" />
                       </li>
                     ))}
                   </ul>
@@ -855,6 +855,7 @@ export function Composer({
               class="composer-link-preview-thumb"
               src={linkPreview.image}
               alt=""
+              aria-hidden="true"
             />
           ) : null}
           <div class="composer-link-preview-text">
@@ -875,7 +876,7 @@ export function Composer({
           {attachments.map(a => (
             <li key={a.id} class="composer-image-thumb-with-alt">
               <div class="composer-image-thumb">
-                <img src={a.previewUrl} alt="" />
+                <img src={a.previewUrl} alt="" aria-hidden="true" />
                 <button
                   type="button"
                   class="composer-image-remove"

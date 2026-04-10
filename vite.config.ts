@@ -2,6 +2,8 @@ import { defineConfig } from 'vite';
 import preact from '@preact/preset-vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { resolve } from 'path';
+// @ts-ignore — vitest types only present when vitest is installed
+/// <reference types="vitest" />
 
 export default defineConfig({
   // GitHub project pages: set GITHUB_PAGES_BASE=/repo-name/ when building (omit for custom domain at /).
@@ -50,6 +52,12 @@ export default defineConfig({
     }),
   ],
   resolve: {
+    alias: { '@': resolve(__dirname, 'src') },
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./src/__tests__/setup.ts'],
     alias: { '@': resolve(__dirname, 'src') },
   },
   build: {

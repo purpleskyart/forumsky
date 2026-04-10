@@ -16,11 +16,8 @@ interface FollowsPage {
   cursor?: string;
 }
 
-/** Load full mute + block + following lists into signals (best-effort). */
-export async function refreshGraphPolicy(): Promise<void> {
+async function fetchAllMutes(): Promise<Set<string>> {
   const m = new Set<string>();
-  const b = new Set<string>();
-  const f = new Set<string>();
   try {
     let cursor: string | undefined;
     do {
@@ -37,6 +34,11 @@ export async function refreshGraphPolicy(): Promise<void> {
   } catch {
     /* guest or API error */
   }
+  return m;
+}
+
+async function fetchAllBlocks(): Promise<Set<string>> {
+  const b = new Set<string>();
   try {
     let cursor: string | undefined;
     do {
@@ -54,26 +56,40 @@ export async function refreshGraphPolicy(): Promise<void> {
   } catch {
     /* guest or API error */
   }
+  return b;
+}
+
+async function fetchAllFollows(selfDid: string | undefined): Promise<Set<string>> {
+  const f = new Set<string>();
+  if (!selfDid) return f;
   try {
-    const self = currentUser.value?.did;
-    if (self) {
-      let cursor: string | undefined;
-      do {
-        const res = await xrpcSessionGet<FollowsPage>('app.bsky.graph.getFollows', {
-          actor: self,
-          limit: 100,
-          cursor,
-        });
-        for (const raw of res.follows ?? []) {
-          const u = raw as { did?: string };
-          if (u.did) f.add(u.did);
-        }
-        cursor = res.cursor;
-      } while (cursor);
-    }
+    let cursor: string | undefined;
+    do {
+      const res = await xrpcSessionGet<FollowsPage>('app.bsky.graph.getFollows', {
+        actor: selfDid,
+        limit: 100,
+        cursor,
+      });
+      for (const raw of res.follows ?? []) {
+        const u = raw as { did?: string };
+        if (u.did) f.add(u.did);
+      }
+      cursor = res.cursor;
+    } while (cursor);
   } catch {
     /* guest or API error */
   }
+  return f;
+}
+
+/** Load full mute + block + following lists into signals concurrently (best-effort). */
+export async function refreshGraphPolicy(): Promise<void> {
+  const self = currentUser.value?.did;
+  const [m, b, f] = await Promise.all([
+    fetchAllMutes(),
+    fetchAllBlocks(),
+    fetchAllFollows(self),
+  ]);
   mutedDids.value = m;
   blockedDids.value = b;
   followingDids.value = f;

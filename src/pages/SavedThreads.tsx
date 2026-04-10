@@ -107,6 +107,7 @@ export function SavedThreads() {
                                 class="thread-thumb"
                                 loading="lazy"
                                 decoding="async"
+                                aria-hidden="true"
                               />
                             </NsfwMediaWrap>
                             {preview.extraCount > 0 && (

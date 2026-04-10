@@ -17,10 +17,10 @@ export interface ListNotificationsResponse {
 }
 
 export async function listNotifications(
-  opts?: { limit?: number; cursor?: string },
+  opts?: { limit?: number; cursor?: string; signal?: AbortSignal },
 ): Promise<ListNotificationsResponse> {
   return xrpcSessionGet<ListNotificationsResponse>('app.bsky.notification.listNotifications', {
     limit: opts?.limit ?? 30,
     cursor: opts?.cursor,
-  });
+  }, opts?.signal);
 }

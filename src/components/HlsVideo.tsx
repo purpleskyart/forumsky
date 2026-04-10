@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from 'preact/hooks';
 import { createPortal } from 'preact/compat';
+import { useHlsPlayer } from '@/hooks/useHlsPlayer';
 
 type HlsVideoProps = {
   playlist: string;
@@ -11,13 +12,6 @@ type HlsVideoProps = {
 
 /** How much of the player must be visible before autoplay (feed-style). */
 const IN_VIEW_THRESHOLD = 0.35;
-
-function nativeHlsSupported(video: HTMLVideoElement): boolean {
-  return Boolean(
-    video.canPlayType('application/vnd.apple.mpegurl') ||
-      video.canPlayType('application/x-mpegURL'),
-  );
-}
 
 /**
  * Plays Bluesky-style HLS playlists in the browser: native where supported (Safari),
@@ -47,59 +41,7 @@ export function HlsVideo({
     setAspectCss(null);
   }, [playlist]);
 
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !playlist) return;
-
-    if (nativeHlsSupported(video)) {
-      video.src = playlist;
-      return () => {
-        video.removeAttribute('src');
-        video.load();
-      };
-    }
-
-    let cancelled = false;
-
-    void import('hls.js').then(({ default: Hls }) => {
-      if (cancelled) return;
-      const el = videoRef.current;
-      if (!el) return;
-
-      if (!Hls.isSupported()) return;
-
-      const instance = new Hls({
-        enableWorker: true,
-        lowLatencyMode: false,
-      });
-      hlsRef.current = instance;
-      instance.loadSource(playlist);
-      instance.attachMedia(el);
-      instance.on(Hls.Events.ERROR, (_event, data) => {
-        if (!data.fatal) return;
-        switch (data.type) {
-          case Hls.ErrorTypes.NETWORK_ERROR:
-            instance.startLoad();
-            break;
-          case Hls.ErrorTypes.MEDIA_ERROR:
-            instance.recoverMediaError();
-            break;
-          default:
-            instance.destroy();
-            if (hlsRef.current === instance) hlsRef.current = null;
-            break;
-        }
-      });
-    });
-
-    return () => {
-      cancelled = true;
-      hlsRef.current?.destroy();
-      hlsRef.current = null;
-      video.removeAttribute('src');
-      video.load();
-    };
-  }, [playlist]);
+  useHlsPlayer(videoRef, hlsRef, playlist, { muted: true, autoplay: false });
 
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -168,63 +110,7 @@ export function HlsVideo({
   }, [lightboxOpen, closeLightbox]);
 
   // Load HLS for lightbox video when it opens
-  useEffect(() => {
-    const video = lightboxVideoRef.current;
-    if (!video || !lightboxOpen || !playlist) return;
-
-    if (nativeHlsSupported(video)) {
-      video.src = playlist;
-      video.muted = false;
-      void video.play().catch(() => {});
-      return () => {
-        video.removeAttribute('src');
-        video.load();
-      };
-    }
-
-    let cancelled = false;
-
-    void import('hls.js').then(({ default: Hls }) => {
-      if (cancelled) return;
-      const el = lightboxVideoRef.current;
-      if (!el) return;
-
-      if (!Hls.isSupported()) return;
-
-      const instance = new Hls({
-        enableWorker: true,
-        lowLatencyMode: false,
-      });
-      lightboxHlsRef.current = instance;
-      instance.loadSource(playlist);
-      instance.attachMedia(el);
-      el.muted = false;
-      void el.play().catch(() => {});
-      instance.on(Hls.Events.ERROR, (_event, data) => {
-        if (!data.fatal) return;
-        switch (data.type) {
-          case Hls.ErrorTypes.NETWORK_ERROR:
-            instance.startLoad();
-            break;
-          case Hls.ErrorTypes.MEDIA_ERROR:
-            instance.recoverMediaError();
-            break;
-          default:
-            instance.destroy();
-            if (lightboxHlsRef.current === instance) lightboxHlsRef.current = null;
-            break;
-        }
-      });
-    });
-
-    return () => {
-      cancelled = true;
-      lightboxHlsRef.current?.destroy();
-      lightboxHlsRef.current = null;
-      video.removeAttribute('src');
-      video.load();
-    };
-  }, [lightboxOpen, playlist]);
+  useHlsPlayer(lightboxVideoRef, lightboxHlsRef, lightboxOpen ? playlist : undefined, { muted: false, autoplay: true });
 
   // Pan/zoom state for mobile fullscreen
   const [isFullscreen, setIsFullscreen] = useState(false);

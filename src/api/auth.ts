@@ -141,7 +141,8 @@ function nukeAllOAuthDatabases() {
 export async function initAuth(): Promise<ProfileView | null> {
   try {
     const client = await getClient();
-    const result = await client.init();
+    const timeoutPromise = new Promise<null>(resolve => setTimeout(() => resolve(null), 5000));
+    const result = await Promise.race([client.init(), timeoutPromise]);
 
     if (result?.session) {
       return await setupSession(result.session);

@@ -338,6 +338,7 @@ export function FollowingFeedRow({
                   fullsize={externalGifSrc.fullsize}
                   alt=""
                   className="post-external-gif following-feed-row-media"
+                  aria-hidden="true"
                 />
               </NsfwMediaWrap>
             ) : (
@@ -351,7 +352,7 @@ export function FollowingFeedRow({
                 >
                   {external.thumb && (
                     <div class="post-external-card-media">
-                      <img class="post-external-thumb" src={external.thumb} alt="" loading="lazy" />
+                      <img class="post-external-thumb" src={external.thumb} alt="" loading="lazy" aria-hidden="true" />
                     </div>
                   )}
                   <div class="post-external-card-body">

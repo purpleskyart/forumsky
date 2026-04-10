@@ -12,19 +12,19 @@ import { TIMELINE_LIMIT, SEARCH_LIMIT, AUTHOR_FEED_LIMIT, POST_URI_CHUNK_SIZE } 
 
 export async function searchPosts(
   query: string,
-  opts?: { cursor?: string; limit?: number; sort?: 'top' | 'latest' },
+  opts?: { cursor?: string; limit?: number; sort?: 'top' | 'latest'; signal?: AbortSignal },
 ): Promise<SearchPostsResponse> {
   return xrpcGet<SearchPostsResponse>('app.bsky.feed.searchPosts', {
     q: query,
     limit: opts?.limit ?? SEARCH_LIMIT,
     cursor: opts?.cursor,
     sort: opts?.sort ?? 'latest',
-  });
+  }, opts?.signal);
 }
 
 export async function searchByTag(
   tag: string,
-  opts?: { cursor?: string; limit?: number; sort?: 'latest' | 'top' },
+  opts?: { cursor?: string; limit?: number; sort?: 'latest' | 'top'; signal?: AbortSignal },
 ): Promise<SearchPostsResponse> {
   return searchPosts(`#${tag}`, {
     ...opts,
@@ -34,12 +34,12 @@ export async function searchByTag(
 
 /** Home timeline (people you follow) — requires OAuth session. */
 export async function getTimeline(
-  opts?: { cursor?: string; limit?: number },
+  opts?: { cursor?: string; limit?: number; signal?: AbortSignal },
 ): Promise<GetTimelineResponse> {
   return xrpcSessionGet<GetTimelineResponse>('app.bsky.feed.getTimeline', {
     limit: opts?.limit ?? TIMELINE_LIMIT,
     cursor: opts?.cursor,
-  });
+  }, opts?.signal);
 }
 
 /** Custom algorithmic feed (`at://…/app.bsky.feed.generator/…`) — requires OAuth session. */
@@ -84,7 +84,7 @@ export async function getAuthorFeed(
   });
 }
 
-export async function getPosts(uris: string[]): Promise<{ posts: PostView[] }> {
+export async function getPosts(uris: string[], opts?: { signal?: AbortSignal }): Promise<{ posts: PostView[] }> {
   if (uris.length === 0) return { posts: [] };
 
   const chunks: PostView[][] = [];
@@ -94,8 +94,8 @@ export async function getPosts(uris: string[]): Promise<{ posts: PostView[] }> {
     chunk.forEach((u, j) => { params[`uris[${j}]`] = u; });
     try {
       const res = getOAuthSession()
-        ? await xrpcSessionGet<{ posts: PostView[] }>('app.bsky.feed.getPosts', params)
-        : await xrpcGet<{ posts: PostView[] }>('app.bsky.feed.getPosts', params);
+        ? await xrpcSessionGet<{ posts: PostView[] }>('app.bsky.feed.getPosts', params, opts?.signal)
+        : await xrpcGet<{ posts: PostView[] }>('app.bsky.feed.getPosts', params, opts?.signal);
       chunks.push(res.posts);
     } catch (err) {
       // Log chunk failure but continue with other chunks

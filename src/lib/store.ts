@@ -69,3 +69,10 @@ export function applyNsfwMediaMode(mode: NsfwMediaMode) {
 
 export const showGlobalComposer = signal(false);
 export const globalComposerCommunity = signal<string | undefined>(undefined);
+
+export const isOnline = signal(typeof navigator !== 'undefined' ? navigator.onLine : true);
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => { isOnline.value = true });
+  window.addEventListener('offline', () => { isOnline.value = false });
+}

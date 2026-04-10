@@ -2966,6 +2966,7 @@ function PostBlock({
                           fullsize={segExtGif.fullsize}
                           alt=""
                           className="post-external-gif"
+                          aria-hidden="true"
                         />
                       </NsfwMediaWrap>
                     ) : (
@@ -2983,6 +2984,7 @@ function PostBlock({
                                 src={segExternal.thumb}
                                 alt=""
                                 loading="lazy"
+                                aria-hidden="true"
                               />
                             </div>
                           )}

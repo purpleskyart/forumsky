@@ -174,7 +174,7 @@ export function AuthDialog() {
                     onMouseEnter={() => setHighlight(i)}
                   >
                     {actor.avatar && (
-                      <img class="auth-suggestion-avatar" src={actor.avatar} alt="" width={28} height={28} loading="lazy" />
+                      <img class="auth-suggestion-avatar" src={actor.avatar} alt="" width={28} height={28} loading="lazy" aria-hidden="true" />
                     )}
                     <div class="auth-suggestion-text">
                       <div class="auth-suggestion-name">

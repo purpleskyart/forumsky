@@ -77,6 +77,8 @@ export function Activity() {
   const [hydratingPosts, setHydratingPosts] = useState(false);
   const [subscribedOnly, setSubscribedOnly] = useState(false);
   const [exactTimeItems, setExactTimeItems] = useState<Set<string>>(new Set());
+  const [error, setError] = useState('');
+  const [retryCount, setRetryCount] = useState(0);
   const authReady = authInitDone.value;
   const viewerDid = currentUser.value?.did;
 
@@ -85,34 +87,35 @@ export function Activity() {
     if (!isLoggedIn.value || !viewerDid) {
       setItems([]);
       setLoading(false);
+      setError('');
       return;
     }
-    let cancelled = false;
+    const controller = new AbortController();
     (async () => {
       setLoading(true);
+      setError('');
       try {
-        const res = await listNotifications({ limit: NOTIFICATION_LIMIT });
-        if (!cancelled) {
-          const filtered =
-            res.notifications?.filter(x =>
-              x.reason === 'reply' ||
-              x.reason === 'mention' ||
-              x.reason === 'quote' ||
-              x.reason === 'like',
-            ) ?? [];
-          setItems(filtered);
-        }
+        const res = await listNotifications({ limit: NOTIFICATION_LIMIT, signal: controller.signal });
+        const filtered =
+          res.notifications?.filter(x =>
+            x.reason === 'reply' ||
+            x.reason === 'mention' ||
+            x.reason === 'quote' ||
+            x.reason === 'like',
+          ) ?? [];
+        setItems(filtered);
       } catch (e) {
-        if (!cancelled) {
-          showToast(e instanceof Error ? e.message : 'Could not load notifications');
-          setItems([]);
-        }
+        if ((e as Error)?.name === 'AbortError') return;
+        const msg = e instanceof Error ? e.message : 'Could not load notifications';
+        setError(msg);
+        showToast(msg);
+        setItems([]);
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     })();
-    return () => { cancelled = true; };
-  }, [authReady, viewerDid]);
+    return () => { controller.abort(); };
+  }, [authReady, viewerDid, retryCount]);
 
   useEffect(() => {
     if (items.length === 0) {
@@ -125,25 +128,26 @@ export function Activity() {
       setPostByUri({});
       return;
     }
-    let cancelled = false;
+    const controller = new AbortController();
     setHydratingPosts(true);
     (async () => {
       const map: Record<string, PostView> = {};
       try {
         for (let i = 0; i < list.length; i += POSTS_CHUNK) {
           const chunk = list.slice(i, i + POSTS_CHUNK);
-          const { posts } = await getPosts(chunk);
-          if (cancelled) return;
+          const { posts } = await getPosts(chunk, { signal: controller.signal });
+          if (controller.signal.aborted) return;
           for (const p of posts) map[p.uri] = p;
         }
-        if (!cancelled) setPostByUri(map);
-      } catch {
-        if (!cancelled) setPostByUri({});
+        setPostByUri(map);
+      } catch (e) {
+        if ((e as Error)?.name === 'AbortError') return;
+        setPostByUri({});
       } finally {
-        if (!cancelled) setHydratingPosts(false);
+        if (!controller.signal.aborted) setHydratingPosts(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => { controller.abort(); };
   }, [items]);
 
   const subscribedRoots = new Set(getSubscribedThreadRoots());
@@ -217,7 +221,14 @@ export function Activity() {
           </div>
         </div>
 
-        {loading ? (
+        {error ? (
+          <div class="error-msg">
+            <p>{error}</p>
+            <button class="btn btn-outline" style="margin-top:10px" onClick={() => setRetryCount(c => c + 1)}>
+              Retry
+            </button>
+          </div>
+        ) : loading ? (
           <div class="activity-loading">
             <div class="spinner" />
             <span>Loading notifications…</span>
@@ -267,7 +278,7 @@ export function Activity() {
 
               const inner = (
                 <>
-                  <Avatar src={n.author.avatar} alt="" size={32} className="activity-cell-avatar" />
+                  <Avatar src={n.author.avatar} alt="" size={32} className="activity-cell-avatar" aria-hidden="true" />
                   <div class="activity-cell-body">
                     <div class="activity-cell-top">
                       <span class={`activity-kind ${cls}`} title={label}>

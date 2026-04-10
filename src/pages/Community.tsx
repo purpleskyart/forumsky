@@ -288,6 +288,7 @@ export function Community({ tag: tagProp }: CommunityProps) {
     sort: 'latest' | 'top',
     prevBuffer: PostView[],
     apiCursor: string | undefined,
+    signal?: AbortSignal,
   ): Promise<{ page: PostView[]; buffer: PostView[]; nextCursor: string | undefined }> {
     const collected: PostView[] = [];
     const buf = [...prevBuffer];
@@ -301,7 +302,7 @@ export function Community({ tag: tagProp }: CommunityProps) {
       }
       if (collected.length >= THREADS_PER_PAGE) break;
 
-      const res = await searchByTag(communityTag, { limit: 100, cursor: cur, sort });
+      const res = await searchByTag(communityTag, { limit: 100, cursor: cur, sort, signal });
       for (const p of res.posts) {
         if (!postPrimaryHashtagMatches(p, communityTag)) continue;
         if (seen.has(p.uri)) continue;
@@ -320,13 +321,14 @@ export function Community({ tag: tagProp }: CommunityProps) {
     communityTag: string,
     minRoots: number,
     startCursor: string | undefined,
+    signal?: AbortSignal,
   ): Promise<{ posts: PostView[]; nextCursor: string | undefined }> {
     const acc: PostView[] = [];
     const seen = seenCommunityUris.current;
     let cur = startCursor;
     let rounds = 0;
     while (acc.length < minRoots && rounds++ < FILTER_MAX_ROUNDS) {
-      const res = await searchByTag(communityTag, { limit: 100, cursor: cur, sort: 'latest' });
+      const res = await searchByTag(communityTag, { limit: 100, cursor: cur, sort: 'latest', signal });
       for (const p of res.posts) {
         if (!postPrimaryHashtagMatches(p, communityTag)) continue;
         if (seen.has(p.uri)) continue;
@@ -445,7 +447,8 @@ export function Community({ tag: tagProp }: CommunityProps) {
       return;
     }
     const gen = ++loadGen.current;
-    let cancelled = false;
+    const controller = new AbortController();
+    const signal = controller.signal;
 
     const run = async () => {
       if (isFollowing && !user?.did) {
@@ -519,8 +522,8 @@ export function Community({ tag: tagProp }: CommunityProps) {
             const seenUri = new Set<string>();
             let apiCursor: string | undefined;
             for (let i = 0; i < TIMELINE_INITIAL_MAX_ROUNDS; i++) {
-              const res = await getTimeline({ limit: 100, cursor: apiCursor });
-              if (cancelled || gen !== loadGen.current) return;
+              const res = await getTimeline({ limit: 100, cursor: apiCursor, signal });
+              if (signal.aborted || gen !== loadGen.current) return;
               for (const item of res.feed) {
                 const p = item.post;
                 if (!isRootPost(p) || seenUri.has(p.uri)) continue;
@@ -532,7 +535,7 @@ export function Community({ tag: tagProp }: CommunityProps) {
               if (raw.length >= THREADS_PER_PAGE) break;
             }
             const roots = sortFeedRootItems(raw, 'recent');
-            if (cancelled || gen !== loadGen.current) return;
+            if (signal.aborted || gen !== loadGen.current) return;
             followingTimelineCursorRef.current = apiCursor;
             setFollowingPool(roots);
             setPosts(roots.slice(0, THREADS_PER_PAGE).map(r => r.post));
@@ -552,9 +555,9 @@ export function Community({ tag: tagProp }: CommunityProps) {
               pool,
               THREADS_PER_PAGE,
               100,
-              () => cancelled || gen !== loadGen.current,
+              () => signal.aborted || gen !== loadGen.current,
             );
-            if (cancelled || gen !== loadGen.current) return;
+            if (signal.aborted || gen !== loadGen.current) return;
             setFollowingPool(pool);
             setPosts(pool.slice(0, THREADS_PER_PAGE).map(r => r.post));
             const more = followingBlendHasMore(rt);
@@ -571,9 +574,9 @@ export function Community({ tag: tagProp }: CommunityProps) {
             isRootPost,
             THREADS_PER_PAGE,
             100,
-            () => cancelled || gen !== loadGen.current,
+            () => signal.aborted || gen !== loadGen.current,
           );
-          if (cancelled || gen !== loadGen.current) return;
+          if (signal.aborted || gen !== loadGen.current) return;
           const sorted = sortFeedRootItems(mrt.raw, sortMode);
           setFollowingPool(sorted);
           setPosts(sorted.slice(0, THREADS_PER_PAGE).map(r => r.post));
@@ -583,8 +586,8 @@ export function Community({ tag: tagProp }: CommunityProps) {
         }
 
         if (sortMode === 'likes') {
-          const { page: pagePosts, buffer, nextCursor } = await pullFilteredRoots(tag, 'top', [], undefined);
-          if (cancelled || gen !== loadGen.current) return;
+          const { page: pagePosts, buffer, nextCursor } = await pullFilteredRoots(tag, 'top', [], undefined, signal);
+          if (signal.aborted || gen !== loadGen.current) return;
           matchedBufferRef.current = buffer;
           searchCursorRef.current = nextCursor;
           setMatchedBuffer(buffer);
@@ -595,8 +598,8 @@ export function Community({ tag: tagProp }: CommunityProps) {
         }
 
         if (sortMode === 'replies') {
-          const { posts: acc, nextCursor } = await accumulateFilteredForReplies(tag, THREADS_PER_PAGE, undefined);
-          if (cancelled || gen !== loadGen.current) return;
+          const { posts: acc, nextCursor } = await accumulateFilteredForReplies(tag, THREADS_PER_PAGE, undefined, signal);
+          if (signal.aborted || gen !== loadGen.current) return;
           const pool = sortThreads(acc, 'replies');
           setReplyPool(pool);
           setReplyApiCursor(nextCursor);
@@ -606,8 +609,8 @@ export function Community({ tag: tagProp }: CommunityProps) {
           return;
         }
 
-        const { page: pagePosts, buffer, nextCursor } = await pullFilteredRoots(tag, 'latest', [], undefined);
-        if (cancelled || gen !== loadGen.current) return;
+        const { page: pagePosts, buffer, nextCursor } = await pullFilteredRoots(tag, 'latest', [], undefined, signal);
+        if (signal.aborted || gen !== loadGen.current) return;
         matchedBufferRef.current = buffer;
         searchCursorRef.current = nextCursor;
         setMatchedBuffer(buffer);
@@ -615,17 +618,17 @@ export function Community({ tag: tagProp }: CommunityProps) {
         setCursor(nextCursor);
         setTotalHits(0);
       } catch (err) {
-        if (cancelled || gen !== loadGen.current) return;
+        if (signal.aborted || gen !== loadGen.current) return;
         const msg = err instanceof Error ? err.message : 'Failed to load community';
         setError(msg);
         showToast(msg);
       } finally {
-        if (!cancelled && gen === loadGen.current) setLoading(false);
+        if (!signal.aborted && gen === loadGen.current) setLoading(false);
       }
     };
 
     void run();
-    return () => { cancelled = true; };
+    return () => { controller.abort(); };
   }, [tag, sortMode, isFollowing, user?.did, listVersion]);
 
   useEffect(() => {

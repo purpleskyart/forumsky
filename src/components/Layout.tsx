@@ -1,5 +1,5 @@
 import type { ComponentChildren } from 'preact';
-import { useEffect } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { Header } from './Header';
 import { BottomNav } from './BottomNav';
 import { MobileAuthBar } from './MobileAuthBar';
@@ -14,6 +14,7 @@ import { authInitDone, currentUser, isLoggedIn, sessionRestorePending } from '@/
 import { clearGraphPolicy, refreshGraphPolicy } from '@/lib/graph-policy';
 import { appPathname } from '@/lib/app-base-path';
 import { navigateBack } from '@/lib/router';
+import { mayHaveRestorableSession } from '@/api/auth';
 
 interface LayoutProps {
   children: ComponentChildren;
@@ -31,7 +32,28 @@ import { Composer } from './Composer';
 import { showGlobalComposer } from '@/lib/store';
 import { setManualScrollRestoration } from '@/lib/scroll-restore';
 
+function AppLoadingSkeleton() {
+  return (
+    <div class="loading" aria-label="Loading…" role="status">
+      <span class="spinner" aria-hidden="true" />
+    </div>
+  );
+}
+
+function ErrorPanel({ message }: { message: string }) {
+  return (
+    <div class="error-panel" role="alert">
+      <p>{message}</p>
+      <button class="btn btn-primary" onClick={() => window.location.reload()}>
+        Retry
+      </button>
+    </div>
+  );
+}
+
 export function Layout({ children }: LayoutProps) {
+  const [authError, setAuthError] = useState<string | null>(null);
+
   useEffect(() => {
     import('@/api/auth')
       .then(m => m.initAuth())
@@ -44,7 +66,8 @@ export function Layout({ children }: LayoutProps) {
           clearGraphPolicy();
         }
       })
-      .catch(() => {
+      .catch((err: Error) => {
+        setAuthError(err.message || 'Failed to initialise. Please retry.');
         clearGraphPolicy();
         // Auth init failed -- app still works for reading public content
       })
@@ -82,6 +105,14 @@ export function Layout({ children }: LayoutProps) {
 
   const showLoggedInChrome = isLoggedIn.value || sessionRestorePending();
   const showMobileAuthBar = !showLoggedInChrome;
+
+  if (authError) {
+    return <ErrorPanel message={authError} />;
+  }
+
+  if (!authInitDone.value && mayHaveRestorableSession()) {
+    return <AppLoadingSkeleton />;
+  }
 
   return (
     <div class="app-shell">

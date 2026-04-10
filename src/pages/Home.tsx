@@ -136,16 +136,16 @@ export function Home() {
   }, [kbRow, kbRowOutlineActive]);
 
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
     const load = async () => {
       const fetches = communities.map(async (c) => {
         try {
           const res = await swr(
             `community_stats_${c.tag}`,
-            () => searchPosts(`#${c.tag}`, { limit: 1 }),
+            () => searchPosts(`#${c.tag}`, { limit: 1, signal: controller.signal }),
             COMMUNITY_STATS_TTL,
           );
-          if (cancelled) return null;
+          if (controller.signal.aborted) return null;
           const last = res.posts[0];
           return {
             tag: c.tag,
@@ -156,12 +156,12 @@ export function Home() {
             } : null,
           };
         } catch {
-          if (cancelled) return null;
+          if (controller.signal.aborted) return null;
           return { tag: c.tag, lastPost: null };
         }
       });
       const results = await Promise.all(fetches);
-      if (cancelled) return;
+      if (controller.signal.aborted) return;
       setPreviews(prev => {
         const next = { ...prev };
         for (const r of results) {
@@ -171,19 +171,19 @@ export function Home() {
       });
     };
     load();
-    return () => { cancelled = true; };
+    return () => { controller.abort(); };
   }, [communities]);
 
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
     if (!user?.did) {
       setFollowPreview(undefined);
-      return;
+      return () => { controller.abort(); };
     }
     (async () => {
       try {
-        const res = await getTimeline({ limit: TIMELINE_PREVIEW_LIMIT });
-        if (cancelled) return;
+        const res = await getTimeline({ limit: TIMELINE_PREVIEW_LIMIT, signal: controller.signal });
+        if (controller.signal.aborted) return;
         const roots = res.feed
           .map(f => f.post)
           .filter(p => !p.record.reply);
@@ -196,10 +196,10 @@ export function Home() {
           } : null,
         });
       } catch {
-        if (!cancelled) setFollowPreview(undefined);
+        if (!controller.signal.aborted) setFollowPreview(undefined);
       }
     })();
-    return () => { cancelled = true; };
+    return () => { controller.abort(); };
   }, [user?.did]);
 
   const handleAdd = (e: Event) => {

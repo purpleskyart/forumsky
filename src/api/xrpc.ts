@@ -1,9 +1,12 @@
 import type { AtprotoBlobRef, OAuthSession } from './types';
+import { isOnline } from '@/lib/store';
 
 const PUBLIC_API = 'https://api.bsky.app';
 
 const GET_MAX_ATTEMPTS = 4;
 const RETRY_BASE_DELAY_MS = 400;
+
+const inFlight = new Map<string, Promise<unknown>>();
 
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -38,7 +41,10 @@ export function getOAuthSession(): OAuthSession | null {
 export async function xrpcGet<T>(
   nsid: string,
   params?: Record<string, string | number | boolean | undefined>,
+  signal?: AbortSignal,
 ): Promise<T> {
+  if (!isOnline.value) throw new XRPCError(0, 'Offline', 'You are offline. Please check your connection.');
+
   const url = new URL(`/xrpc/${nsid}`, PUBLIC_API);
 
   if (params) {
@@ -49,50 +55,65 @@ export async function xrpcGet<T>(
 
   const urlStr = url.toString();
 
-  for (let attempt = 0; attempt < GET_MAX_ATTEMPTS; attempt++) {
-    try {
-      const res = await fetch(urlStr, {
-        headers: { 'Accept': 'application/json' },
-        cache: 'no-store',
-      });
-
-      if (res.ok) {
-        return res.json();
-      }
-
-      if (isTransientStatus(res.status) && attempt < GET_MAX_ATTEMPTS - 1) {
-        await sleep(RETRY_BASE_DELAY_MS * (attempt + 1));
-        continue;
-      }
-
-      let errorType = 'Unknown';
-      let message = `${res.status} ${res.statusText}`;
-      try {
-        const body = await res.json();
-        errorType = body.error || errorType;
-        message = body.message || message;
-      } catch {
-        // Response wasn't JSON (e.g. HTML error page from CDN)
-      }
-      throw new XRPCError(res.status, errorType, message);
-    } catch (e) {
-      if (e instanceof XRPCError) throw e;
-      if (attempt < GET_MAX_ATTEMPTS - 1) {
-        await sleep(RETRY_BASE_DELAY_MS * (attempt + 1));
-        continue;
-      }
-      throw e;
-    }
+  if (inFlight.has(urlStr)) {
+    return inFlight.get(urlStr) as Promise<T>;
   }
 
-  throw new Error('Request failed');
+  const promise = (async () => {
+    for (let attempt = 0; attempt < GET_MAX_ATTEMPTS; attempt++) {
+      try {
+        const res = await fetch(urlStr, {
+          headers: { 'Accept': 'application/json' },
+          cache: 'no-store',
+          signal,
+        });
+
+        if (res.ok) {
+          return res.json();
+        }
+
+        if (isTransientStatus(res.status) && attempt < GET_MAX_ATTEMPTS - 1) {
+          await sleep(RETRY_BASE_DELAY_MS * (attempt + 1));
+          continue;
+        }
+
+        let errorType = 'Unknown';
+        let message = `${res.status} ${res.statusText}`;
+        try {
+          const body = await res.json();
+          errorType = body.error || errorType;
+          message = body.message || message;
+        } catch {
+          // Response wasn't JSON (e.g. HTML error page from CDN)
+        }
+        throw new XRPCError(res.status, errorType, message);
+      } catch (e) {
+        if (e instanceof XRPCError) throw e;
+        if (attempt < GET_MAX_ATTEMPTS - 1) {
+          await sleep(RETRY_BASE_DELAY_MS * (attempt + 1));
+          continue;
+        }
+        throw e;
+      }
+    }
+
+    throw new Error('Request failed');
+  })();
+
+  inFlight.set(urlStr, promise);
+  promise.finally(() => inFlight.delete(urlStr));
+
+  return promise;
 }
 
 /** Authenticated GET (timeline, notifications, etc.) — uses OAuth session + PDS. */
 export async function xrpcSessionGet<T>(
   nsid: string,
   params?: Record<string, string | number | boolean | undefined>,
+  signal?: AbortSignal,
 ): Promise<T> {
+  if (!isOnline.value) throw new XRPCError(0, 'Offline', 'You are offline. Please check your connection.');
+
   if (!oauthSession) {
     throw new XRPCError(401, 'AuthRequired', 'You must be signed in to do this');
   }
@@ -110,6 +131,7 @@ export async function xrpcSessionGet<T>(
       const res = await oauthSession.fetchHandler(path, {
         method: 'GET',
         headers: { 'Accept': 'application/json' },
+        signal,
       });
 
       if (res.ok) {

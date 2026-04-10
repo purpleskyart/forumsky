@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "test": "vitest --run",
+    "test:watch": "vitest",
     "gh-pages:prepare": "cp dist/index.html dist/404.html",
     "build:github-pages": "npm run build && npm run gh-pages:prepare"
   },
@@ -22,11 +24,17 @@
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.9.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/preact": "^3.2.4",
+    "@testing-library/user-event": "^14.6.1",
     "@types/dom-chromium-ai": "^0.0.16",
     "@types/history": "^4.7.11",
+    "@vitest/ui": "^4.1.4",
+    "jsdom": "^29.0.2",
     "typescript": "^5.7.0",
     "vite": "^6.0.0",
     "vite-plugin-pwa": "^0.21.0",
+    "vitest": "^4.1.4",
     "workbox-window": "^7.3.0"
   }
 }

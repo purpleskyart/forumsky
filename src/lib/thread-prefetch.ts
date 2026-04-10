@@ -2,7 +2,14 @@
  * Prefetch thread data to make navigation feel instant
  */
 
-const PREFETCH_CACHE = new Map<string, any>();
+import type { GetPostThreadResponse } from '@/api/types';
+
+interface CachedThreadEntry {
+  data: GetPostThreadResponse;
+  timestamp: number;
+}
+
+const PREFETCH_CACHE = new Map<string, CachedThreadEntry>();
 const PREFETCH_TTL = 10 * 60 * 1000; // 10 minutes
 const STORAGE_KEY = 'forumsky_thread_cache';
 
@@ -14,7 +21,7 @@ if (typeof window !== 'undefined') {
       const parsed = JSON.parse(stored);
       const now = Date.now();
       for (const [uri, entry] of Object.entries(parsed)) {
-        const typedEntry = entry as { data: any; timestamp: number };
+        const typedEntry = entry as CachedThreadEntry;
         if (now - typedEntry.timestamp < PREFETCH_TTL) {
           PREFETCH_CACHE.set(uri, typedEntry);
         }
@@ -28,7 +35,7 @@ if (typeof window !== 'undefined') {
 function persistCache(): void {
   if (typeof window === 'undefined') return;
   try {
-    const obj: Record<string, any> = {};
+    const obj: Record<string, CachedThreadEntry> = {};
     for (const [uri, entry] of PREFETCH_CACHE.entries()) {
       obj[uri] = entry;
     }
@@ -60,16 +67,16 @@ export async function prefetchThread(uri: string): Promise<void> {
   }
 }
 
-export function getCachedThread(uri: string): any | null {
+export function getCachedThread(uri: string): GetPostThreadResponse | null {
   const cached = PREFETCH_CACHE.get(uri);
   if (!cached) return null;
-  
+
   if (Date.now() - cached.timestamp > PREFETCH_TTL) {
     PREFETCH_CACHE.delete(uri);
     persistCache();
     return null;
   }
-  
+
   return cached.data;
 }
 
