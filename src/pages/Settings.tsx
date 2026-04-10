@@ -3,7 +3,8 @@ import { navigate, SPA_ANCHOR_SHIELD } from '@/lib/router';
 import { applyNsfwMediaMode, nsfwMediaMode } from '@/lib/store';
 import type { NsfwMediaMode } from '@/lib/preferences';
 
-import { version } from '../../package.json';
+// Version automatically updates on each build using build timestamp
+const FORUMSKY_VERSION = import.meta.env.VITE_BUILD_DATE || new Date().toISOString().slice(0, 10);
 
 export function Settings() {
   const mode = nsfwMediaMode.value;
@@ -73,7 +74,7 @@ export function Settings() {
 
           <div class="settings-footer">
             <div class="settings-version">
-              ForumSky v{version}
+              ForumSky {FORUMSKY_VERSION}
             </div>
           </div>
         </div>
