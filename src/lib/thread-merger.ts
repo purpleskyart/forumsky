@@ -2,6 +2,9 @@ import type { ThreadViewPost, PostView } from '@/api/types';
 import { isThreadViewPost } from '@/api/types';
 import { parseRichText } from '@/lib/richtext';
 
+// Cache for mergeThread results to avoid re-processing the same thread
+const mergeCache = new WeakMap<ThreadViewPost, MergedThread>();
+
 export interface ForumPost {
   /** All merged post segments (self-replies by the OP concatenated) */
   segments: PostView[];
@@ -170,6 +173,10 @@ export function buildThreadPostIndex(thread: MergedThread): {
  * - All other replies become chronological ForumComments
  */
 export function mergeThread(thread: ThreadViewPost): MergedThread {
+  // Check cache first
+  const cached = mergeCache.get(thread);
+  if (cached) return cached;
+
   const root = thread.post;
   const opDid = root.author.did;
 
@@ -199,7 +206,9 @@ export function mergeThread(thread: ThreadViewPost): MergedThread {
     ? comments[comments.length - 1].post.record.createdAt
     : root.record.createdAt;
 
-  return { forumPost, comments, commenterCount: commenterDids.size, lastActivity };
+  const result: MergedThread = { forumPost, comments, commenterCount: commenterDids.size, lastActivity };
+  mergeCache.set(thread, result);
+  return result;
 }
 
 /**
@@ -291,4 +300,10 @@ export function postPrimaryHashtagMatches(post: PostView, communityTag: string):
   const first = extractFirstHashtag(post);
   if (!first) return false;
   return first.toLowerCase() === communityTag.trim().toLowerCase();
+}
+
+/** Clear the mergeThread cache - useful when thread data is known to have changed */
+export function clearMergeCache(): void {
+  // WeakMap doesn't have a clear method, so we just let old entries be garbage collected
+  // This function exists for API consistency if we switch to a different caching mechanism
 }

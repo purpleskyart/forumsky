@@ -9,6 +9,8 @@ import {
   useRef,
   useContext,
 } from 'preact/hooks';
+import { useIosUpdate } from '@/hooks/useIosUpdate';
+import { useVirtualList } from '@/hooks/useVirtualList';
 import { Avatar } from '@/components/Avatar';
 import { AuthorFlair } from '@/components/AuthorFlair';
 import { Composer } from '@/components/Composer';
@@ -101,7 +103,7 @@ import { reportPost } from '@/api/moderation';
 import { deletePost, createDownvote, deleteDownvote, listMyDownvotes } from '@/api/post';
 import { followActor, listAllFollowingDids } from '@/api/graph-follows';
 import { XRPCError } from '@/api/xrpc';
-import type { PostView, StrongRef } from '@/api/types';
+import type { PostView, StrongRef, ThreadViewPost } from '@/api/types';
 import type { ComponentChildren } from 'preact';
 
 interface ThreadProps {
@@ -324,21 +326,52 @@ export function Thread(props: ThreadProps) {
       setLoading(true);
       setError('');
       try {
-        let did = actor;
-        if (!actor.startsWith('did:')) {
-          const resolved = await swr(`resolve_${actor}`, () => resolveHandle(actor), 300_000);
-          did = resolved.did;
-        }
-        const uri = getPostUri(did, rkey);
+        // Try to construct URI and check cache immediately
+        const did = actor.startsWith('did:') ? actor : null;
+        const tentativeUri = did ? getPostUri(did, rkey) : null;
         
-        // Check cache first for optimistic navigation
-        const cached = getCachedThread(uri);
-        if (cached && isThreadViewPost(cached.thread)) {
-          setThread(mergeThread(cached.thread));
+        // Check cache first - if we have it, show immediately and skip handle resolution
+        let cachedThread: ThreadViewPost | null = null;
+        if (tentativeUri) {
+          const cached = getCachedThread(tentativeUri);
+          if (cached && isThreadViewPost(cached.thread)) {
+            cachedThread = cached.thread;
+          }
+        }
+        
+        // If no cache, we need to resolve handle first
+        let resolvedDid = did;
+        if (!resolvedDid) {
+          const resolved = await swr(`resolve_${actor}`, () => resolveHandle(actor), 24 * 60 * 60 * 1000); // 24 hours
+          resolvedDid = resolved.did;
+        }
+        
+        if (!resolvedDid) {
+          setError('Could not resolve handle');
+          return;
+        }
+        
+        const uri = getPostUri(resolvedDid, rkey);
+        
+        // If we have cached data, show it immediately and fetch fresh data in background
+        if (cachedThread) {
+          setThread(mergeThread(cachedThread));
           setLoading(false);
+          
+          // Background refresh
+          try {
+            const res = await swr(`thread_${uri}`, () => getPostThread(uri, 50, 5), 5 * 60 * 1000); // 5 minutes
+            if (!cancelled && isThreadViewPost(res.thread)) {
+              setThread(mergeThread(res.thread));
+            }
+          } catch {
+            // Background refresh failed, but we already showed cached data
+          }
+          return;
         }
         
-        const res = await swr(`thread_${uri}`, () => getPostThread(uri, 50, 5), 30_000);
+        // No cache - must fetch
+        const res = await swr(`thread_${uri}`, () => getPostThread(uri, 50, 5), 5 * 60 * 1000); // 5 minutes
         if (cancelled) return;
         if (!isThreadViewPost(res.thread)) {
           setError('Thread not found');
@@ -479,6 +512,21 @@ function ThreadView({
       !mutedDids.value.has(c.post.author.did) &&
       !blockedDids.value.has(c.post.author.did),
   );
+
+  // Virtual scrolling for forum layout - only render comments in viewport
+  const [commentsContainerRef, setCommentsContainerRef] = useState<HTMLElement | null>(null);
+  const virtualList = useVirtualList({
+    itemCount: commentLayoutMode === 'forum' ? visibleComments.length : 0,
+    itemHeight: 120, // Estimated height of a comment
+    overscan: 5,
+  });
+  
+  // Update container ref when it changes
+  useEffect(() => {
+    if (commentsContainerRef) {
+      virtualList.containerRef(commentsContainerRef);
+    }
+  }, [commentsContainerRef, virtualList]);
 
   useEffect(() => {
     replyCountAnnounceRef.current = -1;
@@ -1139,56 +1187,73 @@ function ThreadView({
         )}
 
         {commentLayoutMode === 'forum'
-          ? visibleComments.map((comment, idx) => (
-              <Fragment key={comment.post.uri}>
-                <PostBlock
-                  segments={comment.segments}
-                  root={comment.post}
-                  postNumber={idx + 2}
-                  threadRootUri={rootPost.uri}
-                  threadIndex={threadIndex}
-                  mergedTextForPostNumber={mergedTextForPostNumber}
-                  childReplies={getChildRepliesForSegments(
-                    comment.segments,
-                    directRepliesByParentUri,
-                  )}
-                  kbFocusPost={kbFocusPost}
-                  kbOutlineActive={kbOutlineActive}
-                  onOwnPostDeleted={handleOwnPostDeleted}
-                  onReply={handleReplyClick}
-                  onQuoteRepost={handleQuoteRepostClick}
-                  onLocalHide={bumpLocalHidden}
-                  downvoteRecordUri={myDownvotes[comment.post.uri]}
-                  downvoteDisplayCount={Math.max(
-                    0,
-                    (downvoteCounts[comment.post.uri] ?? 0) +
-                      (downvoteCountOptimisticDelta[comment.post.uri] ?? 0),
-                  )}
-                  onDownvotePost={handleDownvotePost}
-                  downvoteBusy={downvoteLoadingUri === comment.post.uri}
-                  threadFollowingDids={threadFollowingDids}
-                  avatarFollowBusyDid={avatarFollowBusyDid}
-                  onThreadAvatarFollow={handleThreadAvatarFollow}
-                />
-                {showComposerAfterPost(comment.post) && (
-                  <ThreadInlineComposer
-                    key={`${replyTarget?.parent.uri ?? 'r'}-${quoteTarget?.post.uri ?? 'q'}`}
-                    replyTo={replyToForComposer}
-                    quoteEmbed={quoteEmbedForComposer}
-                    replyTargetSummary={replyTargetSummary}
-                    composerFocusRequest={composerFocusRequest}
-                    draftRootUri={rootPost.uri}
-                    appendTextRequest={appendQuoteRequest}
-                    onDismiss={dismissComposer}
-                    onPosted={async () => {
-                      await refreshThread();
-                      setReplyTarget(null);
-                      setQuoteTarget(null);
-                    }}
-                  />
-                )}
-              </Fragment>
-            ))
+          ? (
+            <div
+              ref={setCommentsContainerRef}
+              style={{
+                position: 'relative',
+                height: virtualList.totalHeight > 0 ? `${virtualList.totalHeight}px` : 'auto',
+              }}
+            >
+              <div style={{ transform: `translateY(${virtualList.offsetY}px)` }}>
+                {visibleComments
+                  .slice(virtualList.startIndex, virtualList.endIndex + 1)
+                  .map((comment, sliceIdx) => {
+                    const idx = virtualList.startIndex + sliceIdx;
+                    return (
+                      <Fragment key={comment.post.uri}>
+                        <PostBlock
+                          segments={comment.segments}
+                          root={comment.post}
+                          postNumber={idx + 2}
+                          threadRootUri={rootPost.uri}
+                          threadIndex={threadIndex}
+                          mergedTextForPostNumber={mergedTextForPostNumber}
+                          childReplies={getChildRepliesForSegments(
+                            comment.segments,
+                            directRepliesByParentUri,
+                          )}
+                          kbFocusPost={kbFocusPost}
+                          kbOutlineActive={kbOutlineActive}
+                          onOwnPostDeleted={handleOwnPostDeleted}
+                          onReply={handleReplyClick}
+                          onQuoteRepost={handleQuoteRepostClick}
+                          onLocalHide={bumpLocalHidden}
+                          downvoteRecordUri={myDownvotes[comment.post.uri]}
+                          downvoteDisplayCount={Math.max(
+                            0,
+                            (downvoteCounts[comment.post.uri] ?? 0) +
+                              (downvoteCountOptimisticDelta[comment.post.uri] ?? 0),
+                          )}
+                          onDownvotePost={handleDownvotePost}
+                          downvoteBusy={downvoteLoadingUri === comment.post.uri}
+                          threadFollowingDids={threadFollowingDids}
+                          avatarFollowBusyDid={avatarFollowBusyDid}
+                          onThreadAvatarFollow={handleThreadAvatarFollow}
+                        />
+                        {showComposerAfterPost(comment.post) && (
+                          <ThreadInlineComposer
+                            key={`${replyTarget?.parent.uri ?? 'r'}-${quoteTarget?.post.uri ?? 'q'}`}
+                            replyTo={replyToForComposer}
+                            quoteEmbed={quoteEmbedForComposer}
+                            replyTargetSummary={replyTargetSummary}
+                            composerFocusRequest={composerFocusRequest}
+                            draftRootUri={rootPost.uri}
+                            appendTextRequest={appendQuoteRequest}
+                            onDismiss={dismissComposer}
+                            onPosted={async () => {
+                              await refreshThread();
+                              setReplyTarget(null);
+                              setQuoteTarget(null);
+                            }}
+                          />
+                        )}
+                      </Fragment>
+                    );
+                  })}
+              </div>
+            </div>
+          )
           : nestedCommentRoots.map(node => (
               <ThreadNestedCommentBranch
                 key={node.comment.post.uri}
