@@ -54,7 +54,7 @@ export function Profile(props: ProfileProps) {
       setCursor(feedRes.cursor || '');
       setHasMore(!!feedRes.cursor);
     } catch (err) {
-      console.error('Failed to load more posts:', err);
+      if (import.meta.env.DEV) console.error('Failed to load more posts:', err);
     } finally {
       setLoadingMore(false);
     }

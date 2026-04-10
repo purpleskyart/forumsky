@@ -2,6 +2,9 @@ const CACHE_PREFIX = 'fsky_cache_';
 const META_PREFIX = 'fsky_meta_';
 const DEFAULT_TTL = 60_000; // 1 minute
 
+// Track cache keys to avoid full localStorage iteration on eviction
+const cacheKeys = new Set<string>();
+
 export const CACHE_TTL = {
   DEFAULT: DEFAULT_TTL,
   PROFILE: 5 * 60 * 1000, // 5 minutes
@@ -59,6 +62,7 @@ export function setCache<T>(key: string, data: T, ttl = DEFAULT_TTL) {
     const meta: CacheMeta = { ts: Date.now(), ttl };
     localStorage.setItem(CACHE_PREFIX + key, JSON.stringify(entry));
     localStorage.setItem(META_PREFIX + key, JSON.stringify(meta));
+    cacheKeys.add(key);
   } catch {
     evictOldest(5);
     try {
@@ -66,6 +70,7 @@ export function setCache<T>(key: string, data: T, ttl = DEFAULT_TTL) {
       const meta: CacheMeta = { ts: Date.now(), ttl };
       localStorage.setItem(CACHE_PREFIX + key, JSON.stringify(entry));
       localStorage.setItem(META_PREFIX + key, JSON.stringify(meta));
+      cacheKeys.add(key);
     } catch {
       // give up
     }
@@ -73,38 +78,33 @@ export function setCache<T>(key: string, data: T, ttl = DEFAULT_TTL) {
 }
 
 export function clearCache() {
-  const keys: string[] = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key?.startsWith(CACHE_PREFIX) || key?.startsWith(META_PREFIX)) keys.push(key);
-  }
-  keys.forEach(k => localStorage.removeItem(k));
+  cacheKeys.forEach(key => {
+    localStorage.removeItem(CACHE_PREFIX + key);
+    localStorage.removeItem(META_PREFIX + key);
+  });
+  cacheKeys.clear();
 }
 
 export function removeCacheEntry(key: string) {
   try {
     localStorage.removeItem(CACHE_PREFIX + key);
     localStorage.removeItem(META_PREFIX + key);
+    cacheKeys.delete(key);
   } catch {
     /* ignore */
   }
 }
 
 function evictOldest(count: number) {
-  const metaKeys = new Set<string>();
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key?.startsWith(META_PREFIX)) metaKeys.add(key);
-  }
   const entries: { key: string; ts: number }[] = [];
-  for (const metaKey of metaKeys) {
+  for (const key of cacheKeys) {
     try {
-      const raw = localStorage.getItem(metaKey);
+      const raw = localStorage.getItem(META_PREFIX + key);
       if (!raw) continue;
       const { ts } = JSON.parse(raw);
-      entries.push({ key: metaKey.slice(META_PREFIX.length), ts });
+      entries.push({ key, ts });
     } catch {
-      entries.push({ key: metaKey.slice(META_PREFIX.length), ts: 0 });
+      entries.push({ key, ts: 0 });
     }
   }
   entries.sort((a, b) => a.ts - b.ts);
@@ -112,6 +112,7 @@ function evictOldest(count: number) {
     const { key } = entries[i];
     localStorage.removeItem(CACHE_PREFIX + key);
     localStorage.removeItem(META_PREFIX + key);
+    cacheKeys.delete(key);
   }
 }
 

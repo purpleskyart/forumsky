@@ -10,7 +10,7 @@ import type {
 import { hrefForAppPath } from '@/lib/app-base-path';
 import { communityUrl } from '@/lib/router';
 import { h, Fragment } from 'preact';
-import type { VNode, ComponentChild } from 'preact';
+import type { VNode, ComponentChild, JSX } from 'preact';
 
 interface RichSegment {
   text: string;
@@ -84,11 +84,11 @@ export function renderRichText(text: string, facets?: Facet[]): VNode {
 
   for (const seg of segments) {
     if (seg.type === 'mention') {
-      children.push(h('a', { href: hrefForAppPath(`/u/${seg.did}`), class: 'mention' } as any, seg.text));
+      children.push(h('a', { href: hrefForAppPath(`/u/${seg.did}`), class: 'mention' } as JSX.HTMLAttributes<HTMLAnchorElement>, seg.text));
     } else if (seg.type === 'link') {
-      children.push(h('a', { href: seg.href, target: '_blank', rel: 'noopener noreferrer' } as any, seg.text));
+      children.push(h('a', { href: seg.href, target: '_blank', rel: 'noopener noreferrer' } as JSX.HTMLAttributes<HTMLAnchorElement>, seg.text));
     } else if (seg.type === 'tag') {
-      children.push(h('a', { href: hrefForAppPath(communityUrl(seg.tag!)), class: 'hashtag' } as any, seg.text));
+      children.push(h('a', { href: hrefForAppPath(communityUrl(seg.tag!)), class: 'hashtag' } as JSX.HTMLAttributes<HTMLAnchorElement>, seg.text));
     } else {
       children.push(seg.text);
     }
@@ -157,7 +157,7 @@ export function renderPostContent(text: string, facets?: Facet[]): ComponentChil
       charOffsetInPara += line.length;
       if (j < lines.length - 1) charOffsetInPara += 1;
     }
-    return h('p', { key: i } as any, ...lineNodes);
+    return h('p', { key: i } as JSX.HTMLAttributes<HTMLParagraphElement>, ...lineNodes);
   });
 }
 

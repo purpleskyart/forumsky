@@ -56,7 +56,7 @@ export async function prefetchThread(uri: string): Promise<void> {
     persistCache();
   } catch (err) {
     // Silently fail prefetch - it's just an optimization
-    console.debug('Prefetch failed for thread:', uri);
+    if (import.meta.env.DEV) console.debug('Prefetch failed for thread:', uri);
   }
 }
 

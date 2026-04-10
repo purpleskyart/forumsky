@@ -135,6 +135,8 @@ export async function deleteDownvote(downvoteRecordUri: string, actorDid: string
 export async function listMyDownvotes(did: string): Promise<Record<string, string>> {
   const out: Record<string, string> = {};
   let cursor: string | undefined;
+  const MAX_ITERATIONS = 100; // Safety limit: 100 * 100 = 10,000 records max
+  let iterations = 0;
   do {
     const res = await xrpcSessionGet<{
       records?: Array<{ uri?: string; value?: { subject?: { uri?: string } } }>;
@@ -150,6 +152,11 @@ export async function listMyDownvotes(did: string): Promise<Record<string, strin
       if (subjectUri && r.uri) out[subjectUri] = r.uri;
     }
     cursor = res.cursor;
+    iterations++;
+    if (iterations >= MAX_ITERATIONS) {
+      if (import.meta.env.DEV) console.warn('[ForumSky] listMyDownvotes reached max iterations, possible API issue');
+      break;
+    }
   } while (cursor);
   return out;
 }

@@ -92,10 +92,16 @@ export async function getPosts(uris: string[]): Promise<{ posts: PostView[] }> {
     const chunk = uris.slice(i, i + POST_URI_CHUNK_SIZE);
     const params: Record<string, string> = {};
     chunk.forEach((u, j) => { params[`uris[${j}]`] = u; });
-    const res = getOAuthSession()
-      ? await xrpcSessionGet<{ posts: PostView[] }>('app.bsky.feed.getPosts', params)
-      : await xrpcGet<{ posts: PostView[] }>('app.bsky.feed.getPosts', params);
-    chunks.push(res.posts);
+    try {
+      const res = getOAuthSession()
+        ? await xrpcSessionGet<{ posts: PostView[] }>('app.bsky.feed.getPosts', params)
+        : await xrpcGet<{ posts: PostView[] }>('app.bsky.feed.getPosts', params);
+      chunks.push(res.posts);
+    } catch (err) {
+      // Log chunk failure but continue with other chunks
+      if (import.meta.env.DEV) console.warn('[ForumSky] Failed to fetch post chunk:', err);
+      chunks.push([]); // Add empty array to maintain chunk structure
+    }
   }
 
   return { posts: chunks.flat() };

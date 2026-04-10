@@ -33,10 +33,13 @@ let savedRepoSyncPromise: Promise<string[]> | null = null;
 async function loadSavedThreadsFromRepo(): Promise<string[]> {
   if (savedRepoSyncPromise) return savedRepoSyncPromise;
   savedRepoSyncPromise = getSavedThreadsFromRepo();
-  const result = await savedRepoSyncPromise;
-  cachedRepoSavedThreads = result;
-  savedRepoSyncPromise = null;
-  return result;
+  try {
+    const result = await savedRepoSyncPromise;
+    cachedRepoSavedThreads = result;
+    return result;
+  } finally {
+    savedRepoSyncPromise = null;
+  }
 }
 
 export async function syncSavedThreadsFromRepo(): Promise<void> {
@@ -131,9 +134,13 @@ export function setLastReadPostUri(
         : prev?.replyCountAtMark ?? null,
   };
   saveJSON(THREAD_READ_META, m);
+  
+  // Clean up legacy entry for this thread since we now have the new format
   const leg = loadJSON<Record<string, string>>(THREAD_READ_LEGACY, {});
-  leg[threadRootUri] = postUri;
-  saveJSON(THREAD_READ_LEGACY, leg);
+  if (threadRootUri in leg) {
+    delete leg[threadRootUri];
+    saveJSON(THREAD_READ_LEGACY, leg);
+  }
 }
 
 /** True when reply count grew after the user last marked the thread read through the end. */
@@ -214,10 +221,13 @@ let subscribedRepoSyncPromise: Promise<string[]> | null = null;
 async function loadSubscribedThreadsFromRepo(): Promise<string[]> {
   if (subscribedRepoSyncPromise) return subscribedRepoSyncPromise;
   subscribedRepoSyncPromise = getSubscribedThreadsFromRepo();
-  const result = await subscribedRepoSyncPromise;
-  cachedRepoSubscribedThreads = result;
-  subscribedRepoSyncPromise = null;
-  return result;
+  try {
+    const result = await subscribedRepoSyncPromise;
+    cachedRepoSubscribedThreads = result;
+    return result;
+  } finally {
+    subscribedRepoSyncPromise = null;
+  }
 }
 
 export async function syncSubscribedThreadsFromRepo(): Promise<void> {

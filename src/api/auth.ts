@@ -53,10 +53,22 @@ function getLoopbackClientMetadata() {
   return atprotoLoopbackClientMetadata(clientId);
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function getClientMetadata(): any {
+interface OAuthClientMetadata {
+  client_id: string;
+  client_name: string;
+  client_uri: string;
+  redirect_uris: string[];
+  grant_types: string[];
+  response_types: string[];
+  scope: string;
+  application_type: string;
+  dpop_bound_access_tokens: boolean;
+  token_endpoint_auth_method: string;
+}
+
+function getClientMetadata(): OAuthClientMetadata {
   if (isLocalhost()) {
-    return getLoopbackClientMetadata();
+    return getLoopbackClientMetadata() as OAuthClientMetadata;
   }
   const root = appDeploymentRoot();
   return {
@@ -149,7 +161,7 @@ export async function initAuth(): Promise<ProfileView | null> {
     }
     return null;
   } catch (err) {
-    console.warn('[ForumSky] OAuth init:', err);
+    if (import.meta.env.DEV) console.warn('[ForumSky] OAuth init:', err);
     return null;
   }
 }

@@ -76,6 +76,6 @@ if (typeof window !== 'undefined') {
   (window as unknown as { __clearVersion: () => void }).__clearVersion = () => {
     localStorage.removeItem(CACHE_KEY);
     localStorage.removeItem(FIRST_RUN_KEY);
-    console.log('Version cleared. Reload to test update prompt.');
+    if (import.meta.env.DEV) console.log('Version cleared. Reload to test update prompt.');
   };
 }

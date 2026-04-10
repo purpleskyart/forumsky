@@ -17,7 +17,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: preact.ErrorInfo) {
-    console.error('[ForumSky] ErrorBoundary caught:', error, errorInfo);
+    if (import.meta.env.DEV) console.error('[ForumSky] ErrorBoundary caught:', error, errorInfo);
   }
 
   handleRetry = () => {
