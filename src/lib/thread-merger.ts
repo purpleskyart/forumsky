@@ -1,9 +1,42 @@
 import type { ThreadViewPost, PostView } from '@/api/types';
 import { isThreadViewPost } from '@/api/types';
 import { parseRichText } from '@/lib/richtext';
+import { THREAD_MERGER_CACHE_MAX_SIZE } from '@/lib/constants';
 
 // Cache for mergeThread results to avoid re-processing the same thread
-const mergeCache = new WeakMap<ThreadViewPost, MergedThread>();
+// Using a Map instead of WeakMap to have control over cache size
+const mergeCache = new Map<ThreadViewPost, MergedThread>();
+
+// Track access order for LRU eviction
+const accessOrder: ThreadViewPost[] = [];
+
+/** Get from cache with LRU tracking */
+function getFromCache(thread: ThreadViewPost): MergedThread | undefined {
+  const result = mergeCache.get(thread);
+  if (result) {
+    // Update access order (move to end = most recently used)
+    const index = accessOrder.indexOf(thread);
+    if (index > -1) {
+      accessOrder.splice(index, 1);
+      accessOrder.push(thread);
+    }
+  }
+  return result;
+}
+
+/** Set in cache with LRU eviction */
+function setInCache(thread: ThreadViewPost, result: MergedThread) {
+  // Evict oldest entries if at capacity
+  while (mergeCache.size >= THREAD_MERGER_CACHE_MAX_SIZE && accessOrder.length > 0) {
+    const oldest = accessOrder.shift();
+    if (oldest) {
+      mergeCache.delete(oldest);
+    }
+  }
+
+  mergeCache.set(thread, result);
+  accessOrder.push(thread);
+}
 
 export interface ForumPost {
   /** All merged post segments (self-replies by the OP concatenated) */
@@ -174,7 +207,7 @@ export function buildThreadPostIndex(thread: MergedThread): {
  */
 export function mergeThread(thread: ThreadViewPost): MergedThread {
   // Check cache first
-  const cached = mergeCache.get(thread);
+  const cached = getFromCache(thread);
   if (cached) return cached;
 
   const root = thread.post;
@@ -207,7 +240,7 @@ export function mergeThread(thread: ThreadViewPost): MergedThread {
     : root.record.createdAt;
 
   const result: MergedThread = { forumPost, comments, commenterCount: commenterDids.size, lastActivity };
-  mergeCache.set(thread, result);
+  setInCache(thread, result);
   return result;
 }
 
@@ -304,6 +337,11 @@ export function postPrimaryHashtagMatches(post: PostView, communityTag: string):
 
 /** Clear the mergeThread cache - useful when thread data is known to have changed */
 export function clearMergeCache(): void {
-  // WeakMap doesn't have a clear method, so we just let old entries be garbage collected
-  // This function exists for API consistency if we switch to a different caching mechanism
+  mergeCache.clear();
+  accessOrder.length = 0;
+}
+
+/** Get current cache size for debugging */
+export function getMergeCacheSize(): number {
+  return mergeCache.size;
 }

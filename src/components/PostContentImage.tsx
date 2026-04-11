@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'preact/hooks';
 import { createPortal } from 'preact/compat';
+import { FOCUSABLE_SELECTORS } from '@/lib/constants';
 
 interface ImageData {
   thumb: string;
@@ -29,8 +30,47 @@ export function PostContentImage({
   const [open, setOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(currentIndex ?? 0);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const lightboxRef = useRef<HTMLDivElement>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
 
-  const close = useCallback(() => setOpen(false), []);
+  const close = useCallback(() => {
+    setOpen(false);
+    // Restore focus to the element that was focused before opening
+    if (previouslyFocusedRef.current) {
+      previouslyFocusedRef.current.focus();
+    }
+  }, []);
+
+  /** Get all focusable elements within the lightbox */
+  const getFocusableElements = useCallback((): HTMLElement[] => {
+    if (!lightboxRef.current) return [];
+    return Array.from(lightboxRef.current.querySelectorAll(FOCUSABLE_SELECTORS));
+  }, []);
+
+  /** Trap focus within the lightbox */
+  const trapFocus = useCallback((e: KeyboardEvent) => {
+    if (e.key !== 'Tab') return;
+
+    const focusableElements = getFocusableElements();
+    if (focusableElements.length === 0) return;
+
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+
+    if (e.shiftKey) {
+      // Shift+Tab: if on first element, wrap to last
+      if (document.activeElement === firstElement) {
+        e.preventDefault();
+        lastElement.focus();
+      }
+    } else {
+      // Tab: if on last element, wrap to first
+      if (document.activeElement === lastElement) {
+        e.preventDefault();
+        firstElement.focus();
+      }
+    }
+  }, [getFocusableElements]);
 
   const images = allImages || [{ thumb: src, fullsize: src, alt, aspectRatio }];
   const effectiveIndex = allImages ? currentImageIndex : 0;
@@ -86,19 +126,35 @@ export function PostContentImage({
 
   useEffect(() => {
     if (!open) return;
+
+    // Store the previously focused element
+    previouslyFocusedRef.current = document.activeElement as HTMLElement;
+
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') close();
       if (e.key === 'ArrowLeft') goToPrev();
       if (e.key === 'ArrowRight') goToNext();
+      trapFocus(e);
     };
     window.addEventListener('keydown', onKey);
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+
+    // Focus the first focusable element when opening
+    requestAnimationFrame(() => {
+      const focusable = getFocusableElements();
+      if (focusable.length > 0) {
+        // Focus close button first, or first nav button
+        const closeBtn = focusable.find(el => el.classList.contains('media-lightbox-close'));
+        (closeBtn || focusable[0]).focus();
+      }
+    });
+
     return () => {
       window.removeEventListener('keydown', onKey);
       document.body.style.overflow = prevOverflow;
     };
-  }, [open, close, goToPrev, goToNext]);
+  }, [open, close, goToPrev, goToNext, trapFocus, getFocusableElements]);
 
   // Reset index when opening
   useEffect(() => {
@@ -140,6 +196,7 @@ export function PostContentImage({
       {open &&
         createPortal(
           <div
+            ref={lightboxRef}
             class="media-lightbox-backdrop"
             role="dialog"
             aria-modal="true"

@@ -2,7 +2,8 @@ import { buildAtprotoLoopbackClientId, atprotoLoopbackClientMetadata } from '@at
 import { appDeploymentRoot } from '@/lib/app-base-path';
 import { setOAuthSession } from './xrpc';
 import type { ProfileView, OAuthSession } from './types';
-import { getProfile } from './actor';
+import { getProfile, resolveHandle } from './actor';
+import { OAUTH_INIT_TIMEOUT_MS, AUTH_TIMEOUT_MS } from '@/lib/constants';
 
 type BrowserOAuthClient = InstanceType<typeof import('@atproto/oauth-client-browser').BrowserOAuthClient>;
 
@@ -126,22 +127,46 @@ function removeAccountDid(did: string) {
   localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(list));
 }
 
-function nukeAllOAuthDatabases() {
+function nukeAllOAuthDatabases(): { success: boolean; error?: string } {
   try {
-    indexedDB.databases?.().then(dbs => {
+    if (!indexedDB.databases) {
+      return { success: false, error: 'IndexedDB.databases() not supported' };
+    }
+    indexedDB.databases().then(dbs => {
+      let deleted = 0;
+      let failed = 0;
       for (const db of dbs) {
         if (db.name?.includes('atproto') || db.name?.includes('oauth')) {
-          indexedDB.deleteDatabase(db.name);
+          try {
+            indexedDB.deleteDatabase(db.name);
+            deleted++;
+          } catch {
+            failed++;
+          }
         }
       }
+      if (import.meta.env.DEV) {
+        console.log(`[Auth] Cleaned up ${deleted} OAuth databases, ${failed} failed`);
+      }
+    }).catch((err) => {
+      if (import.meta.env.DEV) {
+        console.error('[Auth] Failed to list IndexedDB databases:', err);
+      }
     });
-  } catch {}
+    return { success: true };
+  } catch (err) {
+    const error = err instanceof Error ? err.message : 'Unknown IndexedDB error';
+    if (import.meta.env.DEV) {
+      console.error('[Auth] Error nuking OAuth databases:', error);
+    }
+    return { success: false, error };
+  }
 }
 
 export async function initAuth(): Promise<ProfileView | null> {
   try {
     const client = await getClient();
-    const timeoutPromise = new Promise<null>(resolve => setTimeout(() => resolve(null), 5000));
+    const timeoutPromise = new Promise<null>(resolve => setTimeout(() => resolve(null), OAUTH_INIT_TIMEOUT_MS));
     const result = await Promise.race([client.init(), timeoutPromise]);
 
     if (result?.session) {
@@ -163,7 +188,7 @@ export async function signIn(handle: string): Promise<void> {
 
   const client = await getClient();
   await client.signIn(handle, {
-    signal: AbortSignal.timeout(120_000),
+    signal: AbortSignal.timeout(AUTH_TIMEOUT_MS),
   });
 }
 
@@ -179,27 +204,38 @@ async function setupSession(session: OAuthSession): Promise<ProfileView> {
     profile = await getProfile(did);
     currentSession = { did, handle: profile.handle || did };
   } catch {
-    profile = { did, handle: did };
+    // Profile fetch failed - try to resolve handle from DID as fallback
+    let resolvedHandle = did;
+    try {
+      // Try to get handle from the DID document or cached data
+      const handleResult = await resolveHandle(did);
+      if (handleResult.did) {
+        resolvedHandle = handleResult.did;
+      }
+    } catch {
+      // If resolution fails, we'll use the DID as handle
+    }
+
+    profile = {
+      did,
+      handle: resolvedHandle,
+      displayName: 'Loading...', // Better UX than showing raw DID
+    };
+
+    // Schedule a retry to get the proper profile
+    window.setTimeout(async () => {
+      try {
+        const retryProfile = await getProfile(did);
+        if (retryProfile.handle) {
+          currentSession = { did, handle: retryProfile.handle };
+        }
+      } catch {
+        // Silent retry failure - user already has fallback profile
+      }
+    }, 5000);
   }
 
   rememberAccountDid(profile.did);
-
-  // Post-login sync disabled to prevent crashes
-  // Sync subscribed threads from repo after login
-  // try {
-  //   const { syncSubscribedThreadsFromRepo } = await import('@/lib/forumsky-local');
-  //   void syncSubscribedThreadsFromRepo();
-  // } catch {
-  //   // Sync failed, will use localStorage
-  // }
-
-  // Sync saved threads from repo after login
-  // try {
-  //   const { syncSavedThreadsFromRepo } = await import('@/lib/forumsky-local');
-  //   void syncSavedThreadsFromRepo();
-  // } catch {
-  //   // Sync failed, will use localStorage
-  // }
 
   return profile;
 }
@@ -296,20 +332,27 @@ export async function signOutCurrentUser(): Promise<ProfileView | null> {
   currentSession = null;
   setOAuthSession(null);
   browserClient = null;
-  nukeAllOAuthDatabases();
+  const cleanup = nukeAllOAuthDatabases();
+  if (!cleanup.success && import.meta.env.DEV) {
+    console.warn('[Auth] OAuth database cleanup issue:', cleanup.error);
+  }
   localStorage.removeItem(ACCOUNTS_KEY);
   localStorage.removeItem(ATPROTO_ACTIVE_SUB_KEY);
   return null;
 }
 
 /** Remove every stored session and OAuth data (all accounts on this device). */
-export function signOutAllSessions() {
+export function signOutAllSessions(): { success: boolean; error?: string } {
   currentSession = null;
   browserClient = null;
   setOAuthSession(null);
   localStorage.removeItem(ACCOUNTS_KEY);
   localStorage.removeItem(ATPROTO_ACTIVE_SUB_KEY);
-  nukeAllOAuthDatabases();
+  const cleanup = nukeAllOAuthDatabases();
+  if (!cleanup.success) {
+    return { success: false, error: cleanup.error };
+  }
+  return { success: true };
 }
 
 export function getCurrentDid(): string | null {

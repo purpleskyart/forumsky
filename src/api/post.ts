@@ -254,12 +254,81 @@ export async function deleteThreadgate(did: string, threadgateUri: string): Prom
   });
 }
 
+/** Get the list of DIDs that are mentioned in a post's text and facets */
+function getMentionedDids(postRecord: { text?: string; facets?: Array<{ features?: Array<{ $type?: string; did?: string }> }> }): Set<string> {
+  const mentioned = new Set<string>();
+  if (postRecord.facets) {
+    for (const facet of postRecord.facets) {
+      if (facet.features) {
+        for (const feature of facet.features) {
+          if (feature.$type === 'app.bsky.richtext.facet#mention' && feature.did) {
+            mentioned.add(feature.did);
+          }
+        }
+      }
+    }
+  }
+  return mentioned;
+}
+
+/** Check if a user is a member of a list */
+export async function isListMember(listUri: string, viewerDid: string): Promise<boolean> {
+  try {
+    const res = await xrpcSessionGet<{
+      items?: Array<{ subject?: { did?: string } }>;
+      cursor?: string;
+    }>('app.bsky.graph.getList', {
+      list: listUri,
+      limit: 100,
+    });
+
+    // Check if viewer is in the first batch
+    const items = res.items ?? [];
+    for (const item of items) {
+      if (item.subject?.did === viewerDid) {
+        return true;
+      }
+    }
+
+    // If there's a cursor, we need to paginate to check all members
+    // For performance, we'll limit to checking first 1000 members
+    let cursor = res.cursor;
+    let iterations = 0;
+    const maxIterations = 10; // 10 * 100 = 1000 max
+
+    while (cursor && iterations < maxIterations) {
+      const nextRes = await xrpcSessionGet<{
+        items?: Array<{ subject?: { did?: string } }>;
+        cursor?: string;
+      }>('app.bsky.graph.getList', {
+        list: listUri,
+        limit: 100,
+        cursor,
+      });
+
+      for (const item of nextRes.items ?? []) {
+        if (item.subject?.did === viewerDid) {
+          return true;
+        }
+      }
+
+      cursor = nextRes.cursor;
+      iterations++;
+    }
+
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 /** Check if current user can reply to a post based on thread gate. */
 export async function canReplyToThread(
   postUri: string,
   postAuthorDid: string,
   viewerDid: string | undefined,
   followingDids: Set<string>,
+  postRecord?: { text?: string; facets?: Array<{ features?: Array<{ $type?: string; did?: string }> }> },
 ): Promise<boolean> {
   if (!viewerDid) return false;
   if (viewerDid === postAuthorDid) return true;
@@ -273,14 +342,19 @@ export async function canReplyToThread(
       if (followingDids.has(postAuthorDid)) return true;
     }
     if (rule.$type === 'app.bsky.feed.threadgate#mentionRule') {
-      // Would need to check if viewer is mentioned in post
-      // For now, assume they can check on post load
+      // Check if viewer is mentioned in the post
+      if (postRecord) {
+        const mentioned = getMentionedDids(postRecord);
+        if (mentioned.has(viewerDid)) return true;
+      }
+      // If we don't have the post record, we can't verify - be permissive
+      // The actual post attempt will be rejected by the server if not allowed
       return true;
     }
-    if (rule.$type === 'app.bsky.feed.threadgate#listRule') {
-      // Would need list membership check
-      // For now, conservative default
-      return true;
+    if (rule.$type === 'app.bsky.feed.threadgate#listRule' && rule.list) {
+      // Check if viewer is in the specified list
+      const isMember = await isListMember(rule.list, viewerDid);
+      if (isMember) return true;
     }
   }
   return false;

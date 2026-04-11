@@ -175,14 +175,14 @@ export async function resolveHandle(handle: string): Promise<{ did: string }> {
 /** Prefix search for Bluesky handles / display names (public API). */
 export async function searchActors(
   query: string,
-  opts?: { limit?: number },
+  opts?: { limit?: number; signal?: AbortSignal },
 ): Promise<ProfileView[]> {
   const q = query.trim().replace(/^@+/, '');
   if (q.length < 1) return [];
   const res = await xrpcGet<{ actors: ProfileView[] }>('app.bsky.actor.searchActors', {
     q,
     limit: opts?.limit ?? 8,
-  });
+  }, opts?.signal);
   return res.actors ?? [];
 }
 

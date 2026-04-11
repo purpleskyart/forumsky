@@ -2,6 +2,8 @@ import { signal, computed } from '@preact/signals';
 import type { ProfileView } from '@/api/types';
 import { mayHaveRestorableSession } from '@/api/auth';
 import { getNsfwMediaMode, setNsfwMediaMode, type NsfwMediaMode } from '@/lib/preferences';
+import { setStorageErrorHandler, type StorageError } from '@/lib/forumsky-local';
+import { ANNOUNCEMENT_DELAY_MS, TOAST_DURATION_LONG_MS } from '@/lib/constants';
 
 const STORED_USER_KEY = 'fsky_currentUser';
 
@@ -38,9 +40,45 @@ export const toastMessage = signal<string | null>(null);
 let toastTimer: ReturnType<typeof setTimeout> | null = null;
 export function showToast(msg: string, duration = 3000) {
   toastMessage.value = msg;
+  announceToScreenReader(msg);
   if (toastTimer) clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { toastMessage.value = null; }, duration);
 }
+
+/** Accessibility announcement signal for screen readers */
+export const accessibilityAnnouncement = signal<string>('');
+
+let announcementTimer: ReturnType<typeof setTimeout> | null = null;
+
+/**
+ * Announce a message to screen readers using ARIA live region.
+ * Clears after a delay to allow re-announcement of same message.
+ */
+export function announceToScreenReader(message: string) {
+  accessibilityAnnouncement.value = message;
+  if (announcementTimer) clearTimeout(announcementTimer);
+  announcementTimer = setTimeout(() => {
+    accessibilityAnnouncement.value = '';
+  }, ANNOUNCEMENT_DELAY_MS + 100);
+}
+
+/** Set up storage error handler to show user-friendly error messages */
+function initStorageErrorHandler() {
+  setStorageErrorHandler((error: StorageError) => {
+    if (error.type === 'quota') {
+      showToast('Storage is full — some data may not be saved. Try clearing old threads or drafts.', TOAST_DURATION_LONG_MS);
+    } else if (error.type === 'private') {
+      showToast('Private browsing mode detected — some features may not work properly.', TOAST_DURATION_LONG_MS);
+    }
+    // Log for debugging
+    if (import.meta.env.DEV) {
+      console.error('[Storage Error]', error);
+    }
+  });
+}
+
+// Initialize storage error handler
+initStorageErrorHandler();
 
 export const showAuthDialog = signal(false);
 /** Where to get an AT Protocol account (separate from login OAuth). */

@@ -16,11 +16,41 @@ function loadJSON<T>(k: string, fallback: T): T {
   }
 }
 
-function saveJSON(k: string, v: unknown) {
+export type StorageError = { type: 'quota' | 'private' | 'unknown'; message: string };
+
+let storageErrorHandler: ((error: StorageError) => void) | null = null;
+
+/**
+ * Set a handler to be called when storage operations fail.
+ * Used to notify users of quota exceeded errors.
+ */
+export function setStorageErrorHandler(handler: ((error: StorageError) => void) | null) {
+  storageErrorHandler = handler;
+}
+
+function notifyStorageError(error: StorageError) {
+  if (storageErrorHandler) {
+    storageErrorHandler(error);
+  }
+}
+
+function saveJSON(k: string, v: unknown): boolean {
   try {
     localStorage.setItem(key(k), JSON.stringify(v));
-  } catch {
+    return true;
+  } catch (err) {
     /* quota / private mode */
+    if (err instanceof Error) {
+      if (err.name === 'QuotaExceededError' || 
+          err.message?.includes('quota') ||
+          err.message?.includes('storage') ||
+          err.message?.includes('exceeded')) {
+        notifyStorageError({ type: 'quota', message: `Storage full: unable to save ${k}` });
+      } else if (err.message?.includes('private') || err.message?.includes('secure')) {
+        notifyStorageError({ type: 'private', message: `Private mode: cannot save ${k}` });
+      }
+    }
+    return false;
   }
 }
 
@@ -356,23 +386,115 @@ export interface OutboxPostPayload {
   facets?: Facet[];
   embed?: unknown;
   createdAt: string;
+  retryCount?: number;
 }
 
 const OUTBOX_KEY = 'post_outbox';
+const OUTBOX_LOCK_KEY = 'post_outbox_lock';
+const LOCK_TIMEOUT_MS = 5000;
+
+/**
+ * Simple mutex for outbox operations across tabs.
+ * Uses a timestamp-based lock that expires after LOCK_TIMEOUT_MS.
+ */
+function acquireOutboxLock(): boolean {
+  try {
+    const now = Date.now();
+    const lockData = localStorage.getItem(key(OUTBOX_LOCK_KEY));
+    if (lockData) {
+      const lock = JSON.parse(lockData) as { timestamp: number; tabId: string };
+      // If lock is stale, we can take it
+      if (now - lock.timestamp > LOCK_TIMEOUT_MS) {
+        localStorage.setItem(key(OUTBOX_LOCK_KEY), JSON.stringify({ timestamp: now, tabId: getTabId() }));
+        return true;
+      }
+      // Lock is held by another tab
+      return false;
+    }
+    localStorage.setItem(key(OUTBOX_LOCK_KEY), JSON.stringify({ timestamp: now, tabId: getTabId() }));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function releaseOutboxLock() {
+  try {
+    const lockData = localStorage.getItem(key(OUTBOX_LOCK_KEY));
+    if (lockData) {
+      const lock = JSON.parse(lockData) as { timestamp: number; tabId: string };
+      // Only release if we hold the lock
+      if (lock.tabId === getTabId()) {
+        localStorage.removeItem(key(OUTBOX_LOCK_KEY));
+      }
+    }
+  } catch {
+    // Ignore release errors
+  }
+}
+
+let tabId: string | null = null;
+function getTabId(): string {
+  if (!tabId) {
+    tabId = `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+  }
+  return tabId;
+}
+
+/**
+ * Atomic outbox operation with locking.
+ * Retries up to 3 times if lock is contested.
+ */
+async function withOutboxLock<T>(operation: (outbox: OutboxPostPayload[]) => T): Promise<T | null> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (acquireOutboxLock()) {
+      try {
+        const outbox = getOutbox();
+        const result = operation(outbox);
+        return result;
+      } finally {
+        releaseOutboxLock();
+      }
+    }
+    // Wait a bit before retry
+    await new Promise(r => setTimeout(r, 100 + Math.random() * 200));
+  }
+  return null;
+}
 
 export function getOutbox(): OutboxPostPayload[] {
   return loadJSON<OutboxPostPayload[]>(OUTBOX_KEY, []);
 }
 
-export function enqueueOutbox(item: OutboxPostPayload) {
-  const q = getOutbox();
-  q.push(item);
-  saveJSON(OUTBOX_KEY, q);
+export async function enqueueOutbox(item: OutboxPostPayload): Promise<boolean> {
+  const result = await withOutboxLock((outbox) => {
+    outbox.push(item);
+    return saveJSON(OUTBOX_KEY, outbox);
+  });
+  return result ?? false;
 }
 
-export function dequeueOutbox(id: string) {
-  saveJSON(
-    OUTBOX_KEY,
-    getOutbox().filter(x => x.id !== id),
-  );
+export async function dequeueOutbox(id: string): Promise<boolean> {
+  const result = await withOutboxLock((outbox) => {
+    const filtered = outbox.filter(x => x.id !== id);
+    return saveJSON(OUTBOX_KEY, filtered);
+  });
+  return result ?? false;
+}
+
+export async function updateOutboxItem(id: string, updates: Partial<OutboxPostPayload>): Promise<boolean> {
+  const result = await withOutboxLock((outbox) => {
+    const index = outbox.findIndex(x => x.id === id);
+    if (index === -1) return false;
+    outbox[index] = { ...outbox[index], ...updates };
+    return saveJSON(OUTBOX_KEY, outbox);
+  });
+  return result ?? false;
+}
+
+/** Clean up lock on page unload */
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => {
+    releaseOutboxLock();
+  });
 }

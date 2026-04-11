@@ -9,8 +9,37 @@ import type {
 } from '@/api/types';
 import { hrefForAppPath } from '@/lib/app-base-path';
 import { communityUrl } from '@/lib/router';
+import { BLOCKED_URL_SCHEMES } from '@/lib/constants';
 import { h, Fragment } from 'preact';
 import type { VNode, ComponentChild, JSX } from 'preact';
+
+/**
+ * Validate that a URL is safe to render as a clickable link.
+ * Blocks javascript:, data:, vbscript:, file: and other dangerous schemes.
+ */
+function isSafeUrl(url: string | undefined): boolean {
+  if (!url) return false;
+  try {
+    const parsed = new URL(url);
+    // Check for explicitly blocked schemes
+    if (BLOCKED_URL_SCHEMES.includes(parsed.protocol.toLowerCase())) {
+      return false;
+    }
+    // Only allow http and https
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    // Invalid URL
+    return false;
+  }
+}
+
+/**
+ * Sanitize a URL for safe rendering. Returns empty string if unsafe.
+ */
+function sanitizeUrl(url: string | undefined): string {
+  if (!url) return '';
+  return isSafeUrl(url) ? url : '';
+}
 
 interface RichSegment {
   text: string;
@@ -86,7 +115,14 @@ export function renderRichText(text: string, facets?: Facet[]): VNode {
     if (seg.type === 'mention') {
       children.push(h('a', { href: hrefForAppPath(`/u/${seg.did}`), class: 'mention' } as JSX.HTMLAttributes<HTMLAnchorElement>, seg.text));
     } else if (seg.type === 'link') {
-      children.push(h('a', { href: seg.href, target: '_blank', rel: 'noopener noreferrer' } as JSX.HTMLAttributes<HTMLAnchorElement>, seg.text));
+      // Only render clickable link if URL is safe
+      const safeHref = sanitizeUrl(seg.href);
+      if (safeHref) {
+        children.push(h('a', { href: safeHref, target: '_blank', rel: 'noopener noreferrer' } as JSX.HTMLAttributes<HTMLAnchorElement>, seg.text));
+      } else {
+        // Unsafe URL: render as plain text to prevent clickjacking
+        children.push(seg.text);
+      }
     } else if (seg.type === 'tag') {
       children.push(h('a', { href: hrefForAppPath(communityUrl(seg.tag!)), class: 'hashtag' } as JSX.HTMLAttributes<HTMLAnchorElement>, seg.text));
     } else {

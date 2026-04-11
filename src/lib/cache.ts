@@ -1,9 +1,15 @@
+import { CACHE_MAX_KEYS, CACHE_EVICTION_BATCH_SIZE } from '@/lib/constants';
+
 const CACHE_PREFIX = 'fsky_cache_';
 const META_PREFIX = 'fsky_meta_';
 const DEFAULT_TTL = 60_000; // 1 minute
 
 // Track cache keys to avoid full localStorage iteration on eviction
 const cacheKeys = new Set<string>();
+
+// In-memory size tracking to avoid expensive localStorage scans
+let lastSizeCheck = 0;
+let cachedSize = 0;
 
 export const CACHE_TTL = {
   DEFAULT: DEFAULT_TTL,
@@ -58,13 +64,18 @@ export function getStale<T>(key: string): { data: T; stale: boolean } | null {
 
 export function setCache<T>(key: string, data: T, ttl = DEFAULT_TTL) {
   try {
+    // Check if we're approaching the max keys limit
+    if (cacheKeys.size >= CACHE_MAX_KEYS) {
+      evictOldest(CACHE_EVICTION_BATCH_SIZE);
+    }
+
     const entry: CacheEntry<T> = { data };
     const meta: CacheMeta = { ts: Date.now(), ttl };
     localStorage.setItem(CACHE_PREFIX + key, JSON.stringify(entry));
     localStorage.setItem(META_PREFIX + key, JSON.stringify(meta));
     cacheKeys.add(key);
   } catch {
-    evictOldest(5);
+    evictOldest(CACHE_EVICTION_BATCH_SIZE);
     try {
       const entry: CacheEntry<T> = { data };
       const meta: CacheMeta = { ts: Date.now(), ttl };
@@ -73,8 +84,27 @@ export function setCache<T>(key: string, data: T, ttl = DEFAULT_TTL) {
       cacheKeys.add(key);
     } catch {
       // give up
+      if (import.meta.env.DEV) {
+        console.warn('[Cache] Failed to set cache entry for key:', key);
+      }
     }
   }
+}
+
+/** Get approximate cache size - avoids expensive localStorage scans */
+export function getCacheSize(): number {
+  // Refresh cached size every 5 seconds
+  const now = Date.now();
+  if (now - lastSizeCheck > 5000) {
+    cachedSize = cacheKeys.size;
+    lastSizeCheck = now;
+  }
+  return cachedSize;
+}
+
+/** Check if cache is near capacity */
+export function isCacheNearCapacity(): boolean {
+  return getCacheSize() >= CACHE_MAX_KEYS * 0.9; // 90% full
 }
 
 export function clearCache() {

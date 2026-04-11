@@ -18,6 +18,12 @@ import {
 } from '@/api/blob';
 import { THREAD_TITLE_PREVIEW_MAX_CHARS } from '@/lib/thread-title';
 import {
+  COMPOSER_DRAFT_AUTOSAVE_MS,
+  COMPOSER_LINK_PREVIEW_DEBOUNCE_MS,
+  COMPOSER_MENTION_SEARCH_DEBOUNCE_MS,
+  COMPOSER_MENTION_SEARCH_LIMIT,
+} from '@/lib/constants';
+import {
   getComposerDraft,
   setComposerDraft,
   clearComposerDraft,
@@ -167,9 +173,17 @@ export function Composer({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastAppendIdRef = useRef(0);
   const mentionSearchRef = useRef(0);
+  const mentionAbortRef = useRef<AbortController | null>(null);
   const linkPreviewTimerRef = useRef(0);
   const attachmentsRef = useRef(attachments);
   attachmentsRef.current = attachments;
+
+  // Cleanup mention search on unmount
+  useEffect(() => {
+    return () => {
+      mentionAbortRef.current?.abort();
+    };
+  }, []);
 
   useEffect(() => {
     if (!draftKey) return;
@@ -182,7 +196,7 @@ export function Composer({
     if (!draftKey) return;
     const id = window.setTimeout(() => {
       setComposerDraft(draftKey, { text, threadTitle });
-    }, 450);
+    }, COMPOSER_DRAFT_AUTOSAVE_MS);
     return () => window.clearTimeout(id);
   }, [draftKey, text, threadTitle]);
 
@@ -199,6 +213,9 @@ export function Composer({
   }, [appendTextRequest]);
 
   const normalizedText = useMemo(() => text.replace(/\r\n/g, '\n'), [text]);
+
+  // Track object URLs for cleanup
+  const objectUrlsRef = useRef<Set<string>>(new Set());
 
   const segments = useMemo(() => {
     if (quoteEmbed) {
@@ -274,12 +291,16 @@ export function Composer({
   }, [focusRequest]);
 
   useEffect(() => {
-    const currentAttachments = attachmentsRef.current;
     return () => {
-      // Use timeout to ensure cleanup happens after any in-flight state updates complete
-      window.setTimeout(() => {
-        currentAttachments.forEach(a => URL.revokeObjectURL(a.previewUrl));
-      }, 0);
+      // Cleanup all tracked object URLs on unmount
+      objectUrlsRef.current.forEach(url => {
+        try {
+          URL.revokeObjectURL(url);
+        } catch {
+          // Ignore errors for already-revoked URLs
+        }
+      });
+      objectUrlsRef.current.clear();
     };
   }, []);
 
@@ -315,14 +336,15 @@ export function Composer({
           setLinkPreview(null);
           return;
         }
+        // Sanitize preview data to prevent potential XSS
         setLinkPreview({
           url: data.url,
-          title: data.title,
-          description: data.description,
+          title: data.title.replace(/[<>]/g, ''), // Strip HTML tags
+          description: data.description.replace(/[<>]/g, ''), // Strip HTML tags
           image: data.image,
         });
       });
-    }, 450);
+    }, COMPOSER_LINK_PREVIEW_DEBOUNCE_MS);
     return () => window.clearTimeout(linkPreviewTimerRef.current);
   }, [normalizedText, quoteEmbed]);
 
@@ -347,27 +369,37 @@ export function Composer({
       return;
     }
     const gen = ++mentionSearchRef.current;
+
+    // Cancel any in-flight mention search
+    mentionAbortRef.current?.abort();
+    mentionAbortRef.current = new AbortController();
+
     setMentionMenu({ start: at, end: sel, query: frag, actors: [], loading: true });
     window.setTimeout(() => {
       if (mentionSearchRef.current !== gen) return;
+      const signal = mentionAbortRef.current?.signal;
+      if (signal?.aborted) return;
+
       void import('@/api/actor').then(({ searchActors }) =>
-        searchActors(frag, { limit: 8 }),
+        searchActors(frag, { limit: COMPOSER_MENTION_SEARCH_LIMIT, signal }),
       ).then(actors => {
         if (mentionSearchRef.current !== gen) return;
+        if (signal?.aborted) return;
         setMentionMenu(m =>
           m && m.start === at && m.end === sel && m.query === frag
             ? { ...m, actors, loading: false }
             : m,
         );
-      }).catch(() => {
+      }).catch((err) => {
         if (mentionSearchRef.current !== gen) return;
+        if (err instanceof DOMException && err.name === 'AbortError') return;
         setMentionMenu(m =>
           m && m.start === at && m.end === sel && m.query === frag
             ? { ...m, actors: [], loading: false }
             : m,
         );
       });
-    }, 200);
+    }, COMPOSER_MENTION_SEARCH_DEBOUNCE_MS);
   };
 
   const pickMention = (p: ProfileView) => {
@@ -414,10 +446,12 @@ export function Composer({
           showToast(`${file.name} is too large (max ${MAX_IMAGE_BYTES / 1000}KB)`);
           continue;
         }
+        const previewUrl = URL.createObjectURL(file);
+        objectUrlsRef.current.add(previewUrl);
         next.push({
           id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
           file,
-          previewUrl: URL.createObjectURL(file),
+          previewUrl,
         });
       }
       return next;
@@ -427,7 +461,10 @@ export function Composer({
   const removeAttachment = (id: string) => {
     setAttachments(prev => {
       const found = prev.find(a => a.id === id);
-      if (found) URL.revokeObjectURL(found.previewUrl);
+      if (found) {
+        URL.revokeObjectURL(found.previewUrl);
+        objectUrlsRef.current.delete(found.previewUrl);
+      }
       return prev.filter(a => a.id !== id);
     });
     setAttachmentAlts(prev => {
@@ -484,9 +521,13 @@ export function Composer({
 
     setPosting(true);
     let blueskyPostsCreated = 1;
+    // Track successfully created posts for rollback on partial failure
+    const createdPosts: Array<{ uri: string; rkey: string }> = [];
+
     try {
-      const { createPostWithDid } = await import('@/api/post');
+      const { createPostWithDid, deletePost } = await import('@/api/post');
       const { getProfiles } = await import('@/api/actor');
+      const { parseAtUri } = await import('@/api/feed');
       const did = currentUser.value!.did;
 
       if (quoteEmbed) {
@@ -548,6 +589,12 @@ export function Composer({
             embed: segEmbed,
           });
 
+          // Track successfully created post for potential rollback
+          const parsed = parseAtUri(res.uri);
+          if (parsed?.rkey) {
+            createdPosts.push({ uri: res.uri, rkey: parsed.rkey });
+          }
+
           if (replyTo) {
             parentRef = { uri: res.uri, cid: res.cid };
           } else {
@@ -578,30 +625,53 @@ export function Composer({
       if (draftKey) clearComposerDraft(draftKey);
       onPost?.();
     } catch (err) {
-      const did = currentUser.value?.did;
-      const seg0 = postingSegments[0]?.trim() ?? '';
-      if (
-        did &&
-        replyTo &&
-        !quoteEmbed &&
-        attachments.length === 0 &&
-        postingSegments.length === 1 &&
-        seg0.length > 0
-      ) {
-        const { getProfiles: gp } = await import('@/api/actor');
-        const facets = await buildComposerFacets(seg0, gp);
-        enqueueOutbox({
-          id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-          did,
-          text: seg0,
-          reply: replyTo,
-          facets: facets.length > 0 ? facets : undefined,
-          embed: undefined,
-          createdAt: new Date().toISOString(),
-        });
-        showToast('Failed to post — saved to outbox for retry');
+      // Rollback: delete any successfully created posts to prevent broken threads
+      if (createdPosts.length > 0) {
+        const { deletePost } = await import('@/api/post');
+        const did = currentUser.value!.did;
+        let deletedCount = 0;
+        for (const post of createdPosts) {
+          try {
+            await deletePost(did, post.rkey);
+            deletedCount++;
+          } catch (deleteErr) {
+            // Log but continue trying to delete others
+            if (import.meta.env.DEV) {
+              console.error('[Composer] Failed to rollback post:', post.uri, deleteErr);
+            }
+          }
+        }
+        showToast(
+          `Post failed — ${deletedCount} of ${createdPosts.length} partial posts cleaned up. ` +
+          `Your draft is preserved. Please try again.`,
+          5000
+        );
       } else {
-        showToast('Failed to post: ' + (err instanceof Error ? err.message : 'Unknown error'));
+        const did = currentUser.value?.did;
+        const seg0 = postingSegments[0]?.trim() ?? '';
+        if (
+          did &&
+          replyTo &&
+          !quoteEmbed &&
+          attachments.length === 0 &&
+          postingSegments.length === 1 &&
+          seg0.length > 0
+        ) {
+          const { getProfiles: gp } = await import('@/api/actor');
+          const facets = await buildComposerFacets(seg0, gp);
+          enqueueOutbox({
+            id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            did,
+            text: seg0,
+            reply: replyTo,
+            facets: facets.length > 0 ? facets : undefined,
+            embed: undefined,
+            createdAt: new Date().toISOString(),
+          });
+          showToast('Failed to post — saved to outbox for retry');
+        } else {
+          showToast('Failed to post: ' + (err instanceof Error ? err.message : 'Unknown error'));
+        }
       }
     } finally {
       setPosting(false);
