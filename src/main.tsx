@@ -3,13 +3,16 @@ import { App } from './app';
 import './styles/global.css';
 
 console.log('[ForumSky] main.tsx loaded');
-console.log('[ForumSky] App component:', App);
 
 try {
   const appElement = document.getElementById('app');
-  console.log('[ForumSky] app element:', appElement);
-  render(<App />, appElement!);
-  console.log('[ForumSky] render completed');
+  if (!appElement) {
+    console.error('[ForumSky] ERROR: #app element not found in DOM');
+  } else {
+    console.log('[ForumSky] #app element found, rendering App...');
+    render(<App />, appElement);
+    console.log('[ForumSky] render() called successfully');
+  }
 } catch (error) {
-  console.error('[ForumSky] Render error:', error);
+  console.error('[ForumSky] FATAL Render error:', error);
 }

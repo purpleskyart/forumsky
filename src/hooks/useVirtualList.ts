@@ -38,6 +38,18 @@ export function useVirtualList(options: VirtualListOptions): VirtualListResult {
   const [containerHeight, setContainerHeight] = useState(fixedHeight || 0);
   const prevItemCountRef = useRef(itemCount);
   
+  // Use refs for values that change frequently but shouldn't trigger callback recreation
+  const itemHeightRef = useRef(itemHeight);
+  const overscanRef = useRef(overscan);
+  const containerHeightRef = useRef(containerHeight);
+  const itemCountRef = useRef(itemCount);
+  
+  // Keep refs in sync
+  itemHeightRef.current = itemHeight;
+  overscanRef.current = overscan;
+  containerHeightRef.current = containerHeight;
+  itemCountRef.current = itemCount;
+  
   // Update container height when ref changes or on resize
   useEffect(() => {
     if (fixedHeight) return;
@@ -54,19 +66,23 @@ export function useVirtualList(options: VirtualListOptions): VirtualListResult {
   }, [fixedHeight]);
   
   // Calculate visible range based on scroll position
+  // Uses refs to avoid recreating the callback when values change
   const calculateVisibleRange = useCallback(() => {
     if (!containerRef.current) return;
     
     const scrollTop = containerRef.current.scrollTop;
-    const height = containerHeight || containerRef.current.clientHeight;
+    const height = containerHeightRef.current || containerRef.current.clientHeight;
+    const iHeight = itemHeightRef.current;
+    const iCount = itemCountRef.current;
+    const oScan = overscanRef.current;
     
     // Calculate which items should be visible
-    const start = Math.floor(scrollTop / itemHeight);
-    const visibleCount = Math.ceil(height / itemHeight);
+    const start = Math.floor(scrollTop / iHeight);
+    const visibleCount = Math.ceil(height / iHeight);
     
     // Apply overscan (render extra items above and below)
-    const startIndex = Math.max(0, start - overscan);
-    const endIndex = Math.min(itemCount - 1, start + visibleCount + overscan);
+    const startIndex = Math.max(0, start - oScan);
+    const endIndex = Math.min(iCount - 1, start + visibleCount + oScan);
     
     setVisibleRange(prev => {
       if (prev.start !== startIndex || prev.end !== endIndex) {
@@ -74,7 +90,7 @@ export function useVirtualList(options: VirtualListOptions): VirtualListResult {
       }
       return prev;
     });
-  }, [itemCount, itemHeight, overscan, containerHeight]);
+  }, []); // Empty deps - uses refs for mutable values
   
   // Set up scroll listener
   useEffect(() => {

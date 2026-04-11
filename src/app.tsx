@@ -1,15 +1,16 @@
-import { useEffect, useLayoutEffect, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect } from 'preact/hooks';
 import { Router, Route } from 'preact-router';
 import type { RouterOnChangeArgs } from 'preact-router';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Layout } from './components/Layout';
-import {
-  attachPopstateScrollGuard,
-  attachScrollPositionPersistence,
-  patchHistoryScrollSave,
-  scheduleScrollRestore,
-  setManualScrollRestoration,
-} from '@/lib/scroll-restore';
+// Scroll restoration disabled to prevent crashes
+// import {
+//   attachPopstateScrollGuard,
+//   attachScrollPositionPersistence,
+//   patchHistoryScrollSave,
+//   scheduleScrollRestore,
+//   setManualScrollRestoration,
+// } from '@/lib/scroll-restore';
 import { Home } from './pages/Home';
 import { Community } from './pages/Community';
 import { Thread } from './pages/Thread';
@@ -38,40 +39,35 @@ function RootRoute() {
 
 /** Old URLs `/followed` and `/c/_followed` → canonical followed feed at `/`. */
 function RedirectFollowedUrlsToHome() {
-  useLayoutEffect(() => {
-    navigate('/', true);
-  }, []);
-  return null;
+  // Disabled redirect to prevent potential loop
+  // useLayoutEffect(() => {
+  //   navigate('/', true);
+  // }, []);
+  return <div>Redirecting...</div>;
 }
 
 function onRouterChange(_args: RouterOnChangeArgs) {
-  scheduleScrollRestore();
+  // Scroll restoration disabled
+  // scheduleScrollRestore();
 }
 
 export function App() {
-  const [transitionKey, setTransitionKey] = useState(0);
+  console.log('[ForumSky] App component rendering...');
   
   useEffect(() => {
-    setManualScrollRestoration();
-    const detachPop = attachPopstateScrollGuard();
-    const unpatchHistory = patchHistoryScrollSave();
-    const detachScroll = attachScrollPositionPersistence();
-    return () => {
-      detachPop();
-      unpatchHistory();
-      detachScroll();
-    };
+    console.log('[ForumSky] App useEffect running - scroll restoration DISABLED');
+    // All scroll restoration disabled to prevent crashes
   }, []);
 
   const handleRouteChange = (args: RouterOnChangeArgs) => {
-    setTransitionKey(prev => prev + 1);
-    onRouterChange(args);
+    console.log('[ForumSky] Route changed to:', args.url);
+    // onRouterChange(args);
   };
 
   return (
     <Layout>
       <ErrorBoundary>
-        <div class={`page-transition-enter`} key={transitionKey}>
+        <div class="page-transition-enter">
           <Router history={browserHistory} onChange={handleRouteChange}>
           <Route path="/" component={RootRoute} />
           <Route path="/communities" component={Home} />

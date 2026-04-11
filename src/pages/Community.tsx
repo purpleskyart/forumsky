@@ -695,7 +695,9 @@ export function Community({ tag: tagProp }: CommunityProps) {
         let pool = [...followingPool];
         let apiCursor = followingTimelineCursorRef.current;
 
-        while (pool.length < needEnd && apiCursor) {
+        let iterations = 0;
+        const MAX_ITERATIONS = 100;
+        while (pool.length < needEnd && apiCursor && iterations++ < MAX_ITERATIONS) {
           const res = await getTimeline({ limit: 100, cursor: apiCursor });
           const merged: FeedRootItem[] = [...pool];
           for (const item of res.feed) {
@@ -760,7 +762,9 @@ export function Community({ tag: tagProp }: CommunityProps) {
       let rc = replyApiCursor;
       const needEnd = newPage * THREADS_PER_PAGE;
       try {
-        while (pool.length < needEnd && rc) {
+        let iterations = 0;
+        const MAX_ITERATIONS = 100;
+        while (pool.length < needEnd && rc && iterations++ < MAX_ITERATIONS) {
           const res = await searchByTag(tag!, { limit: 100, cursor: rc, sort: 'latest' });
           const filtered = res.posts.filter(p => postPrimaryHashtagMatches(p, tag!));
           pool = dedupeByUri([...pool, ...filtered]);

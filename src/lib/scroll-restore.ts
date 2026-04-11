@@ -30,6 +30,8 @@ let rafId: number | null = null;
 let ticking = false;
 /** Skip persisting while we apply a restored position (avoids corrupting storage on back/forward). */
 let ignoreScrollPersistUntil = 0;
+/** Track scroll restoration timers for cleanup */
+let restoreTimerIds: number[] = [];
 
 function flushScrollPosition(): void {
   ticking = false;
@@ -82,15 +84,19 @@ export function restoreScrollNow(): void {
   ignoreScrollPersistUntil = performance.now() + 2000;
 
   const apply = () => window.scrollTo({ top: y, left: 0, behavior: 'auto' });
+  // Clear any pending restoration timers
+  restoreTimerIds.forEach(id => window.clearTimeout(id));
+  restoreTimerIds = [];
+
   apply();
   requestAnimationFrame(() => {
     apply();
     requestAnimationFrame(apply);
   });
-  window.setTimeout(apply, 100);
-  window.setTimeout(apply, 300);
-  window.setTimeout(apply, 1000);
-  window.setTimeout(apply, 2000);
+  restoreTimerIds.push(window.setTimeout(apply, 100));
+  restoreTimerIds.push(window.setTimeout(apply, 300));
+  restoreTimerIds.push(window.setTimeout(apply, 1000));
+  restoreTimerIds.push(window.setTimeout(apply, 2000));
 }
 
 /** Call after the router URL changes (back/forward or in-app navigation). */

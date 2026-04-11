@@ -89,6 +89,8 @@ export async function xrpcGet<T>(
         throw new XRPCError(res.status, errorType, message);
       } catch (e) {
         if (e instanceof XRPCError) throw e;
+        // Re-throw AbortError immediately (don't retry)
+        if (e instanceof DOMException && e.name === 'AbortError') throw e;
         if (attempt < GET_MAX_ATTEMPTS - 1) {
           await sleep(RETRY_BASE_DELAY_MS * (attempt + 1));
           continue;
@@ -153,6 +155,8 @@ export async function xrpcSessionGet<T>(
       throw new XRPCError(res.status, errorType, message);
     } catch (e) {
       if (e instanceof XRPCError) throw e;
+      // Re-throw AbortError immediately (don't retry)
+      if (e instanceof DOMException && e.name === 'AbortError') throw e;
       if (attempt < GET_MAX_ATTEMPTS - 1) {
         await sleep(RETRY_BASE_DELAY_MS * (attempt + 1));
         continue;

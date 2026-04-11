@@ -274,8 +274,12 @@ export function Composer({
   }, [focusRequest]);
 
   useEffect(() => {
+    const currentAttachments = attachmentsRef.current;
     return () => {
-      attachmentsRef.current.forEach(a => URL.revokeObjectURL(a.previewUrl));
+      // Use timeout to ensure cleanup happens after any in-flight state updates complete
+      window.setTimeout(() => {
+        currentAttachments.forEach(a => URL.revokeObjectURL(a.previewUrl));
+      }, 0);
     };
   }, []);
 

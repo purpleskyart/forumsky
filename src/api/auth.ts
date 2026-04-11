@@ -184,21 +184,22 @@ async function setupSession(session: OAuthSession): Promise<ProfileView> {
 
   rememberAccountDid(profile.did);
 
+  // Post-login sync disabled to prevent crashes
   // Sync subscribed threads from repo after login
-  try {
-    const { syncSubscribedThreadsFromRepo } = await import('@/lib/forumsky-local');
-    void syncSubscribedThreadsFromRepo();
-  } catch {
-    // Sync failed, will use localStorage
-  }
+  // try {
+  //   const { syncSubscribedThreadsFromRepo } = await import('@/lib/forumsky-local');
+  //   void syncSubscribedThreadsFromRepo();
+  // } catch {
+  //   // Sync failed, will use localStorage
+  // }
 
   // Sync saved threads from repo after login
-  try {
-    const { syncSavedThreadsFromRepo } = await import('@/lib/forumsky-local');
-    void syncSavedThreadsFromRepo();
-  } catch {
-    // Sync failed, will use localStorage
-  }
+  // try {
+  //   const { syncSavedThreadsFromRepo } = await import('@/lib/forumsky-local');
+  //   void syncSavedThreadsFromRepo();
+  // } catch {
+  //   // Sync failed, will use localStorage
+  // }
 
   return profile;
 }
