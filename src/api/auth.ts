@@ -276,12 +276,14 @@ export async function signOutCurrentUser(): Promise<ProfileView | null> {
   removeAccountDid(did);
 
   if (others.length > 0) {
-    const profile = await switchToAccount(others[0]);
+    // Revoke the session BEFORE switching to the other account,
+    // otherwise client.restore() changes the active session and revoke() fails.
     try {
       await client.revoke(did);
     } catch {
       /* session may already be invalid */
     }
+    const profile = await switchToAccount(others[0]);
     return profile;
   }
 
