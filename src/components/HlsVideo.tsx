@@ -238,14 +238,25 @@ export function HlsVideo({
             transform: isFullscreen ? `translate(${panX}px, ${panY}px) scale(${zoom})` : 'none',
             transformOrigin: 'center center',
             transition: isZooming || isPanning ? 'none' : 'transform 0.2s ease-out',
-            cursor: 'zoom-in',
           }}
           onLoadedMetadata={onLoadedMetadata}
           onPlay={onVideoPlay}
-          onClick={openLightbox}
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
+        />
+        {/* Transparent overlay to capture clicks for lightbox, above video but below controls */}
+        <div
+          class="post-hls-video-click-overlay"
+          onClick={openLightbox}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            cursor: 'zoom-in',
+            zIndex: 1,
+            // Allow clicks to pass through to controls when they're visible
+            pointerEvents: showControls || isHovered ? 'none' : 'auto',
+          }}
         />
       </div>
       {lightboxOpen &&

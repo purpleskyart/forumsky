@@ -250,7 +250,6 @@ export function Community({ tag: tagProp }: CommunityProps) {
 
   /** Restore scroll when loadingMore completes (load more scenario). */
   const prevLoadingMoreRef = useRef(loadingMore);
-  const scrollYBeforeLoadMoreRef = useRef(0);
   const wasAtBottomBeforeLoadMoreRef = useRef(false);
   useEffect(() => {
     const wasLoadingMore = prevLoadingMoreRef.current;
@@ -258,28 +257,15 @@ export function Community({ tag: tagProp }: CommunityProps) {
 
     // Save scroll state before loading more
     if (!wasLoadingMore && loadingMore) {
-      scrollYBeforeLoadMoreRef.current = window.scrollY;
       wasAtBottomBeforeLoadMoreRef.current = window.scrollY + window.innerHeight >= document.body.scrollHeight - 100;
     }
 
     if (wasLoadingMore && !loadingMore) {
-      // If user was at bottom before load, smoothly scroll to new bottom after content loads
+      // If user was at bottom before load, keep them at the new bottom
       if (wasAtBottomBeforeLoadMoreRef.current) {
         window.scrollTo({ top: document.body.scrollHeight, left: 0, behavior: 'auto' });
-      } else {
-        restoreScrollNow();
       }
-      // Only one additional restoration attempt to reduce jumping
-      const t = window.setTimeout(() => {
-        if (wasAtBottomBeforeLoadMoreRef.current) {
-          window.scrollTo({ top: document.body.scrollHeight, left: 0, behavior: 'auto' });
-        } else {
-          restoreScrollNow();
-        }
-      }, 200);
-      return () => {
-        window.clearTimeout(t);
-      };
+      // Otherwise: let scroll stay naturally stable (content appended below doesn't shift viewport)
     }
   }, [loadingMore]);
 
@@ -852,7 +838,7 @@ export function Community({ tag: tagProp }: CommunityProps) {
     if (!searchNeedle) return true;
     return (
       p.record.text.toLowerCase().includes(searchNeedle) ||
-      (p.author.displayName || p.author.handle).toLowerCase().includes(searchNeedle)
+      (p.author?.displayName || p.author?.handle || '').toLowerCase().includes(searchNeedle)
     );
   };
 
@@ -863,10 +849,12 @@ export function Community({ tag: tagProp }: CommunityProps) {
   });
 
   let displayPosts: PostView[];
+  // Filter out posts without author (defensive: API can return posts with missing author)
+  const withAuthor = visiblePosts.filter(p => p.author != null);
   if (!searchNeedle) {
-    displayPosts = sortThreads(visiblePosts, sortMode).filter(p => !isAuthorFiltered(p.author.did));
+    displayPosts = sortThreads(withAuthor, sortMode).filter(p => !isAuthorFiltered(p.author.did));
   } else {
-    const matching = visiblePosts.filter(p => matchesSearchText(p));
+    const matching = withAuthor.filter(p => matchesSearchText(p));
     matching.sort(
       (a, b) => (postLoadOrder.get(a.uri) ?? 0) - (postLoadOrder.get(b.uri) ?? 0),
     );
@@ -1006,7 +994,7 @@ export function Community({ tag: tagProp }: CommunityProps) {
       if (e.key === 'e' || e.key === 'Enter') {
         e.preventDefault();
         const p = list[kbRowRef.current];
-        if (!p) return;
+        if (!p?.author) return;
         const parsed = parseAtUri(p.uri);
         if (!parsed) return;
         navigate(threadUrl(p.author.handle || p.author.did, parsed.rkey));
