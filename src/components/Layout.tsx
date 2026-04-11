@@ -53,15 +53,44 @@ export function Layout({ children }: LayoutProps) {
   const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('[Layout] Auth init starting');
-    
-    // Simple timeout to ensure authInitDone becomes true
-    const timer = setTimeout(() => {
-      console.log('[Layout] Auth timeout fired, setting authInitDone = true');
-      authInitDone.value = true;
-    }, 100);
-    
-    return () => clearTimeout(timer);
+    let cancelled = false;
+    authInitDone.value = false;
+
+    // Safety timeout: ensure authInitDone becomes true even if initAuth hangs
+    const safetyTimer = setTimeout(() => {
+      if (!cancelled) {
+        authInitDone.value = true;
+      }
+    }, 6000);
+
+    import('@/api/auth')
+      .then(m => m.initAuth())
+      .then(async (profile) => {
+        if (!cancelled) {
+          if (profile) {
+            const { currentUser } = await import('@/lib/store');
+            currentUser.value = profile;
+            // isLoggedIn is computed from currentUser, no need to set it
+          }
+        }
+      })
+      .catch(err => {
+        if (!cancelled) {
+          const msg = err instanceof Error ? err.message : 'Failed to initialize auth';
+          setAuthError(msg);
+        }
+      })
+      .finally(() => {
+        clearTimeout(safetyTimer);
+        if (!cancelled) {
+          authInitDone.value = true;
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      clearTimeout(safetyTimer);
+    };
   }, []);
 
   /* Artsky-style: Escape blurs fields; Q / Backspace = history back when not on home. */
@@ -94,13 +123,12 @@ export function Layout({ children }: LayoutProps) {
   const showLoggedInChrome = isLoggedIn.value || sessionRestorePending();
   const showMobileAuthBar = !showLoggedInChrome;
 
-  // Skip loading state to prevent potential issues - show content immediately
-  // if (authError) {
-  //   return <ErrorPanel message={authError} />;
-  // }
-  // if (!authInitDone.value) {
-  //   return <AppLoadingSkeleton />;
-  // }
+  if (authError) {
+    return <ErrorPanel message={authError} />;
+  }
+  if (!authInitDone.value) {
+    return <AppLoadingSkeleton />;
+  }
 
   return (
     <div class="app-shell">

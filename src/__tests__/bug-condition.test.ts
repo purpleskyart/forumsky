@@ -41,32 +41,28 @@ function sleep(ms: number): Promise<void> {
 // ---------------------------------------------------------------------------
 describe('Bug 1 — Auth hang: authInitDone must become true within 6 s even when client.init() never resolves', () => {
   it('authInitDone becomes true within 6 s when client.init() hangs', async () => {
+    const authModule = await import('@/api/auth');
     const { authInitDone } = await import('@/lib/store');
+    const { Layout } = await import('@/components/Layout');
+
     authInitDone.value = false;
 
-    // Replicate the exact Layout.tsx pattern with a never-resolving initAuth
-    // (no timeout guard — this is the unfixed code path)
-    const neverResolvingInitAuth = (): Promise<null> => new Promise(() => { /* never resolves */ });
+    // Mock initAuth to never resolve (simulating a hung OAuth client)
+    vi.spyOn(authModule, 'initAuth').mockImplementation(() => new Promise(() => { /* never resolves */ }));
+    vi.spyOn(authModule, 'mayHaveRestorableSession').mockReturnValue(true);
 
-    // This mirrors what Layout.tsx does in its useEffect:
-    //   import('@/api/auth').then(m => m.initAuth()).then(...).catch(...).finally(() => { authInitDone.value = true })
-    // On unfixed code, client.init() has no timeout, so this chain never reaches .finally()
-    neverResolvingInitAuth()
-      .then(() => { /* profile handling */ })
-      .catch(() => { /* error handling */ })
-      .finally(() => {
-        authInitDone.value = true;
-      });
+    // Render Layout which has the safety timeout
+    render(h(Layout, { children: h('div', null, 'content') }));
 
-    // Assert: authInitDone must become true within 6 s
-    // On unfixed code: the promise never resolves, so .finally() never runs,
-    // authInitDone stays false, and this assertion times out
+    // Assert: authInitDone must become true within 6 s due to Layout's safety timeout
     await waitFor(
       () => {
         expect(authInitDone.value).toBe(true);
       },
       { timeout: 6000 },
     );
+
+    vi.restoreAllMocks();
   }, 8000);
 });
 
