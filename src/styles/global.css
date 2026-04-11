@@ -4057,6 +4057,7 @@ button.post-ref-expand-translate-btn {
   right: -6px !important;
   width: 250px !important;
   max-width: calc(100vw - 32px) !important;
+  z-index: 2002 !important;
 }
 
 .bottom-nav-profile {
@@ -4450,7 +4451,30 @@ button.post-ref-expand-translate-btn {
 }
 .search-page-input { flex: 1; min-width: 160px; padding: 8px 10px; }
 .search-page-scope { padding: 8px; }
+.search-page-hint { margin-top: 8px; margin-bottom: 0; }
 .search-results-list { list-style: none; margin: 0; padding: 0; }
+
+/* Mobile: position search form at bottom for easy reach */
+@media (max-width: 600px) {
+  .search-page-sticky-form {
+    position: fixed;
+    bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+    left: 8px;
+    right: 8px;
+    z-index: 1500;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 12px;
+    box-shadow: var(--shadow-md);
+  }
+  .search-page-sticky-form .community-sort-hint {
+    display: none;
+  }
+  .search-results-panel {
+    margin-bottom: calc(140px + env(safe-area-inset-bottom, 0px));
+  }
+}
 .search-results-item {
   padding: 12px 0;
   border-bottom: 1px solid var(--divider);

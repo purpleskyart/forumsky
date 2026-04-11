@@ -105,7 +105,7 @@ export function Search() {
         <span>Search</span>
       </div>
 
-      <div class="panel" style="margin-bottom:16px">
+      <div class="search-page-sticky-form">
         <form class="search-page-form" onSubmit={onSubmit}>
           <input
             type="search"
@@ -132,13 +132,13 @@ export function Search() {
             Search
           </button>
         </form>
-        <p class="community-sort-hint" style="margin-top:8px">
-          The All scope searches all of Bluesky. “Following” filters results to accounts you follow. “My posts” adds a{' '}
+        <p class="community-sort-hint search-page-hint">
+          The All scope searches all of Bluesky. "Following" filters results to accounts you follow. "My posts" adds a{' '}
           <code>from:your.handle</code> prefix.
         </p>
       </div>
 
-      <div class="panel">
+      <div class="panel search-results-panel">
         {loading ? (
           <div class="loading">
             <div class="spinner" />

@@ -59,6 +59,20 @@ export function UserMenuPanel({ onClose, className = '' }: { onClose: () => void
         Drafts
       </a>
       <a
+        href={hrefForAppPath('/saved')}
+        role="menuitem"
+        class="header-user-menu-item"
+        {...SPA_ANCHOR_SHIELD}
+        onClick={(e: Event) => {
+          e.preventDefault();
+          onClose();
+          navigate('/saved');
+          window.scrollTo({ top: 0 });
+        }}
+      >
+        Saved
+      </a>
+      <a
         href={hrefForAppPath('/settings')}
         role="menuitem"
         class="header-user-menu-item"

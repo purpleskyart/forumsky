@@ -3,14 +3,13 @@ import { Router, Route } from 'preact-router';
 import type { RouterOnChangeArgs } from 'preact-router';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Layout } from './components/Layout';
-// Scroll restoration disabled to prevent crashes
-// import {
-//   attachPopstateScrollGuard,
-//   attachScrollPositionPersistence,
-//   patchHistoryScrollSave,
-//   scheduleScrollRestore,
-//   setManualScrollRestoration,
-// } from '@/lib/scroll-restore';
+import {
+  attachPopstateScrollGuard,
+  attachScrollPositionPersistence,
+  patchHistoryScrollSave,
+  scheduleScrollRestore,
+  setManualScrollRestoration,
+} from '@/lib/scroll-restore';
 import { Home } from './pages/Home';
 import { Community } from './pages/Community';
 import { Thread } from './pages/Thread';
@@ -23,7 +22,7 @@ import { Settings } from './pages/Settings';
 import { FOLLOWED_COMMUNITY_TAG } from '@/lib/preferences';
 import { browserHistory } from '@/lib/app-base-path';
 import { navigate } from './lib/router';
-import { authInitDone, currentUser } from './lib/store';
+import { authInitDone, currentUser, currentRoute } from './lib/store';
 
 function FollowedFeedRoute() {
   return <Community tag={FOLLOWED_COMMUNITY_TAG} />;
@@ -47,21 +46,29 @@ function RedirectFollowedUrlsToHome() {
 }
 
 function onRouterChange(_args: RouterOnChangeArgs) {
-  // Scroll restoration disabled
-  // scheduleScrollRestore();
+  scheduleScrollRestore();
 }
 
 export function App() {
   console.log('[ForumSky] App component rendering...');
   
   useEffect(() => {
-    console.log('[ForumSky] App useEffect running - scroll restoration DISABLED');
-    // All scroll restoration disabled to prevent crashes
+    console.log('[ForumSky] App useEffect running - scroll restoration ENABLED');
+    setManualScrollRestoration();
+    const cleanupPopstate = attachPopstateScrollGuard();
+    const cleanupHistory = patchHistoryScrollSave();
+    const cleanupPersistence = attachScrollPositionPersistence();
+    return () => {
+      cleanupPopstate();
+      cleanupHistory();
+      cleanupPersistence();
+    };
   }, []);
 
   const handleRouteChange = (args: RouterOnChangeArgs) => {
     console.log('[ForumSky] Route changed to:', args.url);
-    // onRouterChange(args);
+    currentRoute.value = { path: args.url, params: args.matches || {} };
+    onRouterChange(args);
   };
 
   return (

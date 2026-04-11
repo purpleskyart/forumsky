@@ -1,5 +1,4 @@
 import { useRef, useEffect, useState, useCallback } from 'preact/hooks';
-import { createPortal } from 'preact/compat';
 import { useHlsPlayer } from '@/hooks/useHlsPlayer';
 
 type HlsVideoProps = {
@@ -16,6 +15,9 @@ const IN_VIEW_THRESHOLD = 0.35;
 /**
  * Plays Bluesky-style HLS playlists in the browser: native where supported (Safari),
  * otherwise loads hls.js on demand (Chrome, Firefox, …).
+ * 
+ * Tap video to enter fullscreen (same video element, no reload).
+ * In fullscreen, controls are hidden initially; tap again to show controls.
  */
 export function HlsVideo({ 
   playlist, 
@@ -26,16 +28,21 @@ export function HlsVideo({
 }: HlsVideoProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const lightboxVideoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<import('hls.js').default | null>(null);
-  const lightboxHlsRef = useRef<import('hls.js').default | null>(null);
   const isInViewRef = useRef(false);
-  /** When false, a play overlay covers the player; native controls stay in the DOM for stable layout. */
+  
+  /** In fullscreen: false = just entered, controls hidden; true = tap again, show controls */
+  const [fullscreenControlsEnabled, setFullscreenControlsEnabled] = useState(false);
+  /** Controls visible in non-fullscreen mode (hover or tap) */
   const [showControls, setShowControls] = useState(false);
   /** Locks layout to decoded dimensions so poster → play does not resize the box. */
   const [aspectCss, setAspectCss] = useState<string | null>(
     aspectRatio ? `${aspectRatio.width} / ${aspectRatio.height}` : null
   );
+  /** Track fullscreen state */
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  /** Hover state for desktop */
+  const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
     setAspectCss(null);
@@ -86,56 +93,31 @@ export function HlsVideo({
     };
   }, [playlist]);
 
-  const [isHovered, setIsHovered] = useState(false);
   const onMouseEnter = () => setIsHovered(true);
   const onMouseLeave = () => setIsHovered(false);
 
-  // Lightbox state
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-  const closeLightbox = useCallback(() => setLightboxOpen(false), []);
-
-  // Handle escape key to close lightbox
-  useEffect(() => {
-    if (!lightboxOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeLightbox();
-    };
-    window.addEventListener('keydown', onKey);
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prevOverflow;
-    };
-  }, [lightboxOpen, closeLightbox]);
-
-  // Load HLS for lightbox video when it opens
-  useHlsPlayer(lightboxVideoRef, lightboxHlsRef, lightboxOpen ? playlist : undefined, { muted: false, autoplay: true });
-
   // Pan/zoom state for mobile fullscreen
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [panX, setPanX] = useState(0);
   const [panY, setPanY] = useState(0);
   const [isZooming, setIsZooming] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
   const touchStartRef = useRef<{ x: number; y: number; distance: number } | null>(null);
+  const lastTapTimeRef = useRef(0);
 
-  const onVideoPlay = () => {};
-
-  const openLightbox = (e: MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setLightboxOpen(true);
-  };
-
+  // Track fullscreen changes
   useEffect(() => {
     const onFsChange = () => {
-      const isFs = !!document.fullscreenElement;
+      const fsElement = document.fullscreenElement;
+      const isFs = !!fsElement;
       setIsFullscreen(isFs);
-      setShowControls(isFs);
-      // Reset zoom/pan when exiting fullscreen
-      if (!isFs) {
+      
+      if (isFs) {
+        // Just entered fullscreen: disable controls initially
+        setFullscreenControlsEnabled(false);
+      } else {
+        // Exited fullscreen: reset everything
+        setFullscreenControlsEnabled(false);
         setZoom(1);
         setPanX(0);
         setPanY(0);
@@ -149,6 +131,72 @@ export function HlsVideo({
     };
   }, []);
 
+  // Enter fullscreen using the same video element (no reload)
+  const enterFullscreen = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    
+    // Try video element fullscreen first (better for mobile)
+    const fsMethod = video.requestFullscreen || (video as any).webkitRequestFullscreen;
+    if (fsMethod) {
+      void fsMethod.call(video).catch(() => {});
+    } else {
+      // Fallback to wrapper
+      const wrap = wrapRef.current;
+      if (wrap) {
+        const wrapFs = wrap.requestFullscreen || (wrap as any).webkitRequestFullscreen;
+        if (wrapFs) void wrapFs.call(wrap).catch(() => {});
+      }
+    }
+  }, []);
+
+  const exitFullscreen = useCallback(() => {
+    const exitMethod = document.exitFullscreen || (document as any).webkitExitFullscreen;
+    if (exitMethod) {
+      void exitMethod.call(document).catch(() => {});
+    }
+  }, []);
+
+  // Handle tap on video: first tap enters fullscreen, second tap toggles controls
+  const handleVideoTap = useCallback((e: MouseEvent | TouchEvent) => {
+    const now = Date.now();
+    const timeSinceLastTap = now - lastTapTimeRef.current;
+    lastTapTimeRef.current = now;
+    
+    // Prevent double-tap zoom on mobile
+    if (timeSinceLastTap < 300) {
+      e.preventDefault();
+      return;
+    }
+
+    if (!isFullscreen) {
+      // First tap: enter fullscreen
+      e.preventDefault();
+      e.stopPropagation();
+      enterFullscreen();
+    } else {
+      // In fullscreen: toggle controls
+      e.preventDefault();
+      e.stopPropagation();
+      setFullscreenControlsEnabled(prev => !prev);
+    }
+  }, [isFullscreen, enterFullscreen]);
+
+  // Handle escape key to exit fullscreen
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') exitFullscreen();
+    };
+    window.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [isFullscreen, exitFullscreen]);
+
   // Touch handlers for pinch-to-zoom and pan
   const getTouchDistance = (touches: TouchList): number => {
     if (touches.length < 2) return 0;
@@ -159,7 +207,13 @@ export function HlsVideo({
 
   const onTouchStart = (e: TouchEvent) => {
     const v = videoRef.current;
-    if (!v || !isFullscreen) return;
+    if (!v || !isFullscreen) {
+      // Allow tap to enter fullscreen
+      if (e.touches.length === 1) {
+        handleVideoTap(e);
+      }
+      return;
+    }
 
     if (e.touches.length === 2) {
       // Pinch to zoom
@@ -216,82 +270,88 @@ export function HlsVideo({
     }
   };
 
+  // Determine if controls should be shown
+  // In fullscreen: only if fullscreenControlsEnabled is true
+  // Not in fullscreen: show on hover or if showControls is true
+  const controlsVisible = isFullscreen 
+    ? fullscreenControlsEnabled 
+    : (showControls || isHovered);
+
   return (
-    <>
-      <div
-        class="post-hls-video-wrap"
-        ref={wrapRef}
-        onMouseEnter={onMouseEnter}
-        onMouseLeave={onMouseLeave}
-      >
-        <video
-          ref={videoRef}
-          class={`${className ?? ''} post-hls-video--compact`.trim()}
-          controls={showControls || isHovered}
-          playsInline
-          preload="metadata"
-          poster={poster}
-          aria-label={ariaLabel}
-          style={{
-            aspectRatio: aspectCss || undefined,
-            backgroundColor: 'var(--bg-elevated)',
-            transform: isFullscreen ? `translate(${panX}px, ${panY}px) scale(${zoom})` : 'none',
-            transformOrigin: 'center center',
-            transition: isZooming || isPanning ? 'none' : 'transform 0.2s ease-out',
-          }}
-          onLoadedMetadata={onLoadedMetadata}
-          onPlay={onVideoPlay}
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
-        />
-        {/* Transparent overlay to capture clicks for lightbox, above video but below controls */}
+    <div
+      class="post-hls-video-wrap"
+      ref={wrapRef}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      <video
+        ref={videoRef}
+        class={`${className ?? ''} post-hls-video--compact`.trim()}
+        controls={controlsVisible}
+        playsInline
+        preload="metadata"
+        poster={poster}
+        aria-label={ariaLabel}
+        style={{
+          aspectRatio: aspectCss || undefined,
+          backgroundColor: 'var(--bg-elevated)',
+          transform: isFullscreen ? `translate(${panX}px, ${panY}px) scale(${zoom})` : 'none',
+          transformOrigin: 'center center',
+          transition: isZooming || isPanning ? 'none' : 'transform 0.2s ease-out',
+          cursor: isFullscreen ? (fullscreenControlsEnabled ? 'default' : 'pointer') : 'pointer',
+        }}
+        onLoadedMetadata={onLoadedMetadata}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        onClick={handleVideoTap}
+      />
+      {/* Tap overlay for non-fullscreen mode (shows when controls are visible so clicking controls works) */}
+      {!isFullscreen && (
         <div
           class="post-hls-video-click-overlay"
-          onClick={openLightbox}
+          onClick={handleVideoTap}
           style={{
             position: 'absolute',
             inset: 0,
-            cursor: 'zoom-in',
+            cursor: 'pointer',
             zIndex: 1,
             // Allow clicks to pass through to controls when they're visible
             pointerEvents: showControls || isHovered ? 'none' : 'auto',
           }}
         />
-      </div>
-      {lightboxOpen &&
-        createPortal(
-          <div
-            class="media-lightbox-backdrop"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Enlarged video"
-            onClick={closeLightbox}
-          >
-            <button
-              type="button"
-              class="media-lightbox-close"
-              aria-label="Close"
-              onClick={(e: MouseEvent) => {
-                e.stopPropagation();
-                closeLightbox();
-              }}
-            >
-              ×
-            </button>
-            <video
-              ref={lightboxVideoRef}
-              class="media-lightbox-video"
-              poster={poster}
-              controls
-              playsInline
-              preload="metadata"
-              aria-label={ariaLabel}
-              onClick={(e: MouseEvent) => e.stopPropagation()}
-            />
-          </div>,
-          document.body,
-        )}
-    </>
+      )}
+      {/* Fullscreen close button (visible when controls are enabled) */}
+      {isFullscreen && fullscreenControlsEnabled && (
+        <button
+          type="button"
+          class="media-lightbox-close"
+          aria-label="Close fullscreen"
+          onClick={(e: MouseEvent) => {
+            e.stopPropagation();
+            exitFullscreen();
+          }}
+          style={{
+            position: 'fixed',
+            top: '16px',
+            right: '16px',
+            zIndex: 10000,
+            background: 'rgba(0,0,0,0.6)',
+            border: 'none',
+            color: 'white',
+            fontSize: '24px',
+            width: '44px',
+            height: '44px',
+            borderRadius: '50%',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          ×
+        </button>
+      )}
+    </div>
   );
 }

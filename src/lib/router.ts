@@ -10,8 +10,20 @@ import { confirmLeaveIfComposerDirty } from '@/lib/navigation-guard';
  */
 export const SPA_ANCHOR_SHIELD = { 'data-native': '' } as const;
 
+/** Save scroll position immediately before navigation (for scroll restoration on back). */
+function saveScrollBeforeNav(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const key = window.location.pathname + window.location.search + window.location.hash;
+    sessionStorage.setItem('forumskyScroll:' + key, String(Math.max(0, Math.round(window.scrollY))));
+  } catch {
+    /* ignore */
+  }
+}
+
 export function navigate(path: string, replace = false) {
   if (!confirmLeaveIfComposerDirty()) return;
+  saveScrollBeforeNav();
   preactRoute(path, replace);
 }
 
