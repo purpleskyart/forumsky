@@ -1869,6 +1869,8 @@ function ReferencedPostPeek({
       }
       threadTrCtx.patchMain(targetUri, { mainCached: r.text, view: 'translated' });
       showToast(`Translated via ${translationSourceLabel(r.via)}.`, 4000);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Translation failed', 4000);
     } finally {
       setChildRefTranslationBusy(false);
     }
@@ -2458,6 +2460,8 @@ function PostBlock({
       }
       threadTrCtx.patchMain(root.uri, { view: 'translated' });
       showToast(translationSuccessToastMessage(viaPost, viaReply), 4000);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Translation failed', 4000);
     } finally {
       setTranslationBusy(false);
     }

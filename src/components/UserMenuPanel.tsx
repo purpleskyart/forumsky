@@ -142,6 +142,8 @@ export function UserMenuPanel({ onClose, className = '' }: { onClose: () => void
             currentUser.value = profile;
             if (profile) void refreshGraphPolicy();
             else clearGraphPolicy();
+          } catch (err) {
+            showToast(err instanceof Error ? err.message : 'Sign out failed');
           } finally {
             setAccountActionBusy(false);
           }

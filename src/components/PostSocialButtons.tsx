@@ -69,6 +69,8 @@ export function PostShareButton({
     setBusy(true);
     try {
       await shareOrCopyPostUrl(url);
+    } catch {
+      showToast('Could not share link');
     } finally {
       setBusy(false);
     }
