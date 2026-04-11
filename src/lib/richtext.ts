@@ -584,11 +584,11 @@ const URL_IN_TEXT_RE = /https?:\/\/[^\s<>"{}|\\^`[\]]+/gi;
 /** Distinct http(s) URLs from post body and link facets (for cross-post discovery). */
 export function extractExternalUrlsFromPost(post: PostView): string[] {
   const out: string[] = [];
-  const text = post.record.text || '';
+  const text = post.record?.text || '';
   let m: RegExpExecArray | null;
   const re = new RegExp(URL_IN_TEXT_RE);
   while ((m = re.exec(text)) !== null) out.push(m[0]);
-  for (const f of post.record.facets ?? []) {
+  for (const f of post.record?.facets ?? []) {
     for (const feat of f.features ?? []) {
       if (feat.$type === 'app.bsky.richtext.facet#link' && typeof feat.uri === 'string') {
         if (/^https?:\/\//i.test(feat.uri)) out.push(feat.uri);

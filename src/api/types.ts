@@ -239,3 +239,62 @@ export interface OAuthSession {
   sub?: string;
   fetchHandler: (path: string, init: RequestInit) => Promise<Response>;
 }
+
+/** Thread gate rules for reply control */
+export type ThreadgateRule =
+  | { $type: 'app.bsky.feed.threadgate#mentionRule' }
+  | { $type: 'app.bsky.feed.threadgate#followingRule' }
+  | { $type: 'app.bsky.feed.threadgate#listRule'; list: string };
+
+export interface ThreadgateRecord {
+  $type: 'app.bsky.feed.threadgate';
+  post: string;
+  allow?: ThreadgateRule[];
+  createdAt: string;
+}
+
+/** List purposes */
+export type ListPurpose = 'app.bsky.graph.defs#curatelist' | 'app.bsky.graph.defs#modlist';
+
+export interface ListRecord {
+  $type: 'app.bsky.graph.list';
+  name: string;
+  purpose: ListPurpose;
+  description?: string;
+  avatar?: { ref: { $link: string }; mimeType: string; size: number };
+  createdAt: string;
+}
+
+export interface ListItemRecord {
+  $type: 'app.bsky.graph.listitem';
+  subject: string;
+  list: string;
+  createdAt: string;
+}
+
+export interface ListView {
+  uri: string;
+  cid: string;
+  creator?: ProfileView;
+  name: string;
+  purpose: ListPurpose;
+  description?: string;
+  avatar?: string;
+  indexedAt: string;
+}
+
+export interface ListItemView {
+  uri: string;
+  cid?: string;
+  subject: ProfileView;
+  indexedAt?: string;
+}
+
+export interface ProfileRecord {
+  $type: 'app.bsky.actor.profile';
+  displayName?: string;
+  description?: string;
+  avatar?: { ref: { $link: string }; mimeType: string; size: number };
+  banner?: { ref: { $link: string }; mimeType: string; size: number };
+  createdAt: string;
+}

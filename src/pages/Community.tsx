@@ -80,7 +80,7 @@ function useCommunityTagProp(propsTag?: string): string | undefined {
 }
 
 function isRootPost(p: PostView): boolean {
-  return !p.record.reply;
+  return !p.record?.reply;
 }
 
 function dedupeByUri(posts: PostView[]): PostView[] {

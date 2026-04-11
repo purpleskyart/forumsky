@@ -63,7 +63,7 @@ export function Search() {
           setPosts([]);
         } else {
           const res = await searchPosts(searchQuery, { limit: 50, sort: 'latest' });
-          let list = res.posts.filter(p => !p.record.reply);
+          let list = res.posts.filter(p => !p.record?.reply);
           if (scope === 'following' && followingSet.size > 0) {
             list = list.filter(p => followingSet.has(p.author.did));
           }

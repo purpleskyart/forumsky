@@ -14,6 +14,6 @@ export function formatThreadTitlePreviewLine(firstLine: string): string {
 
 /** Thread list title from the root post (first line of text). */
 export function postThreadListTitle(post: PostView): string {
-  const firstLine = post.record.text.split('\n')[0] ?? '';
+  const firstLine = post.record?.text?.split('\n')[0] ?? '';
   return formatThreadTitlePreviewLine(firstLine);
 }

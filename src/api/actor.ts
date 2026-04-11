@@ -1,5 +1,5 @@
 import { xrpcGet, xrpcSessionGet, xrpcPost, getOAuthSession } from './xrpc';
-import type { GetProfileResponse, GetProfilesResponse, ProfileView, CreateRecordResponse } from './types';
+import type { GetProfileResponse, GetProfilesResponse, ProfileView, CreateRecordResponse, ProfileRecord } from './types';
 
 export interface ActorPreferencesResponse {
   preferences: unknown[];
@@ -184,4 +184,64 @@ export async function searchActors(
     limit: opts?.limit ?? 8,
   });
   return res.actors ?? [];
+}
+
+/** Profile record collection */
+const PROFILE_COLLECTION = 'app.bsky.actor.profile';
+
+export type { ProfileRecord };
+
+/** Get the raw profile record from repo. */
+export async function getProfileRecord(did: string): Promise<ProfileRecord | null> {
+  try {
+    const res = await xrpcSessionGet<{
+      records?: Array<{ uri?: string; value?: ProfileRecord }>;
+    }>('com.atproto.repo.listRecords', {
+      repo: did,
+      collection: PROFILE_COLLECTION,
+      limit: 1,
+    });
+    return res.records?.[0]?.value ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Update profile record (upsert). */
+export async function updateProfile(
+  did: string,
+  opts: {
+    displayName?: string;
+    description?: string;
+    avatar?: ProfileRecord['avatar'];
+    banner?: ProfileRecord['banner'];
+  },
+): Promise<void> {
+  const existing = await getProfileRecord(did);
+
+  const record: ProfileRecord = {
+    $type: PROFILE_COLLECTION,
+    ...(existing || {}),
+    ...(opts.displayName !== undefined && { displayName: opts.displayName }),
+    ...(opts.description !== undefined && { description: opts.description }),
+    ...(opts.avatar && { avatar: opts.avatar }),
+    ...(opts.banner && { banner: opts.banner }),
+    createdAt: existing?.createdAt ?? new Date().toISOString(),
+  };
+
+  if (existing) {
+    await xrpcPost('com.atproto.repo.putRecord', {
+      repo: did,
+      collection: PROFILE_COLLECTION,
+      rkey: 'self',
+      record,
+    });
+  } else {
+    await xrpcPost<CreateRecordResponse>('com.atproto.repo.createRecord', {
+      repo: did,
+      collection: PROFILE_COLLECTION,
+      rkey: 'self',
+      record,
+    });
+  }
 }

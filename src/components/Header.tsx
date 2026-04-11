@@ -159,7 +159,7 @@ export function Header() {
           searchActors(value, { limit: 5 }),
           searchPosts(value, { limit: 5, sort: 'latest' }),
         ]);
-        setSearchSuggestions({ users, posts: postsRes.posts.filter(p => !p.record.reply).slice(0, 5) });
+        setSearchSuggestions({ users, posts: postsRes.posts.filter(p => !p.record?.reply).slice(0, 5) });
         setShowSuggestions(true);
       } catch {
         setSearchSuggestions({ users: [], posts: [] });

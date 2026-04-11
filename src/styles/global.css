@@ -5084,3 +5084,337 @@ button.post-ref-expand-translate-btn {
 .ptr-content {
   will-change: transform;
 }
+
+/* ========== Threadgate ========== */
+.threadgate-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.threadgate-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid var(--divider);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.threadgate-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: var(--divider-strong);
+}
+
+.threadgate-btn:disabled,
+.threadgate-btn--loading {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.threadgate-icon {
+  font-size: 1rem;
+}
+
+.threadgate-label {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.threadgate-chevron {
+  font-size: 0.6rem;
+  margin-left: 2px;
+}
+
+.threadgate-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  min-width: 200px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--divider);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.threadgate-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s ease;
+}
+
+.threadgate-option:hover {
+  background: var(--bg-hover);
+}
+
+.threadgate-option--active {
+  background: var(--bg-selected);
+}
+
+.threadgate-option-icon {
+  font-size: 1.1rem;
+  width: 20px;
+  text-align: center;
+}
+
+.threadgate-option-label {
+  flex: 1;
+}
+
+.threadgate-check {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.threadgate-indicator {
+  font-size: 0.9rem;
+  opacity: 0.7;
+}
+
+/* ========== Lists Manager ========== */
+.lists-manager {
+  padding: 16px;
+}
+
+.lists-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.lists-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.lists-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px;
+  color: var(--text-muted);
+}
+
+.lists-empty {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-muted);
+}
+
+.lists-empty p {
+  margin: 0 0 8px;
+}
+
+.lists-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.list-item {
+  border: 1px solid var(--divider);
+  border-radius: var(--radius);
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+
+.list-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.list-summary:hover {
+  background: var(--bg-hover);
+}
+
+.list-avatar {
+  flex-shrink: 0;
+}
+
+.list-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.list-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.list-description {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.list-meta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.list-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.list-members {
+  border-top: 1px solid var(--divider);
+  padding: 12px;
+  background: var(--bg-surface);
+}
+
+.list-add-member {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.list-add-member input {
+  flex: 1;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  border: 1px solid var(--divider);
+  border-radius: var(--radius);
+  background: var(--bg-input);
+  color: var(--text);
+}
+
+.list-no-members {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin: 16px 0;
+}
+
+.members-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.member-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: var(--radius);
+  transition: background 0.1s ease;
+}
+
+.member-item:hover {
+  background: var(--bg-hover);
+}
+
+.member-avatar {
+  flex-shrink: 0;
+}
+
+.member-handle {
+  flex: 1;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Modal styles for list creation */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 16px;
+}
+
+.modal-content {
+  background: var(--bg-elevated);
+  border: 1px solid var(--divider-strong);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  width: 100%;
+  max-width: 420px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-content h4 {
+  margin: 0 0 16px;
+  font-size: 1.1rem;
+}
+
+.form-group {
+  margin-bottom: 14px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  border: 1px solid var(--divider);
+  border-radius: var(--radius);
+  background: var(--bg-input);
+  color: var(--text);
+  font-family: inherit;
+}
+
+.form-group textarea {
+  resize: vertical;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--divider);
+}

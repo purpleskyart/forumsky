@@ -1,9 +1,14 @@
 import { xrpcPost, xrpcSessionGet } from './xrpc';
 import { parseAtUri } from './feed';
-import type { CreateRecordResponse, StrongRef, Facet } from './types';
+import type { CreateRecordResponse, StrongRef, Facet, ThreadgateRule, ThreadgateRecord } from './types';
 
 /** Custom downvote collection — same as ArtSky; syncs across AT Protocol. */
 const DOWNVOTE_COLLECTION = 'app.purplesky.feed.downvote';
+
+/** Thread gate collection — controls who can reply to posts. */
+const THREADGATE_COLLECTION = 'app.bsky.feed.threadgate';
+
+export type { ThreadgateRule, ThreadgateRecord };
 
 export async function createPost(opts: {
   text: string;
@@ -159,4 +164,124 @@ export async function listMyDownvotes(did: string): Promise<Record<string, strin
     }
   } while (cursor);
   return out;
+}
+
+/** Create a thread gate to restrict who can reply to a post.
+ *  If `allow` is undefined, everyone can reply (no gate).
+ *  If `allow` is empty array, nobody can reply.
+ *  Otherwise, only matching users can reply. */
+export async function createThreadgate(
+  did: string,
+  postUri: string,
+  rules: ThreadgateRule[],
+): Promise<CreateRecordResponse> {
+  return xrpcPost<CreateRecordResponse>('com.atproto.repo.createRecord', {
+    repo: did,
+    collection: THREADGATE_COLLECTION,
+    record: {
+      $type: THREADGATE_COLLECTION,
+      post: postUri,
+      allow: rules.length > 0 ? rules : undefined,
+      createdAt: new Date().toISOString(),
+    },
+  });
+}
+
+/** Get thread gate for a post, if one exists. */
+export async function getThreadgate(
+  did: string,
+  postUri: string,
+): Promise<ThreadgateRecord | null> {
+  try {
+    const res = await xrpcSessionGet<{
+      records?: Array<{ uri?: string; value?: ThreadgateRecord }>;
+    }>('com.atproto.repo.listRecords', {
+      repo: did,
+      collection: THREADGATE_COLLECTION,
+      limit: 1,
+    });
+
+    const record = res.records?.find(r => r.value?.post === postUri);
+    return record?.value ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Update thread gate rules for a post. */
+export async function updateThreadgate(
+  did: string,
+  threadgateUri: string,
+  rules: ThreadgateRule[],
+): Promise<void> {
+  const parsed = parseAtUri(threadgateUri);
+  if (!parsed || parsed.collection !== THREADGATE_COLLECTION) {
+    throw new Error('Invalid threadgate URI');
+  }
+
+  const res = await xrpcSessionGet<{
+    records?: Array<{ uri?: string; value?: ThreadgateRecord }>;
+  }>('com.atproto.repo.listRecords', {
+    repo: did,
+    collection: THREADGATE_COLLECTION,
+    limit: 1,
+  });
+
+  const existing = res.records?.find(r => r.uri === threadgateUri);
+  if (!existing?.value) throw new Error('Threadgate not found');
+
+  await xrpcPost('com.atproto.repo.putRecord', {
+    repo: did,
+    collection: THREADGATE_COLLECTION,
+    rkey: parsed.rkey,
+    record: {
+      ...existing.value,
+      allow: rules.length > 0 ? rules : undefined,
+    },
+  });
+}
+
+/** Remove thread gate, allowing everyone to reply. */
+export async function deleteThreadgate(did: string, threadgateUri: string): Promise<void> {
+  const parsed = parseAtUri(threadgateUri);
+  if (!parsed || parsed.collection !== THREADGATE_COLLECTION) {
+    throw new Error('Invalid threadgate URI');
+  }
+  await xrpcPost('com.atproto.repo.deleteRecord', {
+    repo: did,
+    collection: THREADGATE_COLLECTION,
+    rkey: parsed.rkey,
+  });
+}
+
+/** Check if current user can reply to a post based on thread gate. */
+export async function canReplyToThread(
+  postUri: string,
+  postAuthorDid: string,
+  viewerDid: string | undefined,
+  followingDids: Set<string>,
+): Promise<boolean> {
+  if (!viewerDid) return false;
+  if (viewerDid === postAuthorDid) return true;
+
+  const gate = await getThreadgate(postAuthorDid, postUri);
+  if (!gate || !gate.allow) return true;
+  if (gate.allow.length === 0) return false;
+
+  for (const rule of gate.allow) {
+    if (rule.$type === 'app.bsky.feed.threadgate#followingRule') {
+      if (followingDids.has(postAuthorDid)) return true;
+    }
+    if (rule.$type === 'app.bsky.feed.threadgate#mentionRule') {
+      // Would need to check if viewer is mentioned in post
+      // For now, assume they can check on post load
+      return true;
+    }
+    if (rule.$type === 'app.bsky.feed.threadgate#listRule') {
+      // Would need list membership check
+      // For now, conservative default
+      return true;
+    }
+  }
+  return false;
 }

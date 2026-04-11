@@ -268,7 +268,7 @@ export function Activity() {
               if (n.reason === 'like') {
                 previewLabel = 'Liked post';
                 previewText = subjectPost
-                  ? truncatePreview(subjectPost.record.text, PREVIEW_MAX)
+                  ? truncatePreview(subjectPost.record?.text, PREVIEW_MAX)
                   : null;
               } else {
                 previewLabel =

@@ -186,7 +186,7 @@ export function Home() {
         if (controller.signal.aborted) return;
         const roots = res.feed
           .map(f => f.post)
-          .filter(p => !p.record.reply);
+          .filter(p => !p.record?.reply);
         const last = roots[0];
         setFollowPreview({
           lastPost: last ? {
