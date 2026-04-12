@@ -43,6 +43,8 @@ export function HlsVideo({
   const [isFullscreen, setIsFullscreen] = useState(false);
   /** Hover state for desktop */
   const [isHovered, setIsHovered] = useState(false);
+  /** Video paused state - shows indicator when not playing */
+  const [isPaused, setIsPaused] = useState(true);
 
   // Update aspect ratio when prop changes, but keep existing value if video already loaded
   useEffect(() => {
@@ -90,9 +92,17 @@ export function HlsVideo({
     };
     document.addEventListener('visibilitychange', onVisibilityChange);
 
+    // Track play/pause state for showing video icon overlay
+    const onPlay = () => setIsPaused(false);
+    const onPause = () => setIsPaused(true);
+    video.addEventListener('play', onPlay);
+    video.addEventListener('pause', onPause);
+
     return () => {
       observer.disconnect();
       document.removeEventListener('visibilitychange', onVisibilityChange);
+      video.removeEventListener('play', onPlay);
+      video.removeEventListener('pause', onPause);
     };
   }, [playlist]);
 
@@ -323,6 +333,38 @@ export function HlsVideo({
             pointerEvents: showControls || isHovered ? 'none' : 'auto',
           }}
         />
+      )}
+      {/* Video paused indicator - shows when video is paused and not in fullscreen */}
+      {isPaused && !isFullscreen && (
+        <div
+          class="post-hls-video-paused-indicator"
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            bottom: '8px',
+            right: '8px',
+            width: '28px',
+            height: '28px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(0, 0, 0, 0.6)',
+            borderRadius: '50%',
+            pointerEvents: 'none',
+            zIndex: 2,
+          }}
+        >
+          {/* Video/play icon SVG */}
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="white"
+            style={{ opacity: 0.9 }}
+          >
+            <path d="M8 5v14l11-7z" />
+          </svg>
+        </div>
       )}
       {/* Fullscreen close button (visible when controls are enabled) */}
       {isFullscreen && fullscreenControlsEnabled && (

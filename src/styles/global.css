@@ -766,17 +766,33 @@
 /* —— NSFW / sensitive media (labels) —— */
 .nsfw-media-blur-wrap {
   position: relative;
-  display: inline-block;
-  max-width: 100%;
+  display: block;
+  max-width: min(100%, 400px);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  vertical-align: top;
   cursor: pointer;
+  /* Match the container sizing to prevent layout shift on reveal */
+  line-height: 0;
+}
+/* In media stacks, the wrapper should fill the available width */
+.post-content-media-stack .nsfw-media-blur-wrap,
+.post-quoted-embed-stack .nsfw-media-blur-wrap {
+  max-width: 100%;
+  width: 100%;
 }
 .nsfw-media-blur-layer {
   filter: blur(26px);
   pointer-events: none;
   user-select: none;
+  /* Ensure layer maintains exact content dimensions */
+  display: block;
+  max-width: 100%;
+}
+.nsfw-media-blur-layer > * {
+  /* Prevent margin collapse and ensure consistent sizing */
+  display: block;
+  margin: 0 !important;
+  max-width: 100% !important;
 }
 .nsfw-media-blur-overlay {
   position: absolute;
@@ -2973,6 +2989,11 @@ video.post-hls-video--has-overlay {
   transform: scale(1.06);
 }
 
+/* Video paused indicator - small icon in corner when video is not playing */
+.post-hls-video-paused-indicator {
+  animation: fadeIn 0.2s ease;
+}
+
 /* Multiple images/videos: vertical stack, full image visible (contain) */
 .post-content-media-stack {
   display: flex;
@@ -4850,7 +4871,7 @@ button.post-ref-expand-translate-btn {
   background: var(--bg-elevated);
   text-decoration: none;
   color: inherit;
-  max-width: 100%;
+  max-width: min(100%, 400px);
   overflow: hidden;
 }
 .post-external-card:hover { border-color: var(--accent); }
