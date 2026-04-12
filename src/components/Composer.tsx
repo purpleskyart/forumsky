@@ -155,6 +155,7 @@ export function Composer({
   const [posting, setPosting] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [attachmentAlts, setAttachmentAlts] = useState<Record<string, string>>({});
+  const [mediaSensitive, setMediaSensitive] = useState(false);
   const [mentionMenu, setMentionMenu] = useState<{
     start: number;
     end: number;
@@ -587,6 +588,9 @@ export function Composer({
             reply,
             facets: facets.length > 0 ? facets : undefined,
             embed: segEmbed,
+            labels: mediaSensitive && segEmbed
+              ? { $type: 'com.atproto.label.defs#selfLabels', values: [{ val: 'graphic-media' }] }
+              : undefined,
           });
 
           // Track successfully created post for potential rollback
@@ -609,6 +613,7 @@ export function Composer({
       attachments.forEach(a => URL.revokeObjectURL(a.previewUrl));
       setAttachments([]);
       setAttachmentAlts({});
+      setMediaSensitive(false);
       setText('');
       setThreadTitle('');
       if (quoteEmbed) {
@@ -984,6 +989,23 @@ export function Composer({
             Tip: add alt text so people using screen readers understand your images.
           </p>
         )}
+
+      {attachments.length > 0 && (
+        <div class="composer-media-sensitive-row">
+          <label class="composer-media-sensitive-label">
+            <input
+              type="checkbox"
+              checked={mediaSensitive}
+              onChange={(e: Event) => setMediaSensitive((e.target as HTMLInputElement).checked)}
+              disabled={posting}
+            />
+            Mark media as sensitive / spoiler
+          </label>
+          <p class="composer-media-sensitive-hint">
+            Adds a content warning on Bluesky. Viewers will need to tap to reveal.
+          </p>
+        </div>
+      )}
 
       <div class="composer-toolbar">
         <div class="composer-toolbar-left">

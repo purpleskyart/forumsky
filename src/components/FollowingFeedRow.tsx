@@ -30,7 +30,7 @@ import {
 import { hrefForAppPath } from '@/lib/app-base-path';
 import { navigate, threadUrl, SPA_ANCHOR_SHIELD, spaNavigateClickStopRow } from '@/lib/router';
 import { formatListDateTime, formatRelativeTime, t } from '@/lib/i18n';
-import { formatProfileJoined, formatProfileStatCount, toneIndexForHandle } from '@/lib/user-display';
+import { toneIndexForHandle } from '@/lib/user-display';
 import { isLoggedIn, showAuthDialog } from '@/lib/store';
 import { postHasNsfwLabels } from '@/lib/nsfw-labels';
 import { isThreadSubscribed, toggleSubscribedThreadRoot } from '@/lib/forumsky-local';
@@ -202,24 +202,6 @@ export function FollowingFeedRow({
             </a>
             <AuthorFlair profile={post.author} postLabels={post.labels} />
           </div>
-          <table class="author-stats-table">
-            <tr>
-              <td>Posts:</td>
-              <td>{formatProfileStatCount(post.author.postsCount)}</td>
-            </tr>
-            <tr>
-              <td>Following:</td>
-              <td>{formatProfileStatCount(post.author.followsCount)}</td>
-            </tr>
-            <tr>
-              <td>Followers:</td>
-              <td class="author-accent-stat">{formatProfileStatCount(post.author.followersCount)}</td>
-            </tr>
-            <tr>
-              <td>Joined:</td>
-              <td>{formatProfileJoined(post.author.createdAt)}</td>
-            </tr>
-          </table>
         </div>
       </div>
       <div class="post-body">

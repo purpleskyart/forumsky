@@ -15,6 +15,7 @@ export async function createPost(opts: {
   reply?: { root: StrongRef; parent: StrongRef };
   facets?: Facet[];
   embed?: unknown;
+  labels?: { $type: 'com.atproto.label.defs#selfLabels'; values: { val: string }[] };
 }): Promise<CreateRecordResponse> {
   return xrpcPost<CreateRecordResponse>('com.atproto.repo.createRecord', {
     repo: '', // filled by session DID
@@ -26,6 +27,7 @@ export async function createPost(opts: {
       reply: opts.reply,
       facets: opts.facets,
       embed: opts.embed,
+      labels: opts.labels,
     },
   });
 }
@@ -37,6 +39,7 @@ export async function createPostWithDid(
     reply?: { root: StrongRef; parent: StrongRef };
     facets?: Facet[];
     embed?: unknown;
+    labels?: { $type: 'com.atproto.label.defs#selfLabels'; values: { val: string }[] };
   },
 ): Promise<CreateRecordResponse> {
   return xrpcPost<CreateRecordResponse>('com.atproto.repo.createRecord', {
@@ -49,6 +52,7 @@ export async function createPostWithDid(
       reply: opts.reply,
       facets: opts.facets,
       embed: opts.embed,
+      labels: opts.labels,
     },
   });
 }

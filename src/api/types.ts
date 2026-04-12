@@ -50,6 +50,11 @@ export interface PostRecord {
   embed?: EmbedRecord;
   langs?: string[];
   tags?: string[];
+  /** Self-labels for sensitive content (e.g., 'sexual', 'nudity', 'graphic-media') */
+  labels?: {
+    $type: 'com.atproto.label.defs#selfLabels';
+    values: { val: string }[];
+  };
 }
 
 export interface ReplyRef {
@@ -83,7 +88,8 @@ export interface ByteSlice {
 export type FacetFeature =
   | { $type: 'app.bsky.richtext.facet#mention'; did: string }
   | { $type: 'app.bsky.richtext.facet#link'; uri: string }
-  | { $type: 'app.bsky.richtext.facet#tag'; tag: string };
+  | { $type: 'app.bsky.richtext.facet#tag'; tag: string }
+  | { $type: 'app.purplesky.richtext.facet#spoiler' };
 
 export interface EmbedRecord {
   $type: string;

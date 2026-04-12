@@ -74,6 +74,7 @@ export function attachScrollPositionPersistence(): () => void {
 /**
  * Restore scroll for the current location from sessionStorage.
  * Stops trying to restore once user starts scrolling.
+ * Retries until content is tall enough to support the scroll position.
  */
 export function restoreScrollNow(): void {
   if (typeof window === 'undefined') return;
@@ -88,6 +89,9 @@ export function restoreScrollNow(): void {
   restoreTimerIds = [];
 
   let hasUserScrolled = false;
+  let attemptCount = 0;
+  const maxAttempts = 10;
+
   const checkUserScroll = () => {
     if (Math.abs(window.scrollY - y) > 50) {
       hasUserScrolled = true;
@@ -95,27 +99,47 @@ export function restoreScrollNow(): void {
     return hasUserScrolled;
   };
 
-  const apply = () => {
-    if (checkUserScroll()) return;
-    window.scrollTo({ top: y, left: 0, behavior: 'auto' });
+  const canScrollTo = (targetY: number) => {
+    const docHeight = document.documentElement.scrollHeight;
+    const viewportHeight = window.innerHeight;
+    const maxScroll = Math.max(0, docHeight - viewportHeight);
+    return targetY <= maxScroll + 100; // Allow small overshoot tolerance
   };
 
-  // Initial restore
+  const apply = () => {
+    if (checkUserScroll()) return false;
+    if (!canScrollTo(y)) return false;
+    window.scrollTo({ top: y, left: 0, behavior: 'auto' });
+    return Math.abs(window.scrollY - y) < 50;
+  };
+
+  // Initial restore attempt
   apply();
 
-  // Short follow-ups that stop if user scrolled
+  // Follow-ups that stop if user scrolled or successful restore
   const schedule = (delay: number) => {
     const id = window.setTimeout(() => {
-      if (!checkUserScroll()) apply();
+      attemptCount++;
+      if (checkUserScroll()) return;
+      const success = apply();
+      if (!success && attemptCount < maxAttempts) {
+        // Retry with exponential backoff up to 500ms
+        const nextDelay = Math.min(delay * 1.5, 500);
+        schedule(nextDelay);
+      }
     }, delay);
     restoreTimerIds.push(id);
   };
 
   requestAnimationFrame(() => {
-    if (!checkUserScroll()) apply();
+    if (!checkUserScroll()) {
+      const success = apply();
+      if (!success) schedule(50);
+    }
   });
   schedule(100);
   schedule(300);
+  schedule(600);
 }
 
 /** Call after the router URL changes (back/forward or in-app navigation). */

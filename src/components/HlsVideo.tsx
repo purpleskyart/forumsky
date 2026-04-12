@@ -334,36 +334,42 @@ export function HlsVideo({
           }}
         />
       )}
-      {/* Video paused indicator - shows when video is paused and not in fullscreen */}
+      {/* Centered play button overlay - shows when video is paused so users know it's a video */}
       {isPaused && !isFullscreen && (
         <div
-          class="post-hls-video-paused-indicator"
+          class="post-hls-video-play-overlay"
           aria-hidden="true"
           style={{
             position: 'absolute',
-            bottom: '8px',
-            right: '8px',
-            width: '28px',
-            height: '28px',
+            inset: 0,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: 'rgba(0, 0, 0, 0.6)',
-            borderRadius: '50%',
+            background: 'rgba(0, 0, 0, 0.22)',
+            borderRadius: 'inherit',
             pointerEvents: 'none',
-            zIndex: 2,
+            zIndex: 3,
           }}
         >
-          {/* Video/play icon SVG */}
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="white"
-            style={{ opacity: 0.9 }}
+          <div
+            class="post-hls-video-play-icon"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              color: '#fff',
+              background: 'rgba(0, 0, 0, 0.55)',
+              border: '2px solid rgba(255, 255, 255, 0.88)',
+              boxShadow: '0 2px 14px rgba(0, 0, 0, 0.45)',
+            }}
           >
-            <path d="M8 5v14l11-7z" />
-          </svg>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          </div>
         </div>
       )}
       {/* Fullscreen close button (visible when controls are enabled) */}

@@ -338,13 +338,13 @@ export function Profile(props: ProfileProps) {
                   {!isOwnProfile && profile.viewer?.followedBy && (
                     <span class="profile-follows-you-badge">Follows you</span>
                   )}
+                  {profile.labels?.some(l => l.val === 'bot') && (
+                    <span class="profile-badge-bot" title="Automated account">Bot</span>
+                  )}
                   {profile.labels && profile.labels.length > 0 && (
                     <>
                       {profile.labels.some(l => l.val === 'verified') && (
                         <span class="profile-badge-verified" title="Verified account">Verified</span>
-                      )}
-                      {profile.labels.some(l => l.val === 'bot') && (
-                        <span class="profile-badge-bot" title="Automated account">Bot</span>
                       )}
                       {profile.labels.some(l => ['spam', 'spammy'].includes(l.val)) && (
                         <span class="profile-badge-warning" title="Flagged as spam">Spam</span>

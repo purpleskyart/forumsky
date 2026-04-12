@@ -17,7 +17,7 @@ function isNsfwLabelVal(val: string): boolean {
 /** Bluesky system label; not useful as a user-facing badge. */
 function isHiddenLabelVal(val: string): boolean {
   const core = val.replace(/^[!]+/, '').toLowerCase();
-  return core === 'no-unauthenticated';
+  return core === 'no-unauthenticated' || core === 'bot';
 }
 
 function humanizeLabelVal(val: string): string {

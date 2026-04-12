@@ -43,7 +43,7 @@ import {
 } from '@/lib/thread-merger';
 import { getDownvoteCounts } from '@/lib/constellation';
 import { postHasNsfwLabels } from '@/lib/nsfw-labels';
-import { formatProfileJoined, formatProfileStatCount, toneIndexForHandle } from '@/lib/user-display';
+import { toneIndexForHandle } from '@/lib/user-display';
 import {
   renderPostContent,
   getPostImages,
@@ -2531,21 +2531,15 @@ function PostBlock({
             </a>
             <AuthorFlair profile={root.author} postLabels={root.labels} />
           </div>
-          <table class="author-stats-table">
-            <tr><td>Posts:</td><td>{formatProfileStatCount(root.author.postsCount)}</td></tr>
-            <tr><td>Following:</td><td>{formatProfileStatCount(root.author.followsCount)}</td></tr>
-            <tr><td>Followers:</td><td class="author-accent-stat">{formatProfileStatCount(root.author.followersCount)}</td></tr>
-            <tr><td>Joined:</td><td>{formatProfileJoined(root.author.createdAt)}</td></tr>
-          </table>
           <div class="author-badges">
+            {root.author.labels?.some(l => l.val === 'bot') && (
+              <span class="author-badge author-badge-bot">Bot</span>
+            )}
             {!isOwnPost && root.author.viewer?.following && root.author.viewer?.followedBy && (
               <span class="author-badge author-badge-mutuals">Mutuals</span>
             )}
             {!isOwnPost && root.author.viewer?.followedBy && !root.author.viewer?.following && (
               <span class="author-badge author-badge-follows-you">Follows you</span>
-            )}
-            {root.author.labels?.some(l => l.val === 'bot') && (
-              <span class="author-badge author-badge-bot">Bot</span>
             )}
           </div>
         </div>

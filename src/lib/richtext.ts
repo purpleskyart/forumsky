@@ -43,7 +43,7 @@ function sanitizeUrl(url: string | undefined): string {
 
 interface RichSegment {
   text: string;
-  type: 'text' | 'mention' | 'link' | 'tag';
+  type: 'text' | 'mention' | 'link' | 'tag' | 'spoiler';
   href?: string;
   did?: string;
   tag?: string;
@@ -87,6 +87,8 @@ export function parseRichText(text: string, facets?: Facet[]): RichSegment[] {
       segments.push({ text: facetText, type: 'link', href: feature.uri });
     } else if (feature?.$type === 'app.bsky.richtext.facet#tag') {
       segments.push({ text: facetText, type: 'tag', tag: feature.tag });
+    } else if (feature?.$type === 'app.purplesky.richtext.facet#spoiler') {
+      segments.push({ text: facetText, type: 'spoiler' });
     } else {
       segments.push({ text: facetText, type: 'text' });
     }
@@ -125,6 +127,27 @@ export function renderRichText(text: string, facets?: Facet[]): VNode {
       }
     } else if (seg.type === 'tag') {
       children.push(h('a', { href: hrefForAppPath(communityUrl(seg.tag!)), class: 'hashtag' } as JSX.HTMLAttributes<HTMLAnchorElement>, seg.text));
+    } else if (seg.type === 'spoiler') {
+      children.push(h('span', {
+        class: 'spoiler-text',
+        'data-spoiler': '',
+        'aria-label': 'Spoiler text hidden, click to reveal',
+        'role': 'button',
+        'tabIndex': 0,
+        onClick: (e: MouseEvent) => {
+          const target = e.currentTarget as HTMLElement;
+          target.classList.add('spoiler-text--revealed');
+          target.setAttribute('aria-expanded', 'true');
+        },
+        onKeyDown: (e: KeyboardEvent) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            const target = e.currentTarget as HTMLElement;
+            target.classList.add('spoiler-text--revealed');
+            target.setAttribute('aria-expanded', 'true');
+          }
+        },
+      } as JSX.HTMLAttributes<HTMLSpanElement>, seg.text));
     } else {
       children.push(seg.text);
     }
@@ -529,6 +552,31 @@ export function threadPreviewThumb(post: PostView): ThreadPreviewThumb | null {
 }
 
 /**
+ * Detect spoiler text facets using ||spoiler|| syntax.
+ * Scans for ||text|| patterns and creates custom spoiler facet objects.
+ */
+export function detectSpoilers(text: string): Facet[] {
+  const encoder = new TextEncoder();
+  const facets: Facet[] = [];
+  // Match ||...|| but not empty ||||, using non-greedy matching
+  const regex = /\|\|([^|]+?)\|\|/g;
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    const prefix = text.slice(0, match.index);
+    const byteStart = encoder.encode(prefix).length;
+    const byteEnd = byteStart + encoder.encode(match[0]).length;
+
+    facets.push({
+      index: { byteStart, byteEnd },
+      features: [{ $type: 'app.purplesky.richtext.facet#spoiler' }],
+    });
+  }
+
+  return facets;
+}
+
+/**
  * Detect hashtag facets for new post text.
  * Scans for #hashtag patterns and creates facet objects.
  */
@@ -605,14 +653,15 @@ export async function detectMentionsInText(
   return facets;
 }
 
-/** Combine hashtag detection with resolved @mention facets. */
+/** Combine hashtag, spoiler, and resolved @mention facets. */
 export async function buildComposerFacets(
   text: string,
   getProfiles: (handles: string[]) => Promise<ProfileView[]>,
 ): Promise<Facet[]> {
   const tags = detectHashtags(text);
+  const spoilers = detectSpoilers(text);
   const mentions = await detectMentionsInText(text, getProfiles);
-  return mergeFacetsByByteStart(tags, mentions);
+  return mergeFacetsByByteStart(mergeFacetsByByteStart(tags, spoilers), mentions);
 }
 
 const URL_IN_TEXT_RE = /https?:\/\/[^\s<>"{}|\\^`[\]]+/gi;
