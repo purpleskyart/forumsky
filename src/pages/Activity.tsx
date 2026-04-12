@@ -20,7 +20,7 @@ function notificationThreadPath(n: NotificationItem): string | null {
   if (!sub) return null;
   const parsed = parseAtUri(sub);
   if (!parsed || parsed.collection !== 'app.bsky.feed.post') return null;
-  return threadUrl(parsed.repo, parsed.rkey);
+  return threadUrl(parsed.repo, parsed.rkey, n.uri);
 }
 
 function notificationMatchesSubscribedThreads(n: NotificationItem, subs: Set<string>): boolean {
@@ -197,9 +197,6 @@ export function Activity() {
       <div class="panel activity-panel">
         <div class="activity-head">
           <div class="activity-head-row">
-            <p class="activity-intro">
-              Bluesky notifications with thread titles and post text where available. Rows open the post in ForumSky.
-            </p>
             {hydratingPosts && filteredItems.length > 0 && (
               <span class="activity-hydrate-hint" aria-live="polite">
                 Resolving threads…

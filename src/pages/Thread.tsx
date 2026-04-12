@@ -592,6 +592,30 @@ function ThreadView({
   }, [visibleComments.length]);
 
   const threadIndex = buildThreadPostIndex(thread);
+
+  // Handle ?focus=uri query param: scroll to the specific post on load
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const focusUri = params.get('focus');
+    if (!focusUri) return;
+    const postNumber = threadIndex.postNumberByUri.get(focusUri);
+    if (!postNumber) return;
+    // Small delay to ensure DOM is rendered
+    const id = window.setTimeout(() => {
+      scrollToThreadPost(postNumber);
+      // Clean up the focus param from URL without reloading
+      params.delete('focus');
+      const qs = params.toString();
+      window.history.replaceState(
+        null,
+        '',
+        window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash,
+      );
+    }, 100);
+    return () => window.clearTimeout(id);
+  }, [threadIndex]);
+
   const communityTag = extractFirstHashtag(rootPost);
   const title = formatThreadTitlePreviewLine(rootPost.record.text.split('\n')[0]);
   const rootTone = toneIndexForHandle(rootPost.author.handle);

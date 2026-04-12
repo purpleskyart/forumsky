@@ -72,8 +72,12 @@ export function communityUrl(tag: string): string {
   return `/c/${encodeURIComponent(tag)}`;
 }
 
-export function threadUrl(actor: string, rkey: string): string {
-  return `/t/${encodeURIComponent(actor)}/${encodeURIComponent(rkey)}`;
+export function threadUrl(actor: string, rkey: string, focusUri?: string): string {
+  const base = `/t/${encodeURIComponent(actor)}/${encodeURIComponent(rkey)}`;
+  if (!focusUri) return base;
+  const p = new URLSearchParams();
+  p.set('focus', focusUri);
+  return `${base}?${p.toString()}`;
 }
 
 export function profileUrl(handle: string): string {
