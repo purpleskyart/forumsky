@@ -13,6 +13,7 @@ import { currentUser, showAuthDialog } from '@/lib/store';
 import { appPathname } from '@/lib/app-base-path';
 import { dominantVisibleListRowIndex } from '@/lib/dominant-visible-row';
 import { navigate, communityUrl } from '@/lib/router';
+import { restoreScrollNow } from '@/lib/scroll-restore';
 import { COMMUNITY_STATS_TTL, TIMELINE_PREVIEW_LIMIT } from '@/lib/constants';
 
 interface CommunityPreview {
@@ -201,6 +202,22 @@ export function Home() {
     })();
     return () => { controller.abort(); };
   }, [user?.did]);
+
+  /** After async preview fetches the page height changes; re-apply saved scroll once content exists. */
+  const prevPreviewsRef = useRef(previews);
+  useEffect(() => {
+    const hadPreviews = Object.keys(prevPreviewsRef.current).length > 0;
+    prevPreviewsRef.current = previews;
+    if (!hadPreviews && Object.keys(previews).length > 0) {
+      restoreScrollNow();
+      const t1 = window.setTimeout(() => restoreScrollNow(), 350);
+      const t2 = window.setTimeout(() => restoreScrollNow(), 700);
+      return () => {
+        window.clearTimeout(t1);
+        window.clearTimeout(t2);
+      };
+    }
+  }, [previews]);
 
   const handleAdd = (e: Event) => {
     e.preventDefault();
