@@ -313,13 +313,13 @@ export function Thread(props: ThreadProps) {
   const [error, setError] = useState('');
 
   /** Restore scroll when content loads */
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (loading) return;
     restoreScrollNow();
   }, [loading]);
 
   /** Also restore scroll if we have thread data (cached scenario) */
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (thread) {
       restoreScrollNow();
     }

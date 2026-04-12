@@ -90,7 +90,7 @@ export function Profile(props: ProfileProps) {
   /** Restore scroll when content loads */
   const prevLoadingRef = useRef(loading);
   
-  useEffect(() => {
+  useLayoutEffect(() => {
     const wasLoading = prevLoadingRef.current;
     prevLoadingRef.current = loading;
     if (!wasLoading || loading) return;

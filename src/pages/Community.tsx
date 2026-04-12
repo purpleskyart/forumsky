@@ -236,7 +236,7 @@ export function Community({ tag: tagProp }: CommunityProps) {
   /** Restore scroll when content loads */
   const prevLoadingForScrollRef = useRef(loading);
   
-  useEffect(() => {
+  useLayoutEffect(() => {
     const wasLoading = prevLoadingForScrollRef.current;
     prevLoadingForScrollRef.current = loading;
     if (!wasLoading || loading) return;
@@ -244,7 +244,7 @@ export function Community({ tag: tagProp }: CommunityProps) {
   }, [loading]);
 
   /** Also restore scroll if we have a valid snapshot on mount (cached state scenario) */
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (validSnapshot) {
       restoreScrollNow();
     }
