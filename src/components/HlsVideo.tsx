@@ -44,9 +44,12 @@ export function HlsVideo({
   /** Hover state for desktop */
   const [isHovered, setIsHovered] = useState(false);
 
+  // Update aspect ratio when prop changes, but keep existing value if video already loaded
   useEffect(() => {
-    setAspectCss(null);
-  }, [playlist]);
+    if (aspectRatio) {
+      setAspectCss(`${aspectRatio.width} / ${aspectRatio.height}`);
+    }
+  }, [aspectRatio?.width, aspectRatio?.height]);
 
   useHlsPlayer(videoRef, hlsRef, playlist, { muted: true, autoplay: false });
 

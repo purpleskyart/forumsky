@@ -1128,8 +1128,6 @@ function ThreadView({
         {ariaLiveReplies}
       </div>
 
-      <CrossDiscussionPanel rootPost={rootPost} />
-
       <div class="thread-post-stack" ref={threadStackRef}>
         <PostBlock
           segments={forumPost.segments}
@@ -1282,6 +1280,8 @@ function ThreadView({
               />
             ))}
       </div>
+
+      <CrossDiscussionPanel rootPost={rootPost} />
     </div>
     </ThreadTranslationProvider>
   );

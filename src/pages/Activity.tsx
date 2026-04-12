@@ -76,6 +76,7 @@ export function Activity() {
   const [loading, setLoading] = useState(true);
   const [hydratingPosts, setHydratingPosts] = useState(false);
   const [subscribedOnly, setSubscribedOnly] = useState(false);
+  const [repliesOnly, setRepliesOnly] = useState(false);
   const [exactTimeItems, setExactTimeItems] = useState<Set<string>>(new Set());
   const [error, setError] = useState('');
   const [retryCount, setRetryCount] = useState(0);
@@ -152,9 +153,11 @@ export function Activity() {
 
   const subscribedRoots = new Set(getSubscribedThreadRoots());
 
-  const filteredItems = subscribedOnly
-    ? items.filter(n => notificationMatchesSubscribedThreads(n, subscribedRoots))
-    : items;
+  const filteredItems = repliesOnly
+    ? items.filter(n => n.reason === 'reply')
+    : subscribedOnly
+      ? items.filter(n => notificationMatchesSubscribedThreads(n, subscribedRoots))
+      : items;
 
   if (!isLoggedIn.value) {
     return (
@@ -206,15 +209,22 @@ export function Activity() {
           <div class="activity-filters" role="group" aria-label="Which notifications to show">
             <button
               type="button"
-              class={subscribedOnly ? 'activity-filter-btn' : 'activity-filter-btn activity-filter-btn--active'}
-              onClick={() => setSubscribedOnly(false)}
+              class={!subscribedOnly && !repliesOnly ? 'activity-filter-btn activity-filter-btn--active' : 'activity-filter-btn'}
+              onClick={() => { setSubscribedOnly(false); setRepliesOnly(false); }}
             >
               All
             </button>
             <button
               type="button"
+              class={repliesOnly ? 'activity-filter-btn activity-filter-btn--active' : 'activity-filter-btn'}
+              onClick={() => { setRepliesOnly(true); setSubscribedOnly(false); }}
+            >
+              Replies
+            </button>
+            <button
+              type="button"
               class={subscribedOnly ? 'activity-filter-btn activity-filter-btn--active' : 'activity-filter-btn'}
-              onClick={() => setSubscribedOnly(true)}
+              onClick={() => { setSubscribedOnly(true); setRepliesOnly(false); }}
             >
               Subscribed threads
             </button>
@@ -236,9 +246,11 @@ export function Activity() {
         ) : filteredItems.length === 0 ? (
           <div class="empty activity-empty">
             <p>
-              {subscribedOnly
-                ? 'Nothing yet from threads you subscribe to. Use “Subscribe” on a thread to watch it here.'
-                : 'No recent replies, mentions, quotes, or likes in your notifications.'}
+              {repliesOnly
+                ? 'No replies in your notifications.'
+                : subscribedOnly
+                  ? 'Nothing yet from threads you subscribe to. Use "Subscribe" on a thread to watch it here.'
+                  : 'No recent replies, mentions, quotes, or likes in your notifications.'}
             </p>
           </div>
         ) : (

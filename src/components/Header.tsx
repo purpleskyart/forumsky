@@ -342,18 +342,6 @@ export function Header() {
           </div>
 
           <div class="header-right">
-            {showLoggedInChrome && (
-              <>
-                <a
-                  href={hrefForAppPath('/saved')}
-                  class="header-nav-link header-nav-desktop"
-                  {...SPA_ANCHOR_SHIELD}
-                  onClick={(e: Event) => { e.preventDefault(); navigate('/saved'); }}
-                >
-                  Saved
-                </a>
-              </>
-            )}
             <div class="header-auth">
             {showLoggedInChrome ? (
               restoringSession ? (
