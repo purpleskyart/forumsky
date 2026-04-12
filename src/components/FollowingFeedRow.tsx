@@ -33,7 +33,11 @@ import { formatListDateTime, formatRelativeTime, t } from '@/lib/i18n';
 import { toneIndexForHandle, formatProfileJoined, formatProfileStatCount } from '@/lib/user-display';
 import { isLoggedIn, showAuthDialog } from '@/lib/store';
 import { postHasNsfwLabels } from '@/lib/nsfw-labels';
-import { isThreadSubscribed, toggleSubscribedThreadRoot } from '@/lib/forumsky-local';
+import {
+  getThreadSubscriptionLevel,
+  toggleSubscribedThreadRoot,
+  type SubscriptionLevel,
+} from '@/lib/forumsky-local';
 import { showToast } from '@/lib/store';
 
 export interface FollowingFeedRowProps {
@@ -77,7 +81,9 @@ export function FollowingFeedRow({
   followingAuthorDids,
   viewerDid,
 }: FollowingFeedRowProps) {
-  const [subscribed, setSubscribed] = useState(isThreadSubscribed(post.uri));
+  const [subscribedLevel, setSubscribedLevel] = useState<SubscriptionLevel>(() =>
+    getThreadSubscriptionLevel(post.uri),
+  );
 
   const repostBy = repostAttributionFromReason(feedReason);
   const customFeedLabel = blendSource?.kind === 'custom' ? blendSource.label : undefined;
@@ -288,12 +294,29 @@ export function FollowingFeedRow({
                 type="button"
                 class="btn btn-sm btn-outline following-feed-row-action-btn"
                 onClick={async () => {
-                  const on = await toggleSubscribedThreadRoot(post.uri);
-                  setSubscribed(on);
-                  showToast(on ? 'Subscribed to thread' : 'Unsubscribed from thread');
+                  const level = await toggleSubscribedThreadRoot(post.uri);
+                  setSubscribedLevel(level);
+                  const toastMsg =
+                    level === 'thread'
+                      ? 'Subscribed to thread'
+                      : level === 'all'
+                        ? 'Subscribed to all replies'
+                        : 'Unsubscribed from thread';
+                  showToast(toastMsg);
                 }}
+                title={
+                  subscribedLevel === 'all'
+                    ? 'Subscribed to all replies'
+                    : subscribedLevel === 'thread'
+                      ? 'Subscribed to thread'
+                      : 'Subscribe to thread'
+                }
               >
-                {subscribed ? 'Unsubscribe' : 'Subscribe'}
+                {subscribedLevel === 'all'
+                  ? 'Subscribed (all)'
+                  : subscribedLevel === 'thread'
+                    ? 'Subscribed'
+                    : 'Subscribe'}
               </button>
               {onHide && (
                 <button

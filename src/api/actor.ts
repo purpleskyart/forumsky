@@ -16,9 +16,16 @@ const SUBSCRIBED_THREADS_COLLECTION = 'app.purplesky.threads.subscribed';
 /** Custom collection for storing ForumSky saved threads across devices */
 const SAVED_THREADS_COLLECTION = 'app.purplesky.threads.saved';
 
+export type SubscriptionLevel = 'none' | 'thread' | 'all';
+
+export interface SubscribedThreadEntry {
+  uri: string;
+  level: Exclude<SubscriptionLevel, 'none'>;
+}
+
 export interface SubscribedThreadsRecord {
   $type: string;
-  subscribedThreads: string[];
+  subscribedThreads: SubscribedThreadEntry[];
 }
 
 export interface SavedThreadsRecord {
@@ -27,7 +34,7 @@ export interface SavedThreadsRecord {
 }
 
 /** Get subscribed threads from the user's repo */
-export async function getSubscribedThreadsFromRepo(): Promise<string[]> {
+export async function getSubscribedThreadsFromRepo(): Promise<SubscribedThreadEntry[]> {
   const session = getOAuthSession();
   if (!session) return [];
 
@@ -50,7 +57,7 @@ export async function getSubscribedThreadsFromRepo(): Promise<string[]> {
 }
 
 /** Save subscribed threads to the user's repo */
-export async function saveSubscribedThreadsToRepo(subscribedThreads: string[]): Promise<void> {
+export async function saveSubscribedThreadsToRepo(subscribedThreads: SubscribedThreadEntry[]): Promise<void> {
   const session = getOAuthSession();
   if (!session) return;
 

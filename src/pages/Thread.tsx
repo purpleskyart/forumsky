@@ -97,7 +97,8 @@ import {
   clearLocallyHiddenForThread,
   getLocalHideReasons,
   toggleSubscribedThreadRoot,
-  isThreadSubscribed,
+  getThreadSubscriptionLevel,
+  type SubscriptionLevel,
 } from '@/lib/forumsky-local';
 import { reportPost } from '@/api/moderation';
 import { deletePost, createDownvote, deleteDownvote, listMyDownvotes } from '@/api/post';
@@ -426,7 +427,7 @@ function ThreadView({
   /** Outline only after W/S/A/D or arrows — not on initial load */
   const [kbOutlineActive, setKbOutlineActive] = useState(false);
   const [savedUi, setSavedUi] = useState(false);
-  const [subscribedUi, setSubscribedUi] = useState(false);
+  const [subscribedLevel, setSubscribedLevel] = useState<SubscriptionLevel>('none');
   const [localHiddenList, setLocalHiddenList] = useState<string[]>([]);
   const [ariaLiveReplies, setAriaLiveReplies] = useState('');
   const [selectionQuote, setSelectionQuote] = useState<string | null>(null);
@@ -467,7 +468,7 @@ function ThreadView({
     setKbFocusPost(1);
     setKbOutlineActive(false);
     setSavedUi(isThreadSaved(thread.forumPost.root.uri));
-    setSubscribedUi(isThreadSubscribed(thread.forumPost.root.uri));
+    setSubscribedLevel(getThreadSubscriptionLevel(thread.forumPost.root.uri));
     setLocalHiddenList(getLocallyHiddenPostUris(thread.forumPost.root.uri));
     setCollapsedNestedChains(new Set());
     composeFromQueryConsumedRef.current = false;
@@ -1032,31 +1033,59 @@ function ThreadView({
               )}
               <button
                 type="button"
-                class="btn btn-sm btn-outline"
-                onClick={() => {
-                  const last = flatOrderUris[flatOrderUris.length - 1] ?? rootPost.uri;
-                  setLastReadPostUri(rootPost.uri, last, {
-                    replyCountAtMark: rootPost.replyCount ?? 0,
-                  });
-                  showToast('Marked read through end');
-                }}
-              >
-                {t('thread.markRead')}
-              </button>
-              <button
-                type="button"
-                class="btn btn-sm btn-outline"
+                class="btn btn-sm btn-outline thread-subscribe-btn"
                 onClick={async () => {
-                  const on = await toggleSubscribedThreadRoot(rootPost.uri);
-                  setSubscribedUi(on);
-                  showToast(
-                    on
-                      ? 'Subscribed — filter Activity to "Subscribed threads" to focus on these.'
-                      : 'Unsubscribed from this thread',
-                  );
+                  const level = await toggleSubscribedThreadRoot(rootPost.uri);
+                  setSubscribedLevel(level);
+                  const toastMsg =
+                    level === 'thread'
+                      ? 'Subscribed to thread — filter Activity to "Subscribed threads" to focus on these.'
+                      : level === 'all'
+                        ? 'Subscribed to all replies — you\'ll get notifications for replies and replies to replies.'
+                        : 'Unsubscribed from this thread';
+                  showToast(toastMsg);
                 }}
+                title={
+                  subscribedLevel === 'all'
+                    ? 'Subscribed to all replies'
+                    : subscribedLevel === 'thread'
+                      ? 'Subscribed to thread'
+                      : 'Subscribe to thread'
+                }
+                aria-label={
+                  subscribedLevel === 'all'
+                    ? 'Subscribed to all replies'
+                    : subscribedLevel === 'thread'
+                      ? 'Subscribed to thread'
+                      : 'Subscribe to thread'
+                }
               >
-                {subscribedUi ? t('thread.subscribed') : t('thread.subscribe')}
+                <span class="thread-subscribe-icon" aria-hidden>
+                  {subscribedLevel === 'all' ? (
+                    // Filled bell with ringer lines (like YouTube "All")
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+                      <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+                      {/* Ringer lines */}
+                      <path d="M2 8l2 2" stroke-width="2" />
+                      <path d="M22 8l-2 2" stroke-width="2" />
+                      <path d="M1 4l3 1.5" stroke-width="2" />
+                      <path d="M23 4l-3 1.5" stroke-width="2" />
+                    </svg>
+                  ) : subscribedLevel === 'thread' ? (
+                    // Filled bell
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+                      <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+                    </svg>
+                  ) : (
+                    // Outlined bell
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+                      <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+                    </svg>
+                  )}
+                </span>
               </button>
               {localHiddenList.length > 0 && (
                 <button
@@ -2307,6 +2336,106 @@ function PostOverflowMenu({
   );
 }
 
+function PostSubscribeButton({ threadRootUri }: { threadRootUri?: string }) {
+  const [level, setLevel] = useState<SubscriptionLevel>(() =>
+    threadRootUri ? getThreadSubscriptionLevel(threadRootUri) : 'none',
+  );
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (threadRootUri) {
+      setLevel(getThreadSubscriptionLevel(threadRootUri));
+    }
+  }, [threadRootUri]);
+
+  const onToggle = async () => {
+    if (!threadRootUri) return;
+    if (!isLoggedIn.value) {
+      showAuthDialog.value = true;
+      return;
+    }
+    setBusy(true);
+    try {
+      const newLevel = await toggleSubscribedThreadRoot(threadRootUri);
+      setLevel(newLevel);
+      const toastMsg =
+        newLevel === 'thread'
+          ? 'Subscribed to thread'
+          : newLevel === 'all'
+            ? 'Subscribed to all replies'
+            : 'Unsubscribed from thread';
+      showToast(toastMsg);
+    } catch {
+      showToast('Could not update subscription');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const titleText =
+    level === 'all' ? 'Subscribed to all replies' : level === 'thread' ? 'Subscribed to thread' : 'Subscribe to thread';
+
+  return (
+    <button
+      type="button"
+      class="post-subscribe-btn"
+      onClick={() => void onToggle()}
+      disabled={busy || !threadRootUri}
+      title={titleText}
+      aria-label={titleText}
+    >
+      <span class="post-subscribe-btn-icon" aria-hidden>
+        {level === 'all' ? (
+          // Filled bell with ringer lines (like YouTube "All")
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+            {/* Ringer lines */}
+            <path d="M2 8l2 2" stroke-width="2" />
+            <path d="M22 8l-2 2" stroke-width="2" />
+          </svg>
+        ) : level === 'thread' ? (
+          // Filled bell
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+          </svg>
+        ) : (
+          // Outlined bell
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+          </svg>
+        )}
+      </span>
+    </button>
+  );
+}
+
 function PostBlock({
   segments,
   root,
@@ -2589,6 +2718,7 @@ function PostBlock({
                       : 'Translate'}
               </button>
             )}
+            {threadRootUri && <PostSubscribeButton threadRootUri={threadRootUri} />}
             <PostOverflowMenu ariaLabel={`Post ${postNumber} menu`}>
               {close => (
                 <div class="post-overflow-menu-inner">

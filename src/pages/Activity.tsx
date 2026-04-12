@@ -151,7 +151,7 @@ export function Activity() {
     return () => { controller.abort(); };
   }, [items]);
 
-  const subscribedRoots = new Set(getSubscribedThreadRoots());
+  const subscribedRoots = new Set(getSubscribedThreadRoots().map(e => e.uri));
 
   const filteredItems = repliesOnly
     ? items.filter(n => n.reason === 'reply')

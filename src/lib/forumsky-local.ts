@@ -243,12 +243,37 @@ export function clearLocallyHiddenForThread(threadRootUri: string) {
   clearLocalHideReasonsForThread(threadRootUri);
 }
 
-const SUBSCRIBED_THREADS_KEY = 'subscribed_thread_roots';
+const SUBSCRIBED_THREADS_KEY = 'subscribed_thread_roots_v2';
+const SUBSCRIBED_THREADS_LEGACY_KEY = 'subscribed_thread_roots';
 
-let cachedRepoSubscribedThreads: string[] | null = null;
-let subscribedRepoSyncPromise: Promise<string[]> | null = null;
+export type SubscriptionLevel = 'none' | 'thread' | 'all';
 
-async function loadSubscribedThreadsFromRepo(): Promise<string[]> {
+interface SubscribedThreadEntry {
+  uri: string;
+  level: Exclude<SubscriptionLevel, 'none'>;
+}
+
+let cachedRepoSubscribedThreads: SubscribedThreadEntry[] | null = null;
+let subscribedRepoSyncPromise: Promise<SubscribedThreadEntry[]> | null = null;
+
+function migrateLegacySubscriptions(): SubscribedThreadEntry[] {
+  try {
+    const legacy = loadJSON<string[]>(SUBSCRIBED_THREADS_LEGACY_KEY, []);
+    if (legacy.length > 0) {
+      // Migrate legacy string array to new format (all entries become 'thread' level)
+      const migrated = legacy.map(uri => ({ uri, level: 'thread' as const }));
+      saveJSON(SUBSCRIBED_THREADS_KEY, migrated);
+      // Clear legacy
+      localStorage.removeItem(SUBSCRIBED_THREADS_LEGACY_KEY);
+      return migrated;
+    }
+  } catch {
+    // Ignore migration errors
+  }
+  return [];
+}
+
+async function loadSubscribedThreadsFromRepo(): Promise<SubscribedThreadEntry[]> {
   if (subscribedRepoSyncPromise) return subscribedRepoSyncPromise;
   subscribedRepoSyncPromise = getSubscribedThreadsFromRepo();
   try {
@@ -272,27 +297,51 @@ export async function syncSubscribedThreadsFromRepo(): Promise<void> {
   }
 }
 
-export function getSubscribedThreadRoots(): string[] {
+export function getSubscribedThreadRoots(): SubscribedThreadEntry[] {
   // If we have cached repo data, use it
   if (cachedRepoSubscribedThreads) {
     return cachedRepoSubscribedThreads;
   }
   // Otherwise fall back to localStorage
-  return loadJSON<string[]>(SUBSCRIBED_THREADS_KEY, []);
+  const modern = loadJSON<SubscribedThreadEntry[]>(SUBSCRIBED_THREADS_KEY, []);
+  if (modern.length > 0) {
+    return modern;
+  }
+  // Try to migrate from legacy
+  return migrateLegacySubscriptions();
 }
 
+export function getThreadSubscriptionLevel(rootUri: string): SubscriptionLevel {
+  const entry = getSubscribedThreadRoots().find(e => e.uri === rootUri);
+  return entry?.level ?? 'none';
+}
+
+/** @deprecated Use getThreadSubscriptionLevel instead */
 export function isThreadSubscribed(rootUri: string): boolean {
-  return getSubscribedThreadRoots().includes(rootUri);
+  return getThreadSubscriptionLevel(rootUri) !== 'none';
 }
 
-/** @returns new subscribed state */
-export async function toggleSubscribedThreadRoot(rootUri: string): Promise<boolean> {
+/** Cycles through: none -> thread -> all -> none */
+export async function toggleSubscribedThreadRoot(rootUri: string): Promise<SubscriptionLevel> {
   const cur = getSubscribedThreadRoots();
-  const i = cur.indexOf(rootUri);
-  if (i >= 0) {
-    cur.splice(i, 1);
+  const idx = cur.findIndex(e => e.uri === rootUri);
+
+  let nextLevel: SubscriptionLevel;
+  if (idx < 0) {
+    // none -> thread
+    nextLevel = 'thread';
+    cur.push({ uri: rootUri, level: 'thread' });
   } else {
-    cur.push(rootUri);
+    const currentLevel = cur[idx].level;
+    if (currentLevel === 'thread') {
+      // thread -> all
+      nextLevel = 'all';
+      cur[idx].level = 'all';
+    } else {
+      // all -> none
+      nextLevel = 'none';
+      cur.splice(idx, 1);
+    }
   }
 
   // Update localStorage immediately
@@ -308,7 +357,7 @@ export async function toggleSubscribedThreadRoot(rootUri: string): Promise<boole
     // Sync failed, localStorage has the data
   }
 
-  return i < 0;
+  return nextLevel;
 }
 
 const COMMUNITY_LAST_VISIT_KEY = 'community_last_left_at';
