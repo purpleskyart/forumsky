@@ -13,6 +13,7 @@ import { parseProfileRoutePath } from '@/lib/spa-route-params';
 import { useRouter } from 'preact-router';
 import { currentUser, showAuthDialog, showToast, followingDids } from '@/lib/store';
 import { restoreScrollNow } from '@/lib/scroll-restore';
+import { formatProfileJoined } from '@/lib/user-display';
 import type { ProfileView, PostView, FeedViewPost } from '@/api/types';
 
 interface ProfileProps {
@@ -332,10 +333,30 @@ export function Profile(props: ProfileProps) {
                 {profile.description && (
                   <div style="font-size:0.85rem;margin-top:6px;color:var(--text)">{profile.description}</div>
                 )}
-                <div style="display:flex;gap:16px;margin-top:8px;font-size:0.8rem;color:var(--text-muted)">
-                  <span><strong>{profile.postsCount ?? 0}</strong> posts</span>
-                  <span><strong>{profile.followersCount ?? 0}</strong> followers</span>
-                  <span><strong>{profile.followsCount ?? 0}</strong> following</span>
+                <div class="profile-stats" style="display:flex;gap:12px;margin-top:6px;font-size:0.8rem;color:var(--text-muted);flex-wrap:wrap;align-items:center">
+                  <span class="profile-joined">Joined {formatProfileJoined(profile.createdAt)}</span>
+                  {!isOwnProfile && profile.viewer?.followedBy && (
+                    <span class="profile-follows-you-badge">Follows you</span>
+                  )}
+                  {profile.labels && profile.labels.length > 0 && (
+                    <>
+                      {profile.labels.some(l => l.val === 'verified') && (
+                        <span class="profile-badge-verified" title="Verified account">Verified</span>
+                      )}
+                      {profile.labels.some(l => l.val === 'bot') && (
+                        <span class="profile-badge-bot" title="Automated account">Bot</span>
+                      )}
+                      {profile.labels.some(l => ['spam', 'spammy'].includes(l.val)) && (
+                        <span class="profile-badge-warning" title="Flagged as spam">Spam</span>
+                      )}
+                      {profile.labels.some(l => ['sensitive', 'nsfw', 'adult'].includes(l.val)) && (
+                        <span class="profile-badge-warning" title="Sensitive content">Sensitive</span>
+                      )}
+                      {profile.labels.some(l => l.val === 'impersonation') && (
+                        <span class="profile-badge-warning" title="Possible impersonation">Impersonation</span>
+                      )}
+                    </>
+                  )}
                 </div>
                 {!isOwnProfile && (
                   <div class="profile-follow-actions">
