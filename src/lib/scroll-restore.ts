@@ -113,7 +113,7 @@ export function restoreScrollNow(): void {
     return;
   }
 
-  ignoreScrollPersistUntil = performance.now() + 2000;
+  ignoreScrollPersistUntil = performance.now() + 500;
 
   // Clear any pending restoration timers
   restoreTimerIds.forEach(id => window.clearTimeout(id));
@@ -215,7 +215,7 @@ export function setManualScrollRestoration(): void {
 export function attachPopstateScrollGuard(): () => void {
   if (typeof window === 'undefined') return () => {};
   const onPop = () => {
-    ignoreScrollPersistUntil = performance.now() + 2000;
+    ignoreScrollPersistUntil = performance.now() + 500;
   };
   window.addEventListener('popstate', onPop, true);
   return () => window.removeEventListener('popstate', onPop, true);
