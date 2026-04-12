@@ -46,6 +46,8 @@ function RedirectFollowedUrlsToHome() {
 }
 
 function onRouterChange(_args: RouterOnChangeArgs) {
+  // Global restoration as fallback (for pages without per-page restoration logic)
+  // Pages with async content (Home, Profile, Community) also call restoreScrollNow when content loads
   scheduleScrollRestore();
 }
 

@@ -12,6 +12,7 @@ import { navigate, threadUrl, SPA_ANCHOR_SHIELD } from '@/lib/router';
 import { parseProfileRoutePath } from '@/lib/spa-route-params';
 import { useRouter } from 'preact-router';
 import { currentUser, showAuthDialog, showToast, followingDids } from '@/lib/store';
+import { restoreScrollNow } from '@/lib/scroll-restore';
 import { formatProfileJoined } from '@/lib/user-display';
 import type { ProfileView, PostView, FeedViewPost } from '@/api/types';
 
@@ -86,6 +87,18 @@ export function Profile(props: ProfileProps) {
     return () => observer.disconnect();
   }, [hasMore, loadMore]);
 
+  /** Restore scroll when content loads (single call per mount) */
+  const hasRestoredScrollRef = useRef(false);
+  const prevLoadingRef = useRef(loading);
+  useEffect(() => {
+    const wasLoading = prevLoadingRef.current;
+    prevLoadingRef.current = loading;
+    if (!wasLoading || loading) return;
+    if (!hasRestoredScrollRef.current) {
+      hasRestoredScrollRef.current = true;
+      restoreScrollNow();
+    }
+  }, [loading]);
 
   /** Restore scroll when loadingMore completes (load more scenario). */
   const prevLoadingMoreRef = useRef(loadingMore);

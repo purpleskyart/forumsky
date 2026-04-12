@@ -13,6 +13,7 @@ import { currentUser, showAuthDialog } from '@/lib/store';
 import { appPathname } from '@/lib/app-base-path';
 import { dominantVisibleListRowIndex } from '@/lib/dominant-visible-row';
 import { navigate, communityUrl } from '@/lib/router';
+import { restoreScrollNow } from '@/lib/scroll-restore';
 import { COMMUNITY_STATS_TTL, TIMELINE_PREVIEW_LIMIT } from '@/lib/constants';
 
 interface CommunityPreview {
@@ -202,6 +203,15 @@ export function Home() {
     return () => { controller.abort(); };
   }, [user?.did]);
 
+  /** Restore scroll when content loads (single call per mount) */
+  const hasRestoredScrollRef = useRef(false);
+  useEffect(() => {
+    const hasPreviews = Object.keys(previews).length > 0;
+    if (hasPreviews && !hasRestoredScrollRef.current) {
+      hasRestoredScrollRef.current = true;
+      restoreScrollNow();
+    }
+  }, [previews]);
 
   const handleAdd = (e: Event) => {
     e.preventDefault();

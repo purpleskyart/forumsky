@@ -25,6 +25,7 @@ function readSavedScroll(fullPath: string): number | null {
 
 function writeSavedScroll(fullPath: string, y: number): void {
   sessionStorage.setItem(storageKey(fullPath), String(Math.max(0, Math.round(y))));
+  console.log('[ScrollRestore] Saved scroll for', fullPath, ':', y);
 }
 
 export { writeSavedScroll };
@@ -103,6 +104,7 @@ export function restoreScrollNow(): void {
   if (typeof window === 'undefined') return;
   const key = currentScrollStorageKey();
   const y = readSavedScroll(key);
+  console.log('[ScrollRestore] Attempting to restore for', key, ': saved y=', y, 'current y=', window.scrollY);
   if (y == null) return;
 
   ignoreScrollPersistUntil = performance.now() + 2000;
@@ -113,7 +115,7 @@ export function restoreScrollNow(): void {
 
   let hasUserScrolled = false;
   let attemptCount = 0;
-  const maxAttempts = 10;
+  const maxAttempts = 30; // Increased from 10 to handle slower content loading
 
   const checkUserScroll = () => {
     if (Math.abs(window.scrollY - y) > 50) {
@@ -146,8 +148,8 @@ export function restoreScrollNow(): void {
       if (checkUserScroll()) return;
       const success = apply();
       if (!success && attemptCount < maxAttempts) {
-        // Retry with exponential backoff up to 500ms
-        const nextDelay = Math.min(delay * 1.5, 500);
+        // Retry with exponential backoff up to 2000ms (increased from 500ms)
+        const nextDelay = Math.min(delay * 1.5, 2000);
         schedule(nextDelay);
       }
     }, delay);
@@ -157,12 +159,12 @@ export function restoreScrollNow(): void {
   requestAnimationFrame(() => {
     if (!checkUserScroll()) {
       const success = apply();
-      if (!success) schedule(50);
+      if (!success) schedule(100); // Increased from 50ms
     }
   });
-  schedule(100);
-  schedule(300);
-  schedule(600);
+  schedule(200); // Increased from 100ms
+  schedule(500); // Increased from 300ms
+  schedule(1000); // Increased from 600ms
 }
 
 /** Call after the router URL changes (back/forward or in-app navigation). */
@@ -185,7 +187,7 @@ export function setManualScrollRestoration(): void {
 
 /**
  * Save scroll for the current URL immediately before history changes (SPA navigation).
- * Ensures the outgoing page’s position is stored under the correct key.
+ * Ensures the outgoing page's position is stored under the correct key.
  */
 /** popstate changes URL before React paints; block persisting wrong scrollY under the new path. */
 export function attachPopstateScrollGuard(): () => void {

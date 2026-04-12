@@ -37,6 +37,7 @@ import { useRouter } from 'preact-router';
 import { parseAtUri } from '@/api/feed';
 import { isAuthorFiltered } from '@/lib/graph-policy';
 import { dominantVisibleListRowIndex } from '@/lib/dominant-visible-row';
+import { restoreScrollNow } from '@/lib/scroll-restore';
 import type { FeedBlendSourceMeta, FeedRootItem, PostView, ProfileView } from '@/api/types';
 
 const THREADS_PER_PAGE = 25;
@@ -232,7 +233,18 @@ export function Community({ tag: tagProp }: CommunityProps) {
     searchCursorRef.current = cursor;
   }, [cursor]);
 
-
+  /** Restore scroll when content loads (single call per mount) */
+  const hasRestoredScrollRef = useRef(false);
+  const prevLoadingForScrollRef = useRef(loading);
+  useEffect(() => {
+    const wasLoading = prevLoadingForScrollRef.current;
+    prevLoadingForScrollRef.current = loading;
+    if (!wasLoading || loading) return;
+    if (!hasRestoredScrollRef.current) {
+      hasRestoredScrollRef.current = true;
+      restoreScrollNow();
+    }
+  }, [loading]);
 
   /** Restore scroll when loadingMore completes (load more scenario). */
   const prevLoadingMoreRef = useRef(loadingMore);
