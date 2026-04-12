@@ -100,10 +100,6 @@ export function BottomNav() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       navigate(href);
-      // For non-home buttons, the user specifically wants to be at the top.
-      if (!isHome) {
-        window.scrollTo({ top: 0 });
-      }
     }
   };
 

@@ -114,10 +114,14 @@ export function restoreScrollNow(): void {
   restoreTimerIds = [];
 
   let hasUserScrolled = false;
+  let hasAttemptedRestore = false;
   let attemptCount = 0;
   const maxAttempts = 30; // Increased from 10 to handle slower content loading
 
   const checkUserScroll = () => {
+    // Only check for user scroll AFTER we've attempted restoration at least once
+    // This prevents falsely detecting user scroll when page is at 0 and we're trying to restore to 500
+    if (!hasAttemptedRestore) return false;
     if (Math.abs(window.scrollY - y) > 50) {
       hasUserScrolled = true;
     }
@@ -132,6 +136,7 @@ export function restoreScrollNow(): void {
   };
 
   const apply = () => {
+    hasAttemptedRestore = true;
     if (checkUserScroll()) return false;
     if (!canScrollTo(y)) return false;
     window.scrollTo({ top: y, left: 0, behavior: 'auto' });

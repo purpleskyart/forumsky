@@ -195,7 +195,6 @@ export function Header() {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               } else {
                 navigate('/');
-                window.scrollTo({ top: 0 });
               }
             }}
           >
