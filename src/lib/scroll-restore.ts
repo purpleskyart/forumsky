@@ -33,6 +33,16 @@ let ignoreScrollPersistUntil = 0;
 /** Track scroll restoration timers for cleanup */
 let restoreTimerIds: number[] = [];
 
+/** Pause scroll persistence for a short duration (used during navigation to prevent RAF overwrites). */
+export function pauseScrollPersistence(durationMs = 100): void {
+  ignoreScrollPersistUntil = performance.now() + durationMs;
+  if (rafId != null) {
+    window.cancelAnimationFrame(rafId);
+    rafId = null;
+  }
+  ticking = false;
+}
+
 function flushScrollPosition(): void {
   ticking = false;
   if (typeof window === 'undefined') return;

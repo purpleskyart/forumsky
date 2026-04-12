@@ -33,12 +33,8 @@ import { formatListDateTime, formatRelativeTime, t } from '@/lib/i18n';
 import { toneIndexForHandle, formatProfileJoined, formatProfileStatCount } from '@/lib/user-display';
 import { isLoggedIn, showAuthDialog } from '@/lib/store';
 import { postHasNsfwLabels } from '@/lib/nsfw-labels';
-import {
-  getThreadSubscriptionLevel,
-  toggleSubscribedThreadRoot,
-  type SubscriptionLevel,
-} from '@/lib/forumsky-local';
 import { showToast } from '@/lib/store';
+import { PostSubscribeButton } from '@/components/PostSubscribeButton';
 
 export interface FollowingFeedRowProps {
   post: PostView;
@@ -81,9 +77,6 @@ export function FollowingFeedRow({
   followingAuthorDids,
   viewerDid,
 }: FollowingFeedRowProps) {
-  const [subscribedLevel, setSubscribedLevel] = useState<SubscriptionLevel>(() =>
-    getThreadSubscriptionLevel(post.uri),
-  );
 
   const repostBy = repostAttributionFromReason(feedReason);
   const customFeedLabel = blendSource?.kind === 'custom' ? blendSource.label : undefined;
@@ -224,6 +217,11 @@ export function FollowingFeedRow({
               </tr>
             </tbody>
           </table>
+          <div class="author-badges">
+            {post.author.labels?.some(l => l.val === 'bot') && (
+              <span class="author-badge author-badge-bot">Bot</span>
+            )}
+          </div>
         </div>
       </div>
       <div class="post-body">
@@ -290,34 +288,7 @@ export function FollowingFeedRow({
               </span>
             )}
             <div class="following-feed-row-header-actions" onClick={stopNav}>
-              <button
-                type="button"
-                class="btn btn-sm btn-outline following-feed-row-action-btn"
-                onClick={async () => {
-                  const level = await toggleSubscribedThreadRoot(post.uri);
-                  setSubscribedLevel(level);
-                  const toastMsg =
-                    level === 'thread'
-                      ? 'Subscribed to thread'
-                      : level === 'all'
-                        ? 'Subscribed to all replies'
-                        : 'Unsubscribed from thread';
-                  showToast(toastMsg);
-                }}
-                title={
-                  subscribedLevel === 'all'
-                    ? 'Subscribed to all replies'
-                    : subscribedLevel === 'thread'
-                      ? 'Subscribed to thread'
-                      : 'Subscribe to thread'
-                }
-              >
-                {subscribedLevel === 'all'
-                  ? 'Subscribed (all)'
-                  : subscribedLevel === 'thread'
-                    ? 'Subscribed'
-                    : 'Subscribe'}
-              </button>
+              <PostSubscribeButton threadRootUri={post.uri} />
               {onHide && (
                 <button
                   type="button"

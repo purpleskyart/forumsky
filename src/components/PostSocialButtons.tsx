@@ -300,7 +300,7 @@ export function PostLikeButton({ post }: { post: PostView }) {
       aria-label={liked ? `Unlike (${count})` : `Like (${count})`}
     >
       <span class="post-like-btn-icon" aria-hidden>
-        ♥
+        {liked ? '♥' : '♡'}
       </span>
       <span class="post-like-btn-count">{count}</span>
     </button>

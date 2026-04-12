@@ -87,6 +87,21 @@ export function Profile(props: ProfileProps) {
     return () => observer.disconnect();
   }, [hasMore, loadMore]);
 
+  /** Restore scroll when initial loading completes (back navigation scenario). */
+  const prevLoadingRef = useRef(loading);
+  useEffect(() => {
+    const wasLoading = prevLoadingRef.current;
+    prevLoadingRef.current = loading;
+    if (!wasLoading || loading) return;
+    restoreScrollNow();
+    const t1 = window.setTimeout(() => restoreScrollNow(), 350);
+    const t2 = window.setTimeout(() => restoreScrollNow(), 700);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [loading]);
+
   /** Restore scroll when loadingMore completes (load more scenario). */
   const prevLoadingMoreRef = useRef(loadingMore);
   const scrollYBeforeLoadMoreRef = useRef(0);
