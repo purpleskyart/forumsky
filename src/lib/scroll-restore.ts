@@ -144,7 +144,6 @@ export function restoreScrollNow(): void {
   };
 
   const apply = () => {
-    hasAttemptedRestore = true;
     if (checkUserScroll()) {
       console.log('[ScrollRestore] apply: user scrolled, aborting');
       return false;
@@ -154,6 +153,7 @@ export function restoreScrollNow(): void {
       return false;
     }
     console.log('[ScrollRestore] apply: scrolling to', y);
+    hasAttemptedRestore = true;
     window.scrollTo({ top: y, left: 0, behavior: 'auto' });
     const success = Math.abs(window.scrollY - y) < 50;
     console.log('[ScrollRestore] apply: after scrollTo, scrollY=', window.scrollY, 'success=', success);
