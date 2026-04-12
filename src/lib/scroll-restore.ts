@@ -138,15 +138,26 @@ export function restoreScrollNow(): void {
     const docHeight = document.documentElement.scrollHeight;
     const viewportHeight = window.innerHeight;
     const maxScroll = Math.max(0, docHeight - viewportHeight);
-    return targetY <= maxScroll + 100; // Allow small overshoot tolerance
+    const result = targetY <= maxScroll + 100; // Allow small overshoot tolerance
+    console.log('[ScrollRestore] canScrollTo check: targetY=', targetY, 'docHeight=', docHeight, 'viewportHeight=', viewportHeight, 'maxScroll=', maxScroll, 'result=', result);
+    return result;
   };
 
   const apply = () => {
     hasAttemptedRestore = true;
-    if (checkUserScroll()) return false;
-    if (!canScrollTo(y)) return false;
+    if (checkUserScroll()) {
+      console.log('[ScrollRestore] apply: user scrolled, aborting');
+      return false;
+    }
+    if (!canScrollTo(y)) {
+      console.log('[ScrollRestore] apply: cannot scroll to target, aborting');
+      return false;
+    }
+    console.log('[ScrollRestore] apply: scrolling to', y);
     window.scrollTo({ top: y, left: 0, behavior: 'auto' });
-    return Math.abs(window.scrollY - y) < 50;
+    const success = Math.abs(window.scrollY - y) < 50;
+    console.log('[ScrollRestore] apply: after scrollTo, scrollY=', window.scrollY, 'success=', success);
+    return success;
   };
 
   // Initial restore attempt
