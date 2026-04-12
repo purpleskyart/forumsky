@@ -25,6 +25,15 @@ function writeSavedScroll(fullPath: string, y: number): void {
   sessionStorage.setItem(storageKey(fullPath), String(Math.max(0, Math.round(y))));
 }
 
+/** Remove saved scroll position for a path (used before forward navigation to ensure we start at top). */
+export function clearSavedScroll(fullPath: string): void {
+  try {
+    sessionStorage.removeItem(storageKey(fullPath));
+  } catch {
+    /* ignore */
+  }
+}
+
 let persistRefCount = 0;
 let rafId: number | null = null;
 let ticking = false;

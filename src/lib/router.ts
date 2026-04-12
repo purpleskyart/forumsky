@@ -1,7 +1,7 @@
 import { route as preactRoute } from 'preact-router';
 import { FOLLOWED_COMMUNITY_TAG } from '@/lib/preferences';
 import { confirmLeaveIfComposerDirty } from '@/lib/navigation-guard';
-import { pauseScrollPersistence } from '@/lib/scroll-restore';
+import { pauseScrollPersistence, clearSavedScroll } from '@/lib/scroll-restore';
 
 /**
  * Preact-router installs a document click handler that calls `route(anchor.getAttribute('href'))`.
@@ -27,6 +27,8 @@ function saveScrollBeforeNav(): void {
 export function navigate(path: string, replace = false) {
   if (!confirmLeaveIfComposerDirty()) return;
   saveScrollBeforeNav();
+  // Clear any saved scroll for the destination so forward navigation starts at top
+  clearSavedScroll(path);
   preactRoute(path, replace);
 }
 
