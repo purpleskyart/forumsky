@@ -132,11 +132,20 @@ export function PostContentImage({
 
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') close();
-      if (e.key === 'ArrowLeft') goToPrev();
-      if (e.key === 'ArrowRight') goToNext();
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+        e.preventDefault();
+        e.stopPropagation();
+        goToPrev();
+      }
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+        e.preventDefault();
+        e.stopPropagation();
+        goToNext();
+      }
       trapFocus(e);
     };
-    window.addEventListener('keydown', onKey);
+    // Use capture phase so lightbox gets events before window listeners on feed pages
+    window.addEventListener('keydown', onKey, true);
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
@@ -151,7 +160,7 @@ export function PostContentImage({
     });
 
     return () => {
-      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('keydown', onKey, true);
       document.body.style.overflow = prevOverflow;
     };
   }, [open, close, goToPrev, goToNext, trapFocus, getFocusableElements]);

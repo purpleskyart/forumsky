@@ -84,7 +84,7 @@ export const showAuthDialog = signal(false);
 /** Where to get an AT Protocol account (separate from login OAuth). */
 export const showSignUpDialog = signal(false);
 
-export const currentRoute = signal<{ path: string; params: Record<string, string> }>({
+export const currentRoute = signal<{ path: string; params: Record<string, string | undefined> }>({
   path: '/',
   params: {},
 });
