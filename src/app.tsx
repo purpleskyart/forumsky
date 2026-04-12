@@ -45,28 +45,12 @@ function RedirectFollowedUrlsToHome() {
   return <div>Redirecting...</div>;
 }
 
-// Global flag to signal route change to pages
-let routeChangeCounter = 0;
-let previousUrl = '';
-
-export function getRouteChangeCounter(): number {
-  return routeChangeCounter;
-}
-
-function onRouterChange(args: RouterOnChangeArgs) {
-  const currentUrl = args.url;
-  console.log('[App] Route changed from:', previousUrl, 'to:', currentUrl, 'event:', args);
-  previousUrl = currentUrl;
-  // Increment counter to signal pages that route has changed
-  routeChangeCounter++;
-  console.log('[App] Route changed, counter:', routeChangeCounter);
+function onRouterChange(_args: RouterOnChangeArgs) {
+  // Route change handler - scroll restoration is handled by individual pages
 }
 
 export function App() {
-  console.log('[ForumSky] App component rendering...');
-  
   useEffect(() => {
-    console.log('[ForumSky] App useEffect running - scroll restoration ENABLED');
     setManualScrollRestoration();
     const cleanupPopstate = attachPopstateScrollGuard();
     const cleanupHistory = patchHistoryScrollSave();

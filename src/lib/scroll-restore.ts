@@ -25,7 +25,6 @@ function readSavedScroll(fullPath: string): number | null {
 
 function writeSavedScroll(fullPath: string, y: number): void {
   sessionStorage.setItem(storageKey(fullPath), String(Math.max(0, Math.round(y))));
-  console.log('[ScrollRestore] Saved scroll for', fullPath, ':', y);
 }
 
 export { writeSavedScroll };
@@ -104,16 +103,9 @@ export function restoreScrollNow(): void {
   if (typeof window === 'undefined') return;
   const key = currentScrollStorageKey();
   const y = readSavedScroll(key);
-  console.log('[ScrollRestore] Attempting to restore for key:', key, ': saved y=', y, 'current y=', window.scrollY, 'document height=', document.documentElement.scrollHeight);
-  if (y == null) {
-    console.log('[ScrollRestore] No saved scroll found for key:', key);
-    // Log all saved scroll keys for debugging
-    const allKeys = Object.keys(sessionStorage).filter(k => k.startsWith('forumskyScroll:'));
-    console.log('[ScrollRestore] All saved scroll keys:', allKeys);
-    return;
-  }
+  if (y == null) return;
 
-  ignoreScrollPersistUntil = performance.now() + 500;
+  ignoreScrollPersistUntil = performance.now() + 250;
 
   // Clear any pending restoration timers
   restoreTimerIds.forEach(id => window.clearTimeout(id));
@@ -138,26 +130,15 @@ export function restoreScrollNow(): void {
     const docHeight = document.documentElement.scrollHeight;
     const viewportHeight = window.innerHeight;
     const maxScroll = Math.max(0, docHeight - viewportHeight);
-    const result = targetY <= maxScroll + 100; // Allow small overshoot tolerance
-    console.log('[ScrollRestore] canScrollTo check: targetY=', targetY, 'docHeight=', docHeight, 'viewportHeight=', viewportHeight, 'maxScroll=', maxScroll, 'result=', result);
-    return result;
+    return targetY <= maxScroll + 100; // Allow small overshoot tolerance
   };
 
   const apply = () => {
-    if (checkUserScroll()) {
-      console.log('[ScrollRestore] apply: user scrolled, aborting');
-      return false;
-    }
-    if (!canScrollTo(y)) {
-      console.log('[ScrollRestore] apply: cannot scroll to target, aborting');
-      return false;
-    }
-    console.log('[ScrollRestore] apply: scrolling to', y);
+    if (checkUserScroll()) return false;
+    if (!canScrollTo(y)) return false;
     hasAttemptedRestore = true;
     window.scrollTo({ top: y, left: 0, behavior: 'auto' });
-    const success = Math.abs(window.scrollY - y) < 50;
-    console.log('[ScrollRestore] apply: after scrollTo, scrollY=', window.scrollY, 'success=', success);
-    return success;
+    return Math.abs(window.scrollY - y) < 50;
   };
 
   // Initial restore attempt
@@ -215,7 +196,7 @@ export function setManualScrollRestoration(): void {
 export function attachPopstateScrollGuard(): () => void {
   if (typeof window === 'undefined') return () => {};
   const onPop = () => {
-    ignoreScrollPersistUntil = performance.now() + 500;
+    ignoreScrollPersistUntil = performance.now() + 250;
   };
   window.addEventListener('popstate', onPop, true);
   return () => window.removeEventListener('popstate', onPop, true);

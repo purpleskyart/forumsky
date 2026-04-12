@@ -315,14 +315,12 @@ export function Thread(props: ThreadProps) {
   /** Restore scroll when content loads */
   useEffect(() => {
     if (loading) return;
-    console.log('[Thread] Calling restoreScrollNow');
     restoreScrollNow();
   }, [loading]);
 
   /** Also restore scroll if we have thread data (cached scenario) */
   useEffect(() => {
     if (thread) {
-      console.log('[Thread] Thread data available, calling restoreScrollNow');
       restoreScrollNow();
     }
   }, [thread]);

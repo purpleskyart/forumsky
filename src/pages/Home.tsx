@@ -206,9 +206,7 @@ export function Home() {
   /** Restore scroll when content loads */
   useEffect(() => {
     const hasPreviews = Object.keys(previews).length > 0;
-    console.log('[Home] Content loaded, hasPreviews:', hasPreviews);
     if (hasPreviews) {
-      console.log('[Home] Calling restoreScrollNow');
       restoreScrollNow();
     }
   }, [previews]);

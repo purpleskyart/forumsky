@@ -94,7 +94,6 @@ export function Profile(props: ProfileProps) {
     const wasLoading = prevLoadingRef.current;
     prevLoadingRef.current = loading;
     if (!wasLoading || loading) return;
-    console.log('[Profile] Calling restoreScrollNow');
     restoreScrollNow();
   }, [loading]);
 

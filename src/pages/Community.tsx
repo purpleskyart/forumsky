@@ -239,17 +239,13 @@ export function Community({ tag: tagProp }: CommunityProps) {
   useEffect(() => {
     const wasLoading = prevLoadingForScrollRef.current;
     prevLoadingForScrollRef.current = loading;
-    console.log('[Community] Loading state changed, wasLoading:', wasLoading, 'loading:', loading);
     if (!wasLoading || loading) return;
-    console.log('[Community] Calling restoreScrollNow for tag:', tag);
     restoreScrollNow();
   }, [loading]);
 
   /** Also restore scroll if we have a valid snapshot on mount (cached state scenario) */
   useEffect(() => {
-    console.log('[Community] Mount with validSnapshot:', !!validSnapshot);
     if (validSnapshot) {
-      console.log('[Community] Calling restoreScrollNow from snapshot for tag:', tag);
       restoreScrollNow();
     }
   }, [validSnapshot]);
