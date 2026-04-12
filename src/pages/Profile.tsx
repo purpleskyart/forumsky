@@ -70,11 +70,14 @@ export function Profile(props: ProfileProps) {
     }
   }, [handle, cursor, hasMore, loadingMore, filter, getFilterParam]);
 
+  const isLoadingMoreRef = useRef(loadingMore);
+  isLoadingMoreRef.current = loadingMore;
+
   useEffect(() => {
     if (!loadMoreRef.current || !hasMore) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0]?.isIntersecting) {
+        if (entries[0]?.isIntersecting && !isLoadingMoreRef.current) {
           loadMore();
         }
       },

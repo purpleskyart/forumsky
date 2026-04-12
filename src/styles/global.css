@@ -2998,6 +2998,8 @@ a.post-overflow-menu-item {
 .post-content-media-stack .post-hls-video-wrap,
 .post-quoted-embed-stack .post-hls-video-wrap {
   max-width: 100%;
+  width: fit-content;
+  display: inline-block;
 }
 .post-hls-video-wrap video.post-content-media {
   display: block;
@@ -5394,6 +5396,7 @@ button.post-ref-expand-translate-btn {
 
 .composer-link-preview {
   display: flex;
+  flex-direction: column;
   gap: 8px;
   margin-top: 8px;
   padding: 6px;
@@ -5402,8 +5405,8 @@ button.post-ref-expand-translate-btn {
   background: rgba(255, 255, 255, 0.03);
 }
 .composer-link-preview-thumb {
-  width: 160px;
-  height: 100px;
+  width: 100%;
+  aspect-ratio: 16 / 9;
   object-fit: cover;
   border-radius: 6px;
   flex-shrink: 0;

@@ -102,14 +102,19 @@ function FeedLoadMoreSection({
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const onLoadMoreRef = useRef(onLoadMore);
+  const hasTriggeredRef = useRef(false);
   onLoadMoreRef.current = onLoadMore;
 
   useEffect(() => {
-    if (loadingMore) return;
     const el = wrapRef.current;
     if (!el) return;
 
-    const trigger = () => onLoadMoreRef.current();
+    const trigger = () => {
+      // Prevent double-triggering while loading or if already triggered
+      if (loadingMore || hasTriggeredRef.current) return;
+      hasTriggeredRef.current = true;
+      onLoadMoreRef.current();
+    };
 
     const obs = new IntersectionObserver(
       entries => {
@@ -131,13 +136,24 @@ function FeedLoadMoreSection({
     };
   }, [loadingMore]);
 
+  // Reset trigger flag when loading completes
+  useEffect(() => {
+    if (!loadingMore) {
+      hasTriggeredRef.current = false;
+    }
+  }, [loadingMore]);
+
   return (
     <div class="feed-load-more-wrap" ref={wrapRef}>
       <button
         type="button"
         class="btn btn-outline feed-load-more-btn"
         disabled={loadingMore}
-        onClick={() => onLoadMoreRef.current()}
+        onClick={() => {
+          if (!loadingMore) {
+            onLoadMoreRef.current();
+          }
+        }}
       >
         {loadingMore ? 'Loading\u2026' : 'Load more'}
       </button>

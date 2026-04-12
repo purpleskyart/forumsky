@@ -43,7 +43,7 @@ import {
 } from '@/lib/thread-merger';
 import { getDownvoteCounts } from '@/lib/constellation';
 import { postHasNsfwLabels } from '@/lib/nsfw-labels';
-import { toneIndexForHandle } from '@/lib/user-display';
+import { toneIndexForHandle, formatProfileJoined, formatProfileStatCount } from '@/lib/user-display';
 import {
   renderPostContent,
   getPostImages,
@@ -2542,6 +2542,22 @@ function PostBlock({
               <span class="author-badge author-badge-follows-you">Follows you</span>
             )}
           </div>
+          <table class="author-stats-table">
+            <tbody>
+              <tr>
+                <td>Joined</td>
+                <td>{formatProfileJoined(root.author.createdAt)}</td>
+              </tr>
+              <tr>
+                <td>Followers</td>
+                <td class="author-accent-stat">{formatProfileStatCount(root.author.followersCount)}</td>
+              </tr>
+              <tr>
+                <td>Posts</td>
+                <td class="author-accent-stat">{formatProfileStatCount(root.author.postsCount)}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
       <div class="post-body">
