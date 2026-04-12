@@ -1,4 +1,5 @@
 import { Fragment, createContext } from 'preact';
+import { createPortal } from 'preact/compat';
 import {
   useState,
   useEffect,
