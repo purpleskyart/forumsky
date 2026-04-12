@@ -96,7 +96,6 @@ import {
   setLocalHideReason,
   clearLocallyHiddenForThread,
   getLocalHideReasons,
-  toggleSubscribedThreadRoot,
   getThreadSubscriptionLevel,
   type SubscriptionLevel,
 } from '@/lib/forumsky-local';
@@ -427,7 +426,6 @@ function ThreadView({
   /** Outline only after W/S/A/D or arrows — not on initial load */
   const [kbOutlineActive, setKbOutlineActive] = useState(false);
   const [savedUi, setSavedUi] = useState(false);
-  const [subscribedLevel, setSubscribedLevel] = useState<SubscriptionLevel>('none');
   const [localHiddenList, setLocalHiddenList] = useState<string[]>([]);
   const [ariaLiveReplies, setAriaLiveReplies] = useState('');
   const [selectionQuote, setSelectionQuote] = useState<string | null>(null);
@@ -468,7 +466,6 @@ function ThreadView({
     setKbFocusPost(1);
     setKbOutlineActive(false);
     setSavedUi(isThreadSaved(thread.forumPost.root.uri));
-    setSubscribedLevel(getThreadSubscriptionLevel(thread.forumPost.root.uri));
     setLocalHiddenList(getLocallyHiddenPostUris(thread.forumPost.root.uri));
     setCollapsedNestedChains(new Set());
     composeFromQueryConsumedRef.current = false;
@@ -1031,62 +1028,6 @@ function ThreadView({
                   {t('thread.jumpToNew')}
                 </button>
               )}
-              <button
-                type="button"
-                class="btn btn-sm btn-outline thread-subscribe-btn"
-                onClick={async () => {
-                  const level = await toggleSubscribedThreadRoot(rootPost.uri);
-                  setSubscribedLevel(level);
-                  const toastMsg =
-                    level === 'thread'
-                      ? 'Subscribed to thread — filter Activity to "Subscribed threads" to focus on these.'
-                      : level === 'all'
-                        ? 'Subscribed to all replies — you\'ll get notifications for replies and replies to replies.'
-                        : 'Unsubscribed from this thread';
-                  showToast(toastMsg);
-                }}
-                title={
-                  subscribedLevel === 'all'
-                    ? 'Subscribed to all replies'
-                    : subscribedLevel === 'thread'
-                      ? 'Subscribed to thread'
-                      : 'Subscribe to thread'
-                }
-                aria-label={
-                  subscribedLevel === 'all'
-                    ? 'Subscribed to all replies'
-                    : subscribedLevel === 'thread'
-                      ? 'Subscribed to thread'
-                      : 'Subscribe to thread'
-                }
-              >
-                <span class="thread-subscribe-icon" aria-hidden>
-                  {subscribedLevel === 'all' ? (
-                    // Filled bell with ringer lines (like YouTube "All")
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-                      <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-                      {/* Ringer lines */}
-                      <path d="M2 8l2 2" stroke-width="2" />
-                      <path d="M22 8l-2 2" stroke-width="2" />
-                      <path d="M1 4l3 1.5" stroke-width="2" />
-                      <path d="M23 4l-3 1.5" stroke-width="2" />
-                    </svg>
-                  ) : subscribedLevel === 'thread' ? (
-                    // Filled bell
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-                      <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-                    </svg>
-                  ) : (
-                    // Outlined bell
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-                      <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-                    </svg>
-                  )}
-                </span>
-              </button>
               {localHiddenList.length > 0 && (
                 <button
                   type="button"
@@ -2340,7 +2281,10 @@ function PostSubscribeButton({ threadRootUri }: { threadRootUri?: string }) {
   const [level, setLevel] = useState<SubscriptionLevel>(() =>
     threadRootUri ? getThreadSubscriptionLevel(threadRootUri) : 'none',
   );
-  const [busy, setBusy] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (threadRootUri) {
@@ -2348,91 +2292,203 @@ function PostSubscribeButton({ threadRootUri }: { threadRootUri?: string }) {
     }
   }, [threadRootUri]);
 
-  const onToggle = async () => {
+  useEffect(() => {
+    if (!menuOpen) {
+      setMenuPos(null);
+      return;
+    }
+    if (!btnRef.current) return;
+    const r = btnRef.current.getBoundingClientRect();
+    const menuWidth = 200;
+    const left = Math.min(
+      Math.max(8, r.right - menuWidth),
+      typeof window !== 'undefined' ? window.innerWidth - menuWidth - 8 : r.left,
+    );
+    setMenuPos({ top: r.bottom + 4, left });
+  }, [menuOpen]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onScrollOrResize = () => {
+      if (!btnRef.current) return;
+      const r = btnRef.current.getBoundingClientRect();
+      const menuWidth = 200;
+      const left = Math.min(
+        Math.max(8, r.right - menuWidth),
+        window.innerWidth - menuWidth - 8,
+      );
+      setMenuPos({ top: r.bottom + 4, left });
+    };
+    window.addEventListener('scroll', onScrollOrResize, true);
+    window.addEventListener('resize', onScrollOrResize);
+    return () => {
+      window.removeEventListener('scroll', onScrollOrResize, true);
+      window.removeEventListener('resize', onScrollOrResize);
+    };
+  }, [menuOpen]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDoc = (e: Event) => {
+      const t = e.target as Node;
+      if (btnRef.current?.contains(t) || menuRef.current?.contains(t)) return;
+      setMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false);
+    };
+    document.addEventListener('pointerdown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', onDoc);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [menuOpen]);
+
+  const setSubscription = async (newLevel: SubscriptionLevel) => {
+    if (!threadRootUri) return;
+    if (!isLoggedIn.value) {
+      showAuthDialog.value = true;
+      setMenuOpen(false);
+      return;
+    }
+    try {
+      // Import setThreadSubscriptionLevel dynamically to avoid circular dependency
+      const { setThreadSubscriptionLevel } = await import('@/lib/forumsky-local');
+      await setThreadSubscriptionLevel(threadRootUri, newLevel);
+      setLevel(newLevel);
+      const toastMsg =
+        newLevel === 'thread'
+          ? 'Subscribed to this thread'
+          : newLevel === 'all'
+            ? 'Subscribed to all replies'
+            : 'Unsubscribed';
+      showToast(toastMsg);
+    } catch {
+      showToast('Could not update subscription');
+    } finally {
+      setMenuOpen(false);
+    }
+  };
+
+  const onClick = () => {
     if (!threadRootUri) return;
     if (!isLoggedIn.value) {
       showAuthDialog.value = true;
       return;
     }
-    setBusy(true);
-    try {
-      const newLevel = await toggleSubscribedThreadRoot(threadRootUri);
-      setLevel(newLevel);
-      const toastMsg =
-        newLevel === 'thread'
-          ? 'Subscribed to thread'
-          : newLevel === 'all'
-            ? 'Subscribed to all replies'
-            : 'Unsubscribed from thread';
-      showToast(toastMsg);
-    } catch {
-      showToast('Could not update subscription');
-    } finally {
-      setBusy(false);
-    }
+    setMenuOpen(true);
   };
 
   const titleText =
-    level === 'all' ? 'Subscribed to all replies' : level === 'thread' ? 'Subscribed to thread' : 'Subscribe to thread';
+    level === 'all' ? 'Subscribed to all replies' : level === 'thread' ? 'Subscribed to thread' : 'Subscribe';
+
+  const menuPortal =
+    menuOpen &&
+    menuPos &&
+    createPortal(
+      <div
+        ref={menuRef}
+        class="post-subscribe-menu post-subscribe-menu--portal"
+        style={{ top: `${menuPos.top}px`, left: `${menuPos.left}px` }}
+        role="menu"
+        aria-label="Subscription options"
+      >
+        <button
+          type="button"
+          role="menuitem"
+          class={`post-subscribe-menu-item ${level === 'all' ? 'post-subscribe-menu-item--active' : ''}`}
+          onClick={() => void setSubscription('all')}
+        >
+          <span class="post-subscribe-menu-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2">
+              <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+              <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+              <path d="M1 6l3 1" />
+              <path d="M23 6l-3 1" />
+            </svg>
+          </span>
+          <span class="post-subscribe-menu-text">
+            <span class="post-subscribe-menu-label">All replies</span>
+            <span class="post-subscribe-menu-hint">Get notified of all replies</span>
+          </span>
+        </button>
+        <button
+          type="button"
+          role="menuitem"
+          class={`post-subscribe-menu-item ${level === 'thread' ? 'post-subscribe-menu-item--active' : ''}`}
+          onClick={() => void setSubscription('thread')}
+        >
+          <span class="post-subscribe-menu-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2">
+              <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+              <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+            </svg>
+          </span>
+          <span class="post-subscribe-menu-text">
+            <span class="post-subscribe-menu-label">This thread</span>
+            <span class="post-subscribe-menu-hint">Top-level replies only</span>
+          </span>
+        </button>
+        <div class="post-subscribe-menu-divider" />
+        <button
+          type="button"
+          role="menuitem"
+          class={`post-subscribe-menu-item ${level === 'none' ? 'post-subscribe-menu-item--active' : ''}`}
+          onClick={() => void setSubscription('none')}
+        >
+          <span class="post-subscribe-menu-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+              <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+              <line x1="1" y1="1" x2="23" y2="23" />
+            </svg>
+          </span>
+          <span class="post-subscribe-menu-text">
+            <span class="post-subscribe-menu-label">Unsubscribe</span>
+            <span class="post-subscribe-menu-hint">Stop notifications</span>
+          </span>
+        </button>
+      </div>,
+      document.body,
+    );
 
   return (
-    <button
-      type="button"
-      class="post-subscribe-btn"
-      onClick={() => void onToggle()}
-      disabled={busy || !threadRootUri}
-      title={titleText}
-      aria-label={titleText}
-    >
-      <span class="post-subscribe-btn-icon" aria-hidden>
-        {level === 'all' ? (
-          // Filled bell with ringer lines (like YouTube "All")
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-            {/* Ringer lines */}
-            <path d="M2 8l2 2" stroke-width="2" />
-            <path d="M22 8l-2 2" stroke-width="2" />
-          </svg>
-        ) : level === 'thread' ? (
-          // Filled bell
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-          </svg>
-        ) : (
-          // Outlined bell
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-          </svg>
-        )}
-      </span>
-    </button>
+    <div class="post-subscribe-wrap">
+      <button
+        ref={btnRef}
+        type="button"
+        class="post-subscribe-btn"
+        onClick={onClick}
+        disabled={!threadRootUri}
+        title={titleText}
+        aria-label={titleText}
+        aria-expanded={menuOpen}
+        aria-haspopup="menu"
+      >
+        <span class="post-subscribe-btn-icon" aria-hidden>
+          {level === 'all' ? (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2">
+              <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+              <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+              <path d="M1 6l3 1" />
+              <path d="M23 6l-3 1" />
+            </svg>
+          ) : level === 'thread' ? (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2">
+              <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+              <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+              <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+            </svg>
+          )}
+        </span>
+      </button>
+      {menuPortal}
+    </div>
   );
 }
 

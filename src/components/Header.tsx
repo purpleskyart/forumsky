@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
 import { Avatar } from '@/components/Avatar';
-import { showAuthDialog, showSignUpDialog, currentUser, isLoggedIn, showToast, sessionRestorePending } from '@/lib/store';
+import { showAuthDialog, showSignUpDialog, currentUser, isLoggedIn, showToast, sessionRestorePending, showGlobalComposer } from '@/lib/store';
 import { hrefForAppPath } from '@/lib/app-base-path';
 import { navigate, communityUrl, searchUrl, SPA_ANCHOR_SHIELD, threadUrl, profileUrl } from '@/lib/router';
 import { UserMenuPanel } from '@/components/UserMenuPanel';
@@ -349,28 +349,37 @@ export function Header() {
                   <div class="spinner" />
                 </div>
               ) : (
-              <div class="header-user-menu" ref={userMenuRef}>
-                <button
-                  type="button"
-                  class="header-user-menu-trigger"
-                  aria-expanded={userMenuOpen}
-                  aria-haspopup="menu"
-                  aria-controls="header-user-menu-panel"
-                  title={`${user?.displayName || user?.handle} — account menu`}
-                  onClick={() => {
-                    setUserMenuOpen(o => !o);
-                  }}
-                >
-                  <Avatar
-                    src={user?.avatar}
-                    alt={user?.displayName || user?.handle || 'Account'}
-                    size={32}
-                  />
-                </button>
-                {userMenuOpen && (
-                  <UserMenuPanel onClose={() => setUserMenuOpen(false)} />
-                )}
-              </div>
+                <>
+                  <button
+                    type="button"
+                    class="btn btn-primary btn-sm header-new-post-btn"
+                    onClick={() => { showGlobalComposer.value = true; }}
+                  >
+                    New Post
+                  </button>
+                  <div class="header-user-menu" ref={userMenuRef}>
+                    <button
+                      type="button"
+                      class="header-user-menu-trigger"
+                      aria-expanded={userMenuOpen}
+                      aria-haspopup="menu"
+                      aria-controls="header-user-menu-panel"
+                      title={`${user?.displayName || user?.handle} — account menu`}
+                      onClick={() => {
+                        setUserMenuOpen(o => !o);
+                      }}
+                    >
+                      <Avatar
+                        src={user?.avatar}
+                        alt={user?.displayName || user?.handle || 'Account'}
+                        size={32}
+                      />
+                    </button>
+                    {userMenuOpen && (
+                      <UserMenuPanel onClose={() => setUserMenuOpen(false)} />
+                    )}
+                  </div>
+                </>
               )
             ) : (
               <>

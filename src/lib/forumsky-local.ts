@@ -360,6 +360,39 @@ export async function toggleSubscribedThreadRoot(rootUri: string): Promise<Subsc
   return nextLevel;
 }
 
+/** Set a specific subscription level for a thread */
+export async function setThreadSubscriptionLevel(rootUri: string, level: SubscriptionLevel): Promise<void> {
+  const cur = getSubscribedThreadRoots();
+  const idx = cur.findIndex(e => e.uri === rootUri);
+
+  if (level === 'none') {
+    // Remove from list
+    if (idx >= 0) {
+      cur.splice(idx, 1);
+    }
+  } else {
+    // Add or update
+    if (idx >= 0) {
+      cur[idx].level = level;
+    } else {
+      cur.push({ uri: rootUri, level });
+    }
+  }
+
+  // Update localStorage immediately
+  saveJSON(SUBSCRIBED_THREADS_KEY, cur);
+
+  // Update cache
+  cachedRepoSubscribedThreads = cur;
+
+  // Sync to repo in background
+  try {
+    await saveSubscribedThreadsToRepo(cur);
+  } catch {
+    // Sync failed, localStorage has the data
+  }
+}
+
 const COMMUNITY_LAST_VISIT_KEY = 'community_last_left_at';
 
 export function getCommunityLastLeftAt(tag: string): string | null {

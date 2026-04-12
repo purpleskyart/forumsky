@@ -2500,6 +2500,80 @@ button.post-translate-btn:disabled {
   opacity: 0.55;
   cursor: default;
 }
+.post-subscribe-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.post-subscribe-menu {
+  min-width: 220px;
+  max-width: min(320px, calc(100vw - 16px));
+  padding: 6px 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+}
+.post-subscribe-menu--portal {
+  position: fixed;
+  z-index: 10000;
+  margin: 0;
+}
+.post-subscribe-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 0.84rem;
+  font-weight: 500;
+  text-align: left;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+.post-subscribe-menu-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.post-subscribe-menu-item--active {
+  color: var(--accent);
+}
+.post-subscribe-menu-item--active .post-subscribe-menu-icon {
+  color: var(--accent);
+}
+.post-subscribe-menu-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+.post-subscribe-menu-icon svg {
+  width: 20px;
+  height: 20px;
+}
+.post-subscribe-menu-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.post-subscribe-menu-label {
+  font-weight: 500;
+  color: var(--text);
+}
+.post-subscribe-menu-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.post-subscribe-menu-divider {
+  height: 1px;
+  margin: 6px 0;
+  background: var(--border-light);
+}
 .post-overflow-menu {
   min-width: 200px;
   max-width: min(280px, calc(100vw - 16px));
@@ -3210,7 +3284,7 @@ video.post-hls-video--has-overlay {
 .post-external-link:hover { background: rgba(0, 0, 0, 0.3); }
 
 .post-external-thumb {
-  max-width: 200px;
+  width: 100%;
   margin-bottom: 4px;
   border-radius: var(--radius);
   display: block;
@@ -4931,23 +5005,6 @@ button.post-ref-expand-translate-btn {
   margin-top: 0;
   width: fit-content;
   max-width: 100%;
-}
-.thread-subscribe-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px 8px;
-}
-.thread-subscribe-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-}
-.thread-subscribe-icon svg {
-  width: 18px;
-  height: 18px;
 }
 .thread-quote-selection-bar {
   display: flex;
