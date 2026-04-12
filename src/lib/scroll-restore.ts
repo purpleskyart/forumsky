@@ -73,7 +73,7 @@ export function attachScrollPositionPersistence(): () => void {
 
 /**
  * Restore scroll for the current location from sessionStorage.
- * Several passes help after async layout (feed load, images).
+ * Stops trying to restore once user starts scrolling.
  */
 export function restoreScrollNow(): void {
   if (typeof window === 'undefined') return;
@@ -83,20 +83,39 @@ export function restoreScrollNow(): void {
 
   ignoreScrollPersistUntil = performance.now() + 2000;
 
-  const apply = () => window.scrollTo({ top: y, left: 0, behavior: 'auto' });
   // Clear any pending restoration timers
   restoreTimerIds.forEach(id => window.clearTimeout(id));
   restoreTimerIds = [];
 
+  let hasUserScrolled = false;
+  const checkUserScroll = () => {
+    if (Math.abs(window.scrollY - y) > 50) {
+      hasUserScrolled = true;
+    }
+    return hasUserScrolled;
+  };
+
+  const apply = () => {
+    if (checkUserScroll()) return;
+    window.scrollTo({ top: y, left: 0, behavior: 'auto' });
+  };
+
+  // Initial restore
   apply();
+
+  // Short follow-ups that stop if user scrolled
+  const schedule = (delay: number) => {
+    const id = window.setTimeout(() => {
+      if (!checkUserScroll()) apply();
+    }, delay);
+    restoreTimerIds.push(id);
+  };
+
   requestAnimationFrame(() => {
-    apply();
-    requestAnimationFrame(apply);
+    if (!checkUserScroll()) apply();
   });
-  restoreTimerIds.push(window.setTimeout(apply, 100));
-  restoreTimerIds.push(window.setTimeout(apply, 300));
-  restoreTimerIds.push(window.setTimeout(apply, 1000));
-  restoreTimerIds.push(window.setTimeout(apply, 2000));
+  schedule(100);
+  schedule(300);
 }
 
 /** Call after the router URL changes (back/forward or in-app navigation). */

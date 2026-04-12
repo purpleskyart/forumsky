@@ -918,7 +918,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
 }
 
 /* --- Toggle Button --- */
@@ -2244,6 +2244,39 @@
 }
 .post-author-card .author-stats-table .author-accent-stat {
   font-weight: 600;
+}
+
+/* Author badges in thread sidebar (mutuals, bot, follows you) */
+.post-author-card .author-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+  justify-content: center;
+}
+.post-author-card .author-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  border-radius: 12px;
+  border: 1px solid;
+  line-height: 1.2;
+}
+.post-author-card .author-badge-mutuals {
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.25);
+}
+.post-author-card .author-badge-follows-you {
+  color: var(--accent);
+  background: rgba(233, 30, 140, 0.12);
+  border-color: rgba(233, 30, 140, 0.25);
+}
+.post-author-card .author-badge-bot {
+  color: #8b5cf6;
+  background: rgba(139, 92, 246, 0.12);
+  border-color: rgba(139, 92, 246, 0.25);
 }
 
 /* Username accent tones (hash by handle). @handle stays muted — only display name + stats accent. */

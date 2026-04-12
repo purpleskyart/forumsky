@@ -402,14 +402,14 @@ export function Profile(props: ProfileProps) {
               class={`btn btn-sm ${filter === 'replies' ? 'btn-primary' : 'btn-outline'}`}
               onClick={() => setFilter('replies')}
             >
-              Posts & Replies
+              Replies and Reposts
             </button>
             <button
               type="button"
               class={`btn btn-sm ${filter === 'all' ? 'btn-primary' : 'btn-outline'}`}
               onClick={() => setFilter('all')}
             >
-              All (with Reposts)
+              All
             </button>
           </div>
         </div>
