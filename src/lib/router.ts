@@ -1,7 +1,6 @@
 import { route as preactRoute } from 'preact-router';
 import { FOLLOWED_COMMUNITY_TAG } from '@/lib/preferences';
 import { confirmLeaveIfComposerDirty } from '@/lib/navigation-guard';
-import { pauseScrollPersistence, clearSavedScroll } from '@/lib/scroll-restore';
 
 /**
  * Preact-router installs a document click handler that calls `route(anchor.getAttribute('href'))`.
@@ -11,24 +10,8 @@ import { pauseScrollPersistence, clearSavedScroll } from '@/lib/scroll-restore';
  */
 export const SPA_ANCHOR_SHIELD = { 'data-native': '' } as const;
 
-/** Save scroll position immediately before navigation (for scroll restoration on back). */
-function saveScrollBeforeNav(): void {
-  if (typeof window === 'undefined') return;
-  try {
-    // Pause RAF-based persistence to prevent it from overwriting this value
-    pauseScrollPersistence();
-    const key = window.location.pathname + window.location.search + window.location.hash;
-    sessionStorage.setItem('forumskyScroll:' + key, String(Math.max(0, Math.round(window.scrollY))));
-  } catch {
-    /* ignore */
-  }
-}
-
 export function navigate(path: string, replace = false) {
   if (!confirmLeaveIfComposerDirty()) return;
-  saveScrollBeforeNav();
-  // Clear any saved scroll for the destination so forward navigation starts at top
-  clearSavedScroll(path);
   preactRoute(path, replace);
 }
 
