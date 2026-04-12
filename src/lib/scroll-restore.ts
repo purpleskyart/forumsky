@@ -3,6 +3,8 @@
  * back/forward returns to the same vertical position (feed ↔ thread).
  */
 
+import { appPathname } from '@/lib/app-base-path';
+
 const PREFIX = 'forumskyScroll:';
 
 function storageKey(fullPath: string): string {
@@ -11,7 +13,7 @@ function storageKey(fullPath: string): string {
 
 export function currentScrollStorageKey(): string {
   if (typeof window === 'undefined') return '';
-  return window.location.pathname + window.location.search + window.location.hash;
+  return appPathname() + window.location.search + window.location.hash;
 }
 
 function readSavedScroll(fullPath: string): number | null {
