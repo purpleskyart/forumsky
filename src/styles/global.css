@@ -559,6 +559,27 @@
   opacity: 0.65;
   cursor: default;
 }
+
+/* Desktop header new post button - pink modern design */
+.header-new-post-btn {
+  background: linear-gradient(135deg, #ec4899 0%, #f472b6 50%, #fb7185 100%) !important;
+  border: none;
+  box-shadow: 0 2px 12px rgba(236, 72, 153, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-weight: 600;
+}
+
+.header-new-post-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #f472b6 0%, #fb7185 50%, #fda4af 100%) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(236, 72, 153, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+  color: #fff !important;
+}
+
+.header-new-post-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(236, 72, 153, 0.35);
+}
 /* Same chrome as post footer actions (.post-like-btn, .post-reply-btn--social, etc.) */
 .btn-outline {
   border: 1px solid var(--divider-strong);

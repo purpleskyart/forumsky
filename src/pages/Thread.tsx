@@ -11,6 +11,7 @@ import {
 } from 'preact/hooks';
 import { useIosUpdate } from '@/hooks/useIosUpdate';
 import { useVirtualList } from '@/hooks/useVirtualList';
+import { restoreScrollNow } from '@/lib/scroll-restore';
 import { Avatar } from '@/components/Avatar';
 import { AuthorFlair } from '@/components/AuthorFlair';
 import { Composer } from '@/components/Composer';
@@ -310,6 +311,21 @@ export function Thread(props: ThreadProps) {
   const [thread, setThread] = useState<MergedThread | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  /** Restore scroll when content loads */
+  useEffect(() => {
+    if (loading) return;
+    console.log('[Thread] Calling restoreScrollNow');
+    restoreScrollNow();
+  }, [loading]);
+
+  /** Also restore scroll if we have thread data (cached scenario) */
+  useEffect(() => {
+    if (thread) {
+      console.log('[Thread] Thread data available, calling restoreScrollNow');
+      restoreScrollNow();
+    }
+  }, [thread]);
 
   useLayoutEffect(() => {
     if (!actor || !rkey) return;
