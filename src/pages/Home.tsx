@@ -203,13 +203,11 @@ export function Home() {
     return () => { controller.abort(); };
   }, [user?.did]);
 
-  /** Restore scroll when content loads (single call per mount) */
-  const hasRestoredScrollRef = useRef(false);
+  /** Restore scroll when content loads */
   useEffect(() => {
     const hasPreviews = Object.keys(previews).length > 0;
-    console.log('[Home] Content loaded, hasPreviews:', hasPreviews, 'hasRestored:', hasRestoredScrollRef.current);
-    if (hasPreviews && !hasRestoredScrollRef.current) {
-      hasRestoredScrollRef.current = true;
+    console.log('[Home] Content loaded, hasPreviews:', hasPreviews);
+    if (hasPreviews) {
       console.log('[Home] Calling restoreScrollNow');
       restoreScrollNow();
     }

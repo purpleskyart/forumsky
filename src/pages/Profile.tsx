@@ -87,17 +87,15 @@ export function Profile(props: ProfileProps) {
     return () => observer.disconnect();
   }, [hasMore, loadMore]);
 
-  /** Restore scroll when content loads (single call per mount) */
-  const hasRestoredScrollRef = useRef(false);
+  /** Restore scroll when content loads */
   const prevLoadingRef = useRef(loading);
+  
   useEffect(() => {
     const wasLoading = prevLoadingRef.current;
     prevLoadingRef.current = loading;
     if (!wasLoading || loading) return;
-    if (!hasRestoredScrollRef.current) {
-      hasRestoredScrollRef.current = true;
-      restoreScrollNow();
-    }
+    console.log('[Profile] Calling restoreScrollNow');
+    restoreScrollNow();
   }, [loading]);
 
   /** Restore scroll when loadingMore completes (load more scenario). */

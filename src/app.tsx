@@ -45,9 +45,17 @@ function RedirectFollowedUrlsToHome() {
   return <div>Redirecting...</div>;
 }
 
+// Global flag to signal route change to pages
+let routeChangeCounter = 0;
+
+export function getRouteChangeCounter(): number {
+  return routeChangeCounter;
+}
+
 function onRouterChange(_args: RouterOnChangeArgs) {
-  // Scroll restoration is now handled by individual pages when their content loads
-  // This prevents race conditions between global and per-page restoration
+  // Increment counter to signal pages that route has changed
+  routeChangeCounter++;
+  console.log('[App] Route changed, counter:', routeChangeCounter);
 }
 
 export function App() {
