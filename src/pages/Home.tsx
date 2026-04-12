@@ -207,8 +207,10 @@ export function Home() {
   const hasRestoredScrollRef = useRef(false);
   useEffect(() => {
     const hasPreviews = Object.keys(previews).length > 0;
+    console.log('[Home] Content loaded, hasPreviews:', hasPreviews, 'hasRestored:', hasRestoredScrollRef.current);
     if (hasPreviews && !hasRestoredScrollRef.current) {
       hasRestoredScrollRef.current = true;
+      console.log('[Home] Calling restoreScrollNow');
       restoreScrollNow();
     }
   }, [previews]);

@@ -104,8 +104,14 @@ export function restoreScrollNow(): void {
   if (typeof window === 'undefined') return;
   const key = currentScrollStorageKey();
   const y = readSavedScroll(key);
-  console.log('[ScrollRestore] Attempting to restore for', key, ': saved y=', y, 'current y=', window.scrollY);
-  if (y == null) return;
+  console.log('[ScrollRestore] Attempting to restore for key:', key, ': saved y=', y, 'current y=', window.scrollY, 'document height=', document.documentElement.scrollHeight);
+  if (y == null) {
+    console.log('[ScrollRestore] No saved scroll found for key:', key);
+    // Log all saved scroll keys for debugging
+    const allKeys = Object.keys(sessionStorage).filter(k => k.startsWith('forumskyScroll:'));
+    console.log('[ScrollRestore] All saved scroll keys:', allKeys);
+    return;
+  }
 
   ignoreScrollPersistUntil = performance.now() + 2000;
 
