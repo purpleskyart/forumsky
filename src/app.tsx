@@ -47,12 +47,16 @@ function RedirectFollowedUrlsToHome() {
 
 // Global flag to signal route change to pages
 let routeChangeCounter = 0;
+let previousUrl = '';
 
 export function getRouteChangeCounter(): number {
   return routeChangeCounter;
 }
 
-function onRouterChange(_args: RouterOnChangeArgs) {
+function onRouterChange(args: RouterOnChangeArgs) {
+  const currentUrl = args.url;
+  console.log('[App] Route changed from:', previousUrl, 'to:', currentUrl, 'event:', args);
+  previousUrl = currentUrl;
   // Increment counter to signal pages that route has changed
   routeChangeCounter++;
   console.log('[App] Route changed, counter:', routeChangeCounter);
