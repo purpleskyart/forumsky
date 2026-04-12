@@ -37,7 +37,6 @@ import { useRouter } from 'preact-router';
 import { parseAtUri } from '@/api/feed';
 import { isAuthorFiltered } from '@/lib/graph-policy';
 import { dominantVisibleListRowIndex } from '@/lib/dominant-visible-row';
-import { restoreScrollNow } from '@/lib/scroll-restore';
 import type { FeedBlendSourceMeta, FeedRootItem, PostView, ProfileView } from '@/api/types';
 
 const THREADS_PER_PAGE = 25;
@@ -233,36 +232,7 @@ export function Community({ tag: tagProp }: CommunityProps) {
     searchCursorRef.current = cursor;
   }, [cursor]);
 
-  /** After async refetch the page is short when scroll restore runs; re-apply saved Y once content exists. */
-  const prevLoadingForScrollRef = useRef(loading);
-  useEffect(() => {
-    const wasLoading = prevLoadingForScrollRef.current;
-    prevLoadingForScrollRef.current = loading;
-    if (!wasLoading || loading) return;
-    restoreScrollNow();
-    const t1 = window.setTimeout(() => restoreScrollNow(), 350);
-    const t2 = window.setTimeout(() => restoreScrollNow(), 700);
-    return () => {
-      window.clearTimeout(t1);
-      window.clearTimeout(t2);
-    };
-  }, [loading]);
 
-  /** Restore scroll when returning to page with valid snapshot (e.g., back from thread). */
-  const prevValidSnapshotRef = useRef(validSnapshot);
-  useEffect(() => {
-    const hadValidSnapshot = !!prevValidSnapshotRef.current;
-    prevValidSnapshotRef.current = validSnapshot;
-    if (hadValidSnapshot && validSnapshot) {
-      restoreScrollNow();
-      const t1 = window.setTimeout(() => restoreScrollNow(), 350);
-      const t2 = window.setTimeout(() => restoreScrollNow(), 700);
-      return () => {
-        window.clearTimeout(t1);
-        window.clearTimeout(t2);
-      };
-    }
-  }, [validSnapshot]);
 
   /** Restore scroll when loadingMore completes (load more scenario). */
   const prevLoadingMoreRef = useRef(loadingMore);

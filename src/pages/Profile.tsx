@@ -12,7 +12,6 @@ import { navigate, threadUrl, SPA_ANCHOR_SHIELD } from '@/lib/router';
 import { parseProfileRoutePath } from '@/lib/spa-route-params';
 import { useRouter } from 'preact-router';
 import { currentUser, showAuthDialog, showToast, followingDids } from '@/lib/store';
-import { restoreScrollNow } from '@/lib/scroll-restore';
 import { formatProfileJoined } from '@/lib/user-display';
 import type { ProfileView, PostView, FeedViewPost } from '@/api/types';
 
@@ -87,20 +86,6 @@ export function Profile(props: ProfileProps) {
     return () => observer.disconnect();
   }, [hasMore, loadMore]);
 
-  /** Restore scroll when initial loading completes (back navigation scenario). */
-  const prevLoadingRef = useRef(loading);
-  useEffect(() => {
-    const wasLoading = prevLoadingRef.current;
-    prevLoadingRef.current = loading;
-    if (!wasLoading || loading) return;
-    restoreScrollNow();
-    const t1 = window.setTimeout(() => restoreScrollNow(), 350);
-    const t2 = window.setTimeout(() => restoreScrollNow(), 700);
-    return () => {
-      window.clearTimeout(t1);
-      window.clearTimeout(t2);
-    };
-  }, [loading]);
 
   /** Restore scroll when loadingMore completes (load more scenario). */
   const prevLoadingMoreRef = useRef(loadingMore);
@@ -120,20 +105,7 @@ export function Profile(props: ProfileProps) {
       // If user was at bottom before load, smoothly scroll to new bottom after content loads
       if (wasAtBottomBeforeLoadMoreRef.current) {
         window.scrollTo({ top: document.body.scrollHeight, left: 0, behavior: 'auto' });
-      } else {
-        restoreScrollNow();
       }
-      // Only one additional restoration attempt to reduce jumping
-      const t = window.setTimeout(() => {
-        if (wasAtBottomBeforeLoadMoreRef.current) {
-          window.scrollTo({ top: document.body.scrollHeight, left: 0, behavior: 'auto' });
-        } else {
-          restoreScrollNow();
-        }
-      }, 200);
-      return () => {
-        window.clearTimeout(t);
-      };
     }
   }, [loadingMore]);
 

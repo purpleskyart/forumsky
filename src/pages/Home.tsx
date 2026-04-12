@@ -13,7 +13,6 @@ import { currentUser, showAuthDialog } from '@/lib/store';
 import { appPathname } from '@/lib/app-base-path';
 import { dominantVisibleListRowIndex } from '@/lib/dominant-visible-row';
 import { navigate, communityUrl } from '@/lib/router';
-import { restoreScrollNow } from '@/lib/scroll-restore';
 import { COMMUNITY_STATS_TTL, TIMELINE_PREVIEW_LIMIT } from '@/lib/constants';
 
 interface CommunityPreview {
@@ -203,37 +202,6 @@ export function Home() {
     return () => { controller.abort(); };
   }, [user?.did]);
 
-  /** After async preview fetches the page height changes; re-apply saved scroll once content exists. */
-  const prevPreviewsRef = useRef<Record<string, CommunityPreview>>({});
-  const hasRestoredOnMountRef = useRef(false);
-  useEffect(() => {
-    const hadPreviews = Object.keys(prevPreviewsRef.current).length > 0;
-    const hasPreviews = Object.keys(previews).length > 0;
-    prevPreviewsRef.current = previews;
-
-    // Mount restoration: if we already have previews on first effect run, restore scroll
-    if (hasPreviews && !hasRestoredOnMountRef.current) {
-      hasRestoredOnMountRef.current = true;
-      restoreScrollNow();
-      const t1 = window.setTimeout(() => restoreScrollNow(), 350);
-      const t2 = window.setTimeout(() => restoreScrollNow(), 700);
-      return () => {
-        window.clearTimeout(t1);
-        window.clearTimeout(t2);
-      };
-    }
-
-    // Transition restoration: when previews go from empty to populated
-    if (!hadPreviews && hasPreviews && hasRestoredOnMountRef.current) {
-      restoreScrollNow();
-      const t1 = window.setTimeout(() => restoreScrollNow(), 350);
-      const t2 = window.setTimeout(() => restoreScrollNow(), 700);
-      return () => {
-        window.clearTimeout(t1);
-        window.clearTimeout(t2);
-      };
-    }
-  }, [previews]);
 
   const handleAdd = (e: Event) => {
     e.preventDefault();
