@@ -19,7 +19,7 @@ function describeDraftKey(key: string): { label: string; href: string | null } {
   }
   if (key.startsWith('community:')) {
     const tag = key.slice('community:'.length);
-    return { label: `New thread in #${tag}`, href: communityUrl(tag) };
+    return { label: `New thread in !${tag}`, href: communityUrl(tag) };
   }
   return { label: key, href: null };
 }

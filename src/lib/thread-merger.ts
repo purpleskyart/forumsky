@@ -316,7 +316,8 @@ function collectCommenterSelfReplies(
 }
 
 /**
- * First hashtag in post text (by UTF-8 byte order in facets), not facet array order.
+ * First community tag in post text (by UTF-8 byte order in facets), not facet array order.
+ * Only supports !tag syntax (legacy #tag is not recognized as community posts).
  */
 export function extractFirstHashtag(post: PostView): string | null {
   const segments = parseRichText(post.record.text, post.record.facets);
@@ -324,11 +325,11 @@ export function extractFirstHashtag(post: PostView): string | null {
     if (seg.type === 'tag' && seg.tag) return seg.tag;
   }
   if (post.record.tags?.length) return post.record.tags[0];
-  const m = /#([a-zA-Z0-9_]+)/.exec(post.record.text);
+  const m = /!([a-zA-Z0-9_]+)/.exec(post.record.text);
   return m ? m[1] : null;
 }
 
-/** Thread root belongs in a #community only when that tag is the first hashtag in the post. */
+/** Thread root belongs in a community only when !tag matches the community name. */
 export function postPrimaryHashtagMatches(post: PostView, communityTag: string): boolean {
   const first = extractFirstHashtag(post);
   if (!first) return false;

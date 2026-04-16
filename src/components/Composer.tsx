@@ -62,12 +62,12 @@ function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-/** First Bluesky post in a community thread: append #tag unless the user already included it. */
+/** First Bluesky post in a community thread: append !tag unless the user already included it. */
 function withCommunityTagOnFirstSegment(segText: string, community: string): string {
-  const re = new RegExp(`#${escapeRegExp(community)}\\b`);
+  const re = new RegExp(`!${escapeRegExp(community)}\\b`);
   if (re.test(segText)) return segText;
   const t = segText.trim();
-  const tagLine = `#${community}`;
+  const tagLine = `!${community}`;
   return t ? `${t}\n\n${tagLine}` : tagLine;
 }
 
@@ -268,7 +268,7 @@ export function Composer({
   const smartTextareaAriaLabel = useMemo(() => {
     if (replyTo && replyTargetSummary) return `Reply: ${replyTargetSummary}`;
     if (replyTo) return 'Write your reply';
-    if (community) return `New thread in #${community}`;
+    if (community) return `New thread in !${community}`;
     return 'Compose post';
   }, [replyTo, replyTargetSummary, community]);
 
@@ -1063,9 +1063,6 @@ export function Composer({
             <span class="composer-community-tag-label">Community tag</span>
             <span class="composer-community-tag-value">#{community}</span>
           </div>
-          <p class="composer-community-tag-hint">
-            Added to the end of your first Bluesky post when you publish. You do not need to type it in the box above.
-          </p>
         </div>
       )}
     </form>

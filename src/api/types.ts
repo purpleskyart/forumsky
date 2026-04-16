@@ -186,6 +186,7 @@ export interface SearchPostsResponse {
 
 export interface GetPostThreadResponse {
   thread: ThreadViewPost | NotFoundPost | BlockedPost;
+  cursor?: string;
 }
 
 export interface GetAuthorFeedResponse {

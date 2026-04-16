@@ -10,7 +10,6 @@ import {
   useContext,
 } from 'preact/hooks';
 import { useIosUpdate } from '@/hooks/useIosUpdate';
-import { useVirtualList } from '@/hooks/useVirtualList';
 import { restoreScrollNow } from '@/lib/scroll-restore';
 import { Avatar } from '@/components/Avatar';
 import { AuthorFlair } from '@/components/AuthorFlair';
@@ -29,7 +28,7 @@ import { GifImage, GifImageFromEmbed } from '@/components/GifImage';
 import { PostContentImage } from '@/components/PostContentImage';
 import { HlsVideo } from '@/components/HlsVideo';
 import { NsfwMediaWrap } from '@/components/NsfwMediaWrap';
-import { getPostThread, getPostUri, parseAtUri, getPosts, searchPosts } from '@/api/feed';
+import { getPostThread, getPostUri, parseAtUri, getPosts, searchPosts, getLikes } from '@/api/feed';
 import { resolveHandle } from '@/api/actor';
 import {
   mergeThread,
@@ -102,6 +101,7 @@ import { reportPost } from '@/api/moderation';
 import { deletePost, createDownvote, deleteDownvote, listMyDownvotes } from '@/api/post';
 import { followActor } from '@/api/graph-follows';
 import { PostSubscribeButton } from '@/components/PostSubscribeButton';
+import { ScrollNavigation } from '@/components/ScrollNavigation';
 import { XRPCError } from '@/api/xrpc';
 import type { PostView, StrongRef, ThreadViewPost } from '@/api/types';
 import type { ComponentChildren } from 'preact';
@@ -312,18 +312,7 @@ export function Thread(props: ThreadProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  /** Restore scroll when content loads */
-  useLayoutEffect(() => {
-    if (loading) return;
-    restoreScrollNow();
-  }, [loading]);
-
-  /** Also restore scroll if we have thread data (cached scenario) */
-  useLayoutEffect(() => {
-    if (thread) {
-      restoreScrollNow();
-    }
-  }, [thread]);
+  // Scroll restoration disabled for thread page to prevent jumps when content updates
 
   useLayoutEffect(() => {
     if (!actor || !rkey) return;
@@ -366,30 +355,23 @@ export function Thread(props: ThreadProps) {
         
         const uri = getPostUri(resolvedDid, rkey);
         
-        // If we have cached data, show it immediately and fetch fresh data in background
+        // If we have cached data, show it immediately
         if (cachedThread) {
           setThread(mergeThread(cachedThread));
           setLoading(false);
-          
-          // Background refresh
-          try {
-            const res = await swr(`thread_${uri}`, () => getPostThread(uri, 50, 5), 5 * 60 * 1000); // 5 minutes
-            if (!cancelled && isThreadViewPost(res.thread)) {
-              setThread(mergeThread(res.thread));
-            }
-          } catch {
-            // Background refresh failed, but we already showed cached data
-          }
+          // Background refresh disabled to prevent scroll jumps
           return;
         }
         
         // No cache - must fetch
-        const res = await swr(`thread_${uri}`, () => getPostThread(uri, 50, 5), 5 * 60 * 1000); // 5 minutes
+        const res = await swr(`thread_${uri}`, () => getPostThread(uri, 100, 5), 5 * 60 * 1000); // 5 minutes
         if (cancelled) return;
         if (!isThreadViewPost(res.thread)) {
           setError('Thread not found');
           return;
         }
+        // Log to check if API returns cursor for pagination
+        console.log('Thread response cursor:', res.cursor, 'comment count:', res.thread.replies?.length);
         setThread(mergeThread(res.thread));
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load thread');
@@ -451,6 +433,8 @@ function ThreadView({
   const composeFromQueryConsumedRef = useRef(false);
   const replyCountAnnounceRef = useRef(-1);
   const [avatarFollowBusyDid, setAvatarFollowBusyDid] = useState<string | null>(null);
+  // Track which comments the thread creator (OP) has liked
+  const [threadCreatorLikedUris, setThreadCreatorLikedUris] = useState<Set<string>>(new Set());
   const threadViewerDid = currentUser.value?.did;
   // Use global followingDids signal for instant availability
   const threadFollowingDids = followingDids.value;
@@ -513,20 +497,7 @@ function ThreadView({
       !blockedDids.value.has(c.post.author.did),
   );
 
-  // Virtual scrolling for forum layout - only render comments in viewport
-  const [commentsContainerRef, setCommentsContainerRef] = useState<HTMLElement | null>(null);
-  const virtualList = useVirtualList({
-    itemCount: commentLayoutMode === 'forum' ? visibleComments.length : 0,
-    itemHeight: 120, // Estimated height of a comment
-    overscan: 5,
-  });
-  
-  // Update container ref when it changes
-  useEffect(() => {
-    if (commentsContainerRef) {
-      virtualList.containerRef(commentsContainerRef);
-    }
-  }, [commentsContainerRef, virtualList]);
+  // Virtual scrolling disabled for comments due to variable heights causing scroll glitches
 
   useEffect(() => {
     replyCountAnnounceRef.current = -1;
@@ -593,6 +564,50 @@ function ThreadView({
       }
     };
   }, [thread]);
+
+  // Fetch likes for visible comments to check if thread creator (OP) liked them
+  useEffect(() => {
+    const threadCreatorDid = rootPost.author.did;
+    const abortController = new AbortController();
+
+    async function fetchThreadCreatorLikes() {
+      const likedUris = new Set<string>();
+
+      // Fetch likes for each visible comment (limited to first 20 to avoid too many requests)
+      const commentsToCheck = visibleComments.slice(0, 20);
+
+      await Promise.all(
+        commentsToCheck.map(async (comment) => {
+          try {
+            const likesRes = await getLikes(comment.post.uri, {
+              cid: comment.post.cid,
+              limit: 50,
+            });
+            const threadCreatorLiked = likesRes.likes.some(
+              (like) => like.actor.did === threadCreatorDid,
+            );
+            if (threadCreatorLiked) {
+              likedUris.add(comment.post.uri);
+            }
+          } catch {
+            // Silently ignore errors for individual comments
+          }
+        }),
+      );
+
+      if (!abortController.signal.aborted) {
+        setThreadCreatorLikedUris(likedUris);
+      }
+    }
+
+    if (visibleComments.length > 0) {
+      void fetchThreadCreatorLikes();
+    } else {
+      setThreadCreatorLikedUris(new Set());
+    }
+
+    return () => abortController.abort();
+  }, [visibleComments, rootPost.author.did]);
 
   useEffect(() => {
     const n = visibleComments.length;
@@ -1182,113 +1197,115 @@ function ThreadView({
 
         {commentLayoutMode === 'forum'
           ? (
-            <div
-              ref={setCommentsContainerRef}
-              style={{
-                position: 'relative',
-                height: virtualList.totalHeight > 0 ? `${virtualList.totalHeight}px` : 'auto',
-              }}
-            >
-              <div style={{ transform: `translateY(${virtualList.offsetY}px)` }}>
-                {visibleComments
-                  .slice(virtualList.startIndex, virtualList.endIndex + 1)
-                  .map((comment, sliceIdx) => {
-                    const idx = virtualList.startIndex + sliceIdx;
-                    return (
-                      <Fragment key={comment.post.uri}>
-                        <PostBlock
-                          segments={comment.segments}
-                          root={comment.post}
-                          postNumber={idx + 2}
-                          threadRootUri={rootPost.uri}
-                          threadIndex={threadIndex}
-                          mergedTextForPostNumber={mergedTextForPostNumber}
-                          childReplies={getChildRepliesForSegments(
-                            comment.segments,
-                            directRepliesByParentUri,
-                          )}
-                          kbFocusPost={kbFocusPost}
-                          kbOutlineActive={kbOutlineActive}
-                          onOwnPostDeleted={handleOwnPostDeleted}
-                          onReply={handleReplyClick}
-                          onQuoteRepost={handleQuoteRepostClick}
-                          onLocalHide={bumpLocalHidden}
-                          downvoteRecordUri={myDownvotes[comment.post.uri]}
-                          downvoteDisplayCount={Math.max(
-                            0,
-                            (downvoteCounts[comment.post.uri] ?? 0) +
-                              (downvoteCountOptimisticDelta[comment.post.uri] ?? 0),
-                          )}
-                          onDownvotePost={handleDownvotePost}
-                          downvoteBusy={downvoteLoadingUri === comment.post.uri}
-                          threadFollowingDids={threadFollowingDids}
-                          avatarFollowBusyDid={avatarFollowBusyDid}
-                          onThreadAvatarFollow={handleThreadAvatarFollow}
-                        />
-                        {showComposerAfterPost(comment.post) && (
-                          <ThreadInlineComposer
-                            key={`${replyTarget?.parent.uri ?? 'r'}-${quoteTarget?.post.uri ?? 'q'}`}
-                            replyTo={replyToForComposer}
-                            quoteEmbed={quoteEmbedForComposer}
-                            replyTargetSummary={replyTargetSummary}
-                            composerFocusRequest={composerFocusRequest}
-                            draftRootUri={rootPost.uri}
-                            appendTextRequest={appendQuoteRequest}
-                            onDismiss={dismissComposer}
-                            onPosted={async () => {
-                              await refreshThread();
-                              setReplyTarget(null);
-                              setQuoteTarget(null);
-                            }}
-                          />
-                        )}
-                      </Fragment>
-                    );
-                  })}
-              </div>
+            <div>
+              {visibleComments.map((comment, idx) => (
+                <Fragment key={comment.post.uri}>
+                  <PostBlock
+                    segments={comment.segments}
+                    root={comment.post}
+                    postNumber={idx + 2}
+                    threadRootUri={rootPost.uri}
+                    threadIndex={threadIndex}
+                    mergedTextForPostNumber={mergedTextForPostNumber}
+                    childReplies={getChildRepliesForSegments(
+                      comment.segments,
+                      directRepliesByParentUri,
+                    )}
+                    kbFocusPost={kbFocusPost}
+                    kbOutlineActive={kbOutlineActive}
+                    onOwnPostDeleted={handleOwnPostDeleted}
+                    onReply={handleReplyClick}
+                    onQuoteRepost={handleQuoteRepostClick}
+                    onLocalHide={bumpLocalHidden}
+                    downvoteRecordUri={myDownvotes[comment.post.uri]}
+                    downvoteDisplayCount={Math.max(
+                      0,
+                      (downvoteCounts[comment.post.uri] ?? 0) +
+                        (downvoteCountOptimisticDelta[comment.post.uri] ?? 0),
+                    )}
+                    onDownvotePost={handleDownvotePost}
+                    downvoteBusy={downvoteLoadingUri === comment.post.uri}
+                    threadFollowingDids={threadFollowingDids}
+                    avatarFollowBusyDid={avatarFollowBusyDid}
+                    onThreadAvatarFollow={handleThreadAvatarFollow}
+                    threadCreatorLiked={threadCreatorLikedUris.has(comment.post.uri)}
+                    threadCreatorAvatar={rootPost.author.avatar}
+                    threadCreatorDisplayName={rootPost.author.displayName || rootPost.author.handle}
+                  />
+                  {showComposerAfterPost(comment.post) && (
+                    <ThreadInlineComposer
+                      key={`${replyTarget?.parent.uri ?? 'r'}-${quoteTarget?.post.uri ?? 'q'}`}
+                      replyTo={replyToForComposer}
+                      quoteEmbed={quoteEmbedForComposer}
+                      replyTargetSummary={replyTargetSummary}
+                      composerFocusRequest={composerFocusRequest}
+                      draftRootUri={rootPost.uri}
+                      appendTextRequest={appendQuoteRequest}
+                      onDismiss={dismissComposer}
+                      onPosted={async () => {
+                        await refreshThread();
+                        setReplyTarget(null);
+                        setQuoteTarget(null);
+                      }}
+                    />
+                  )}
+                </Fragment>
+              ))}
             </div>
           )
-          : nestedCommentRoots.map(node => (
-              <ThreadNestedCommentBranch
-                key={node.comment.post.uri}
-                node={node}
-                threadRootUri={rootPost.uri}
-                threadIndex={threadIndex}
-                mergedTextForPostNumber={mergedTextForPostNumber}
-                kbFocusPost={kbFocusPost}
-                kbOutlineActive={kbOutlineActive}
-                draftRootUri={rootPost.uri}
-                appendQuoteRequest={appendQuoteRequest}
-                collapsedNestedChains={collapsedNestedChains}
-                onToggleNestedChainCollapse={toggleNestedChainCollapsed}
-                onOwnPostDeleted={handleOwnPostDeleted}
-                onReply={handleReplyClick}
-                onQuoteRepost={handleQuoteRepostClick}
-                showComposerAfterPost={showComposerAfterPost}
-                replyToForComposer={replyToForComposer}
-                quoteEmbedForComposer={quoteEmbedForComposer}
-                replyTargetSummary={replyTargetSummary}
-                composerFocusRequest={composerFocusRequest}
-                onDismissComposer={dismissComposer}
-                onPosted={async () => {
-                  await refreshThread();
-                  setReplyTarget(null);
-                  setQuoteTarget(null);
-                }}
-                onLocalHide={bumpLocalHidden}
-                myDownvotes={myDownvotes}
-                downvoteCounts={downvoteCounts}
-                downvoteCountOptimisticDelta={downvoteCountOptimisticDelta}
-                downvoteLoadingUri={downvoteLoadingUri}
-                onDownvotePost={handleDownvotePost}
-                threadFollowingDids={threadFollowingDids}
-                avatarFollowBusyDid={avatarFollowBusyDid}
-                onThreadAvatarFollow={handleThreadAvatarFollow}
-              />
-            ))}
+          : nestedCommentRoots.map((node, index) => {
+              const topCommentId = `top-comment-${index}`;
+              return (
+                <div key={node.comment.post.uri} id={topCommentId} class="top-comment-wrapper">
+                  <ThreadNestedCommentBranch
+                    node={node}
+                    threadRootUri={rootPost.uri}
+                    threadIndex={threadIndex}
+                    mergedTextForPostNumber={mergedTextForPostNumber}
+                    kbFocusPost={kbFocusPost}
+                    kbOutlineActive={kbOutlineActive}
+                    draftRootUri={rootPost.uri}
+                    appendQuoteRequest={appendQuoteRequest}
+                    collapsedNestedChains={collapsedNestedChains}
+                    onToggleNestedChainCollapse={toggleNestedChainCollapsed}
+                    onOwnPostDeleted={handleOwnPostDeleted}
+                    onReply={handleReplyClick}
+                    onQuoteRepost={handleQuoteRepostClick}
+                    showComposerAfterPost={showComposerAfterPost}
+                    replyToForComposer={replyToForComposer}
+                    quoteEmbedForComposer={quoteEmbedForComposer}
+                    replyTargetSummary={replyTargetSummary}
+                    composerFocusRequest={composerFocusRequest}
+                    onDismissComposer={dismissComposer}
+                    onPosted={async () => {
+                      await refreshThread();
+                      setReplyTarget(null);
+                      setQuoteTarget(null);
+                    }}
+                    onLocalHide={bumpLocalHidden}
+                    myDownvotes={myDownvotes}
+                    downvoteCounts={downvoteCounts}
+                    downvoteCountOptimisticDelta={downvoteCountOptimisticDelta}
+                    downvoteLoadingUri={downvoteLoadingUri}
+                    onDownvotePost={handleDownvotePost}
+                    threadFollowingDids={threadFollowingDids}
+                    avatarFollowBusyDid={avatarFollowBusyDid}
+                    onThreadAvatarFollow={handleThreadAvatarFollow}
+                    threadCreatorLiked={threadCreatorLikedUris.has(node.comment.post.uri)}
+                    threadCreatorAvatar={rootPost.author.avatar}
+                    threadCreatorDisplayName={rootPost.author.displayName || rootPost.author.handle}
+                  />
+                </div>
+              );
+            })}
       </div>
 
       <CrossDiscussionPanel rootPost={rootPost} />
+      
+      <ScrollNavigation 
+        isNestedMode={commentLayoutMode === 'nested'}
+        topCommentCount={nestedCommentRoots.length}
+      />
     </div>
     </ThreadTranslationProvider>
   );
@@ -1391,6 +1408,9 @@ function ThreadNestedCommentBranch({
   threadFollowingDids,
   avatarFollowBusyDid,
   onThreadAvatarFollow,
+  threadCreatorLiked,
+  threadCreatorAvatar,
+  threadCreatorDisplayName,
 }: {
   node: CommentTreeNode;
   threadRootUri: string;
@@ -1421,6 +1441,9 @@ function ThreadNestedCommentBranch({
   threadFollowingDids: Set<string> | null;
   avatarFollowBusyDid: string | null;
   onThreadAvatarFollow: (authorDid: string) => void | Promise<void>;
+  threadCreatorLiked?: boolean;
+  threadCreatorAvatar?: string;
+  threadCreatorDisplayName?: string;
 }) {
   const c = node.comment;
   const postNumber = threadIndex.postNumberByUri.get(c.post.uri) ?? 0;
@@ -1457,6 +1480,9 @@ function ThreadNestedCommentBranch({
         threadFollowingDids={threadFollowingDids}
         avatarFollowBusyDid={avatarFollowBusyDid}
         onThreadAvatarFollow={onThreadAvatarFollow}
+        threadCreatorLiked={threadCreatorLiked}
+        threadCreatorAvatar={threadCreatorAvatar}
+        threadCreatorDisplayName={threadCreatorDisplayName}
       />
       {showComposerAfterPost(c.post) && (
         <ThreadInlineComposer
@@ -1546,6 +1572,9 @@ function ThreadNestedCommentBranch({
                     threadFollowingDids={threadFollowingDids}
                     avatarFollowBusyDid={avatarFollowBusyDid}
                     onThreadAvatarFollow={onThreadAvatarFollow}
+                    threadCreatorLiked={threadCreatorLiked}
+                    threadCreatorAvatar={threadCreatorAvatar}
+                    threadCreatorDisplayName={threadCreatorDisplayName}
                   />
                 ))}
               </div>
@@ -1657,7 +1686,7 @@ function ReferencedPostPeek({
   const [loadError, setLoadError] = useState(false);
   /** Parent (&gt;&gt;handle) line: show replied-to text immediately; child reply links stay collapsed until clicked. */
   const [unfurled, setUnfurled] = useState(() => layout === 'parent');
-  const [postSnippetHover] = useState(false);
+  const [postSnippetHover, setPostSnippetHover] = useState(false);
   const [tooltipPos, setTooltipPos] = useState<{
     top: number;
     left: number;
@@ -1671,6 +1700,7 @@ function ReferencedPostPeek({
   const authorBtnRef = useRef<HTMLButtonElement>(null);
   const authorCardRef = useRef<HTMLDivElement>(null);
   const authorLeaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const expandLeaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** Controls + inline expand (+ hover layer for parent); clicks outside collapse `unfurled`. */
   const peekDismissBoundaryRef = useRef<HTMLDivElement | null>(null);
   const [childRefTranslationBusy, setChildRefTranslationBusy] = useState(false);
@@ -1897,6 +1927,34 @@ function ReferencedPostPeek({
     setUnfurled(v => !v);
   }, []);
 
+  const clearExpandLeaveTimer = useCallback(() => {
+    if (expandLeaveTimerRef.current != null) {
+      clearTimeout(expandLeaveTimerRef.current);
+      expandLeaveTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleCloseExpand = useCallback(() => {
+    clearExpandLeaveTimer();
+    expandLeaveTimerRef.current = setTimeout(() => {
+      setUnfurled(false);
+      expandLeaveTimerRef.current = null;
+    }, 50);
+  }, [clearExpandLeaveTimer]);
+
+  const onQuoteHover = useCallback(() => {
+    if (layout === 'child') {
+      clearExpandLeaveTimer();
+      setUnfurled(true);
+    }
+  }, [layout, clearExpandLeaveTimer]);
+
+  const onQuoteLeave = useCallback(() => {
+    if (layout === 'child') {
+      scheduleCloseExpand();
+    }
+  }, [layout, scheduleCloseExpand]);
+
   const onJumpClick = useCallback(
     (e: Event) => {
       e.preventDefault();
@@ -1984,7 +2042,7 @@ function ReferencedPostPeek({
     ariaKind === 'parent' ? (
       parentControlsRow
     ) : (
-      <>
+      <span onMouseEnter={onQuoteHover} onMouseLeave={onQuoteLeave}>
         <button
           ref={quoteRef}
           type="button"
@@ -1997,7 +2055,7 @@ function ReferencedPostPeek({
         </button>
         {jumpButton}
         {expandHint}
-      </>
+      </span>
     );
 
   const hoverLayer =
@@ -2159,44 +2217,77 @@ function ReferencedPostPeek({
   return (
     <div ref={peekDismissBoundaryRef} class="post-child-reply-item">
       <span class="post-child-reply-pair">{controlsRow}</span>
-      {expandLayer}
+      {expandLayer && (
+        <div
+          onMouseEnter={clearExpandLeaveTimer}
+          onMouseLeave={scheduleCloseExpand}
+        >
+          {expandLayer}
+        </div>
+      )}
       {hoverLayer}
     </div>
   );
 }
 
-function ReplyToParentLine({
+function ReplyToParentLineInline({
   parentUri,
   threadRootUri,
   threadIndex,
-  onRemoteParentBody,
-  syncTranslationView,
-  syncReplyPreviewTranslation,
-  replyPreviewSourceLang,
 }: {
   parentUri: string;
   threadRootUri: string;
   threadIndex: ThreadPostIndex;
-  onRemoteParentBody?: (text: string | null) => void;
-  syncTranslationView?: 'original' | 'translated';
-  syncReplyPreviewTranslation?: string | null;
-  replyPreviewSourceLang?: string | null;
+}) {
+  if (parentUri === threadRootUri) return null;
+  const parentPost = threadIndex.postByUri.get(parentUri);
+  if (!parentPost) return null;
+  const handle = parentPost.author.handle;
+  const displayName = parentPost.author.displayName || handle;
+  const postNumber = threadIndex.postNumberByUri.get(parentUri);
+
+  const scrollToParent = () => {
+    if (postNumber) {
+      scrollToThreadPost(postNumber);
+    }
+  };
+
+  return (
+    <span class="post-reply-to-inline">
+      <span class="post-reply-to-inline-sep">·</span>
+      <span class="post-reply-to-inline-label">Replying to </span>
+      <button
+        type="button"
+        class="post-reply-to-inline-author"
+        onClick={scrollToParent}
+        title={`@${handle}${postNumber ? ` (post ${postNumber})` : ''}`}
+      >
+        {displayName}
+      </button>
+    </span>
+  );
+}
+
+function QuotedPostPreview({
+  parentUri,
+  threadRootUri,
+  threadIndex,
+}: {
+  parentUri: string;
+  threadRootUri: string;
+  threadIndex: ThreadPostIndex;
 }) {
   if (parentUri === threadRootUri) return null;
 
   return (
-    <div class="post-reply-to-wrap">
+    <div class="post-quoted-preview-wrapper">
       <ReferencedPostPeek
         layout="parent"
         targetUri={parentUri}
         threadRootUri={threadRootUri}
         threadIndex={threadIndex}
-        buttonClassName="post-quote-ref"
+        buttonClassName="post-reply-to-ref--body"
         ariaKind="parent"
-        onRemoteParentBody={onRemoteParentBody}
-        syncTranslationView={syncTranslationView}
-        syncReplyPreviewTranslation={syncReplyPreviewTranslation}
-        replyPreviewSourceLang={replyPreviewSourceLang}
       />
     </div>
   );
@@ -2335,6 +2426,9 @@ function PostBlock({
   threadFollowingDids,
   avatarFollowBusyDid,
   onThreadAvatarFollow,
+  threadCreatorLiked,
+  threadCreatorAvatar,
+  threadCreatorDisplayName,
 }: {
   segments: PostView[];
   root: PostView;
@@ -2356,6 +2450,9 @@ function PostBlock({
   threadFollowingDids?: Set<string> | null;
   avatarFollowBusyDid?: string | null;
   onThreadAvatarFollow?: (authorDid: string) => void | Promise<void>;
+  threadCreatorLiked?: boolean;
+  threadCreatorAvatar?: string;
+  threadCreatorDisplayName?: string;
 }) {
   const threadTrCtx = useContext(ThreadTranslationContext);
   // Per-segment media: compute once, render inline with each segment's text
@@ -2382,16 +2479,11 @@ function PostBlock({
     () => segments.map(s => s.record.text).join('\n\n'),
     [segments],
   );
-  const indexedParentText = useMemo(() => {
+  const replyContextBodyText = useMemo(() => {
     if (!replyParentUri || !threadIndex) return null;
     const pv = threadIndex.postByUri.get(replyParentUri);
     return pv?.record.text ?? null;
   }, [replyParentUri, threadIndex]);
-  const [fetchedReplyParentBody, setFetchedReplyParentBody] = useState<string | null>(null);
-  useEffect(() => {
-    setFetchedReplyParentBody(null);
-  }, [replyParentUri]);
-  const replyContextBodyText = indexedParentText ?? fetchedReplyParentBody ?? null;
 
   const translateOffer = useMemo(() => {
     if (typeof navigator === 'undefined') return null;
@@ -2569,8 +2661,35 @@ function PostBlock({
       </div>
       <div class="post-body">
         <div class="post-header">
-          <PostHeaderDate createdAt={root.record.createdAt} />
+          <div class="post-header-left">
+            <PostHeaderDate createdAt={root.record.createdAt} />
+            {showReplyContext && replyParentUri && threadRootUri && threadIndex && (
+              <ReplyToParentLineInline
+                parentUri={replyParentUri}
+                threadRootUri={threadRootUri}
+                threadIndex={threadIndex}
+              />
+            )}
+          </div>
           <div class="post-header-right">
+            {threadCreatorLiked && (
+              <div
+                class="thread-creator-like-indicator"
+                title={`Liked by ${threadCreatorDisplayName || 'thread creator'}`}
+              >
+                <span class="thread-creator-like-heart" aria-hidden>
+                  ♥
+                </span>
+                {threadCreatorAvatar && (
+                  <img
+                    src={threadCreatorAvatar}
+                    alt=""
+                    class="thread-creator-like-avatar"
+                    loading="lazy"
+                  />
+                )}
+              </div>
+            )}
             {translateOffer && (
               <button
                 type="button"
@@ -2874,21 +2993,6 @@ function PostBlock({
             <span class="post-number">{postNumber}</span>
           </div>
         </div>
-        {showReplyContext && replyParentUri && threadRootUri && threadIndex && (
-          <ReplyToParentLine
-            parentUri={replyParentUri}
-            threadRootUri={threadRootUri}
-            threadIndex={threadIndex}
-            onRemoteParentBody={setFetchedReplyParentBody}
-            syncTranslationView={translationView}
-            syncReplyPreviewTranslation={
-              translationView === 'translated' ? cachedTranslationReply : null
-            }
-            replyPreviewSourceLang={
-              translateOffer?.translateReply ? translateOffer.replySourceLang : null
-            }
-          />
-        )}
         <div
           class="post-content"
           lang={
@@ -2899,6 +3003,13 @@ function PostBlock({
               : undefined
           }
         >
+          {showReplyContext && replyParentUri && threadRootUri && threadIndex && (
+            <QuotedPostPreview
+              parentUri={replyParentUri}
+              threadRootUri={threadRootUri}
+              threadIndex={threadIndex}
+            />
+          )}
           {translationView === 'translated' && cachedTranslationMain != null ? (
             <div class="post-translation-plain">
               {cachedTranslationMain.split(/\n{2,}/).map((para, i) => (
@@ -3108,6 +3219,9 @@ function PostBlock({
                   <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
                 </svg>
               </span>
+              {childReplies.length > 0 && (
+                <span class="post-reply-btn-count">{childReplies.length}</span>
+              )}
             </button>
             <PostRepostButton
               post={root}
@@ -3131,13 +3245,10 @@ function PostBlock({
               role="navigation"
               aria-label={`Replies to post ${postNumber}`}
             >
-              <span class="post-child-replies-prefix" aria-hidden="true">
-                &gt;&gt;
-              </span>
               <div class="post-child-replies-links">
-                {childReplies.map((r, i) => (
+                {childReplies.map((r) => (
                   <Fragment key={r.uri}>
-                    {i > 0 && <span class="post-child-replies-sep"> · </span>}
+                    <span class="post-child-replies-prefix" aria-hidden="true">&gt;&gt;</span>
                     <ReferencedPostPeek
                       layout="child"
                       targetUri={r.uri}

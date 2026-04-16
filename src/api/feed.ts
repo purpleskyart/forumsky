@@ -7,6 +7,7 @@ import type {
   GetFeedResponse,
   GetFeedGeneratorResponse,
   PostView,
+  ProfileView,
 } from './types';
 import { TIMELINE_LIMIT, SEARCH_LIMIT, AUTHOR_FEED_LIMIT, POST_URI_CHUNK_SIZE } from '@/lib/constants';
 
@@ -115,4 +116,28 @@ export function parseAtUri(uri: string): { repo: string; collection: string; rke
   const m = uri.match(/^at:\/\/([^/]+)\/([^/]+)\/([^/]+)$/);
   if (!m) return null;
   return { repo: m[1], collection: m[2], rkey: m[3] };
+}
+
+export interface GetLikesResponse {
+  uri: string;
+  cid: string;
+  likes: Array<{
+    indexedAt: string;
+    createdAt: string;
+    actor: ProfileView;
+  }>;
+  cursor?: string;
+}
+
+/** Fetch who liked a post (public endpoint). Limited to first 50 for performance. */
+export async function getLikes(
+  uri: string,
+  opts?: { cid?: string; limit?: number; cursor?: string },
+): Promise<GetLikesResponse> {
+  return xrpcGet<GetLikesResponse>('app.bsky.feed.getLikes', {
+    uri,
+    cid: opts?.cid,
+    limit: opts?.limit ?? 50,
+    cursor: opts?.cursor,
+  });
 }

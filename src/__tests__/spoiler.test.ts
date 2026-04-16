@@ -121,8 +121,8 @@ describe('buildComposerFacets includes spoilers', () => {
     expect(spoilerFacets).toHaveLength(1);
   });
 
-  it('combines spoilers with mentions and hashtags', async () => {
-    const text = 'Hello @user check ||spoiler|| and #topic';
+  it('combines spoilers with mentions and tags', async () => {
+    const text = 'Hello @user check ||spoiler|| and !topic';
 
     const facets = await buildComposerFacets(text, async (handles) =>
       handles.map(h => ({ did: `did:plc:${h}`, handle: h }))

@@ -296,6 +296,10 @@ export function HlsVideo({
       ref={wrapRef}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
+      style={{
+        maxHeight: isFullscreen ? 'none' : 'min(380px, 58vh)',
+        maxWidth: isFullscreen ? 'none' : '400px',
+      }}
     >
       <video
         ref={videoRef}
@@ -308,6 +312,11 @@ export function HlsVideo({
         style={{
           aspectRatio: aspectCss || undefined,
           backgroundColor: 'var(--bg-elevated)',
+          maxHeight: isFullscreen ? 'none' : 'min(380px, 58vh)',
+          maxWidth: isFullscreen ? 'none' : '400px',
+          width: isFullscreen ? 'auto' : 'auto',
+          height: isFullscreen ? 'auto' : 'auto',
+          objectFit: 'contain',
           transform: isFullscreen ? `translate(${panX}px, ${panY}px) scale(${zoom})` : 'none',
           transformOrigin: 'center center',
           transition: isZooming || isPanning ? 'none' : 'transform 0.2s ease-out',

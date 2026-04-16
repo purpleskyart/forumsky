@@ -163,8 +163,12 @@ export function GifImage({
           decoding="async"
           draggable={false}
           style={{ 
-            aspectRatio: aspectRatio ? `${aspectRatio.width} / ${aspectRatio.height}` : undefined,
             backgroundColor: 'var(--bg-elevated)',
+            maxHeight: 'min(380px, 58vh)',
+            maxWidth: '400px',
+            width: 'auto',
+            height: 'auto',
+            objectFit: 'contain',
           }}
         />
       )}
@@ -172,11 +176,11 @@ export function GifImage({
       {!swap && !inView && (
         <div
           class="post-gif-placeholder"
-          style={
-            aspectRatio
-              ? { aspectRatio: `${aspectRatio.width} / ${aspectRatio.height}` }
-              : { minHeight: '160px' }
-          }
+          style={{
+            minHeight: '160px',
+            maxHeight: 'min(380px, 58vh)',
+            maxWidth: '400px',
+          }}
         />
       )}
 
@@ -189,8 +193,12 @@ export function GifImage({
           decoding="async"
           draggable={false}
           style={{ 
-            aspectRatio: aspectRatio ? `${aspectRatio.width} / ${aspectRatio.height}` : undefined,
             backgroundColor: 'var(--bg-elevated)',
+            maxHeight: 'min(380px, 58vh)',
+            maxWidth: '400px',
+            width: 'auto',
+            height: 'auto',
+            objectFit: 'contain',
           }}
         />
       )}
@@ -203,7 +211,10 @@ export function GifImage({
             class="post-gif-canvas"
             style={{ 
               display: frozen ? 'block' : 'none',
-              aspectRatio: aspectRatio ? `${aspectRatio.width} / ${aspectRatio.height}` : undefined,
+              maxHeight: 'min(380px, 58vh)',
+              maxWidth: '400px',
+              width: 'auto',
+              height: 'auto',
             }}
             aria-hidden="true"
           />

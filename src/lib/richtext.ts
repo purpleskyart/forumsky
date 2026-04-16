@@ -577,13 +577,13 @@ export function detectSpoilers(text: string): Facet[] {
 }
 
 /**
- * Detect hashtag facets for new post text.
- * Scans for #hashtag patterns and creates facet objects.
+ * Detect tag facets for new post text.
+ * Scans for !tag patterns (community syntax) and creates facet objects.
  */
 export function detectHashtags(text: string): Facet[] {
   const encoder = new TextEncoder();
   const facets: Facet[] = [];
-  const regex = /#([a-zA-Z0-9_]+)/g;
+  const regex = /!([a-zA-Z0-9_]+)/g;
   let match;
 
   while ((match = regex.exec(text)) !== null) {

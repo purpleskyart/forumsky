@@ -178,13 +178,12 @@ export function PostContentImage({
         class={className}
         src={src}
         alt={alt}
-        loading="lazy"
+        loading="eager"
         decoding="async"
         tabIndex={0}
         aria-label={alt ? `View larger: ${alt}` : 'View larger image'}
         style={{
           cursor: 'zoom-in',
-          aspectRatio: aspectRatio ? `${aspectRatio.width} / ${aspectRatio.height}` : undefined,
           backgroundColor: 'var(--bg-elevated)',
         }}
         onClick={(e: MouseEvent) => {
@@ -242,6 +241,12 @@ export function PostContentImage({
               class="media-lightbox-img"
               src={images[effectiveIndex].fullsize}
               alt={images[effectiveIndex].alt}
+              style={{
+                maxWidth: '90vw',
+                maxHeight: '90vh',
+                objectFit: 'contain',
+                boxShadow: '0 0 0 4px rgba(255, 255, 255, 0.1)',
+              }}
               onClick={(e: MouseEvent) => e.stopPropagation()}
             />
             {allImages && allImages.length > 1 && effectiveIndex < allImages.length - 1 && (

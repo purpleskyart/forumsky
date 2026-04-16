@@ -7,8 +7,6 @@ interface VirtualListOptions {
   itemHeight: number;
   /** Number of items to render outside viewport (overscan) */
   overscan?: number;
-  /** Container height in pixels (auto-detected if not provided) */
-  containerHeight?: number;
 }
 
 interface VirtualListResult {
@@ -16,140 +14,113 @@ interface VirtualListResult {
   startIndex: number;
   /** Index of last visible item */
   endIndex: number;
-  /** Total scrollable height */
+  /** Total scrollable height (for positioning) */
   totalHeight: number;
   /** Offset for visible items */
   offsetY: number;
-  /** Set container ref */
+  /** Set container ref (for measuring position) */
   containerRef: (el: HTMLElement | null) => void;
   /** Scroll to specific index */
   scrollToIndex: (index: number) => void;
 }
 
 /**
- * Virtual list hook using Intersection Observer.
+ * Virtual list hook using window scroll.
  * Only renders items that are in or near the viewport.
+ * Designed for pages where the window is the scrolling container.
  */
 export function useVirtualList(options: VirtualListOptions): VirtualListResult {
-  const { itemCount, itemHeight, overscan = 3, containerHeight: fixedHeight } = options;
-  
+  const { itemCount, itemHeight, overscan = 3 } = options;
+
   const containerRef = useRef<HTMLElement | null>(null);
   const [visibleRange, setVisibleRange] = useState({ start: 0, end: Math.min(itemCount - 1, 10) });
-  const [containerHeight, setContainerHeight] = useState(fixedHeight || 0);
-  const prevItemCountRef = useRef(itemCount);
-  
+
   // Use refs for values that change frequently but shouldn't trigger callback recreation
   const itemHeightRef = useRef(itemHeight);
   const overscanRef = useRef(overscan);
-  const containerHeightRef = useRef(containerHeight);
   const itemCountRef = useRef(itemCount);
-  
+  const prevItemCountRef = useRef(itemCount);
+
   // Keep refs in sync
   itemHeightRef.current = itemHeight;
   overscanRef.current = overscan;
-  containerHeightRef.current = containerHeight;
   itemCountRef.current = itemCount;
-  
-  // Update container height when ref changes or on resize
-  useEffect(() => {
-    if (fixedHeight) return;
-    
-    const updateHeight = () => {
-      if (containerRef.current) {
-        setContainerHeight(containerRef.current.clientHeight);
-      }
-    };
-    
-    updateHeight();
-    window.addEventListener('resize', updateHeight);
-    return () => window.removeEventListener('resize', updateHeight);
-  }, [fixedHeight]);
-  
-  // Calculate visible range based on scroll position
-  // Uses refs to avoid recreating the callback when values change
+
+  // Calculate visible range based on window scroll position
   const calculateVisibleRange = useCallback(() => {
-    if (!containerRef.current) return;
-    
-    const scrollTop = containerRef.current.scrollTop;
-    const height = containerHeightRef.current || containerRef.current.clientHeight;
+    const container = containerRef.current;
     const iHeight = itemHeightRef.current;
     const iCount = itemCountRef.current;
     const oScan = overscanRef.current;
-    
+
+    if (!container || iCount === 0) {
+      setVisibleRange({ start: 0, end: 0 });
+      return;
+    }
+
+    // Get container's position relative to the document
+    const containerRect = container.getBoundingClientRect();
+    const containerTop = containerRect.top + window.scrollY;
+
+    // Calculate scroll position relative to the container
+    const scrollTop = Math.max(0, window.scrollY - containerTop);
+    const viewportHeight = window.innerHeight;
+
     // Calculate which items should be visible
     const start = Math.floor(scrollTop / iHeight);
-    const visibleCount = Math.ceil(height / iHeight);
-    
+    const visibleCount = Math.ceil(viewportHeight / iHeight);
+
     // Apply overscan (render extra items above and below)
     const startIndex = Math.max(0, start - oScan);
     const endIndex = Math.min(iCount - 1, start + visibleCount + oScan);
-    
+
     setVisibleRange(prev => {
       if (prev.start !== startIndex || prev.end !== endIndex) {
         return { start: startIndex, end: endIndex };
       }
       return prev;
     });
-  }, []); // Empty deps - uses refs for mutable values
-  
-  // Set up scroll listener
+  }, []);
+
+  // Set up window scroll listener
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    
     const handleScroll = () => {
       requestAnimationFrame(calculateVisibleRange);
     };
-    
-    container.addEventListener('scroll', handleScroll, { passive: true });
-    calculateVisibleRange(); // Initial calculation
-    
-    return () => container.removeEventListener('scroll', handleScroll);
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', calculateVisibleRange, { passive: true });
+
+    // Initial calculation with a slight delay to ensure layout is complete
+    const timeoutId = setTimeout(calculateVisibleRange, 0);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', calculateVisibleRange);
+      clearTimeout(timeoutId);
+    };
   }, [calculateVisibleRange]);
-  
-  // Recalculate when dependencies change
+
+  // Recalculate when item count changes
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) {
-      calculateVisibleRange();
-      return;
-    }
-
-    const prevItemCount = prevItemCountRef.current;
-    const newItemCount = itemCount;
-    const itemsAdded = newItemCount - prevItemCount;
-
-    // If new items were appended and user is near bottom, preserve scroll position
-    if (itemsAdded > 0 && prevItemCount > 0) {
-      const scrollTop = container.scrollTop;
-      const scrollHeight = container.scrollHeight;
-      const clientHeight = container.clientHeight;
-      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-
-      // If user is within 200px of bottom, maintain position relative to bottom
-      if (distanceFromBottom < 200) {
-        // Calculate new scroll position to maintain same distance from bottom
-        const newScrollHeight = newItemCount * itemHeight;
-        const newScrollTop = newScrollHeight - distanceFromBottom - clientHeight;
-        container.scrollTop = Math.max(0, newScrollTop);
-      }
-    }
-
-    prevItemCountRef.current = newItemCount;
+    prevItemCountRef.current = itemCount;
     calculateVisibleRange();
-  }, [itemCount, itemHeight, calculateVisibleRange]);
-  
+  }, [itemCount, calculateVisibleRange]);
+
   const scrollToIndex = useCallback((index: number) => {
     const container = containerRef.current;
     if (!container) return;
-    
-    const targetScrollTop = index * itemHeight;
-    container.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
+
+    const containerRect = container.getBoundingClientRect();
+    const containerTop = containerRect.top + window.scrollY;
+    const targetScrollTop = containerTop + (index * itemHeight);
+
+    window.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
   }, [itemHeight]);
-  
+
   const totalHeight = itemCount * itemHeight;
   const offsetY = visibleRange.start * itemHeight;
-  
+
   return {
     startIndex: visibleRange.start,
     endIndex: visibleRange.end,
@@ -157,8 +128,9 @@ export function useVirtualList(options: VirtualListOptions): VirtualListResult {
     offsetY,
     containerRef: (el: HTMLElement | null) => {
       containerRef.current = el;
-      if (el && !fixedHeight) {
-        setContainerHeight(el.clientHeight);
+      // Recalculate when container ref is set
+      if (el) {
+        setTimeout(calculateVisibleRange, 0);
       }
     },
     scrollToIndex,
