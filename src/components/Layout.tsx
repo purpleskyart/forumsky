@@ -10,7 +10,7 @@ import { OutboxRetryBar } from './OutboxRetryBar';
 import { OfflineBanner } from './OfflineBanner';
 import { ReloadPrompt } from './ReloadPrompt';
 import { FloatingPostButton } from './FloatingPostButton';
-import { authInitDone, isLoggedIn, sessionRestorePending } from '@/lib/store';
+import { authInitDone, isLoggedIn, sessionRestorePending, showAuthDialog } from '@/lib/store';
 import { appPathname } from '@/lib/app-base-path';
 import { navigateBack } from '@/lib/router';
 

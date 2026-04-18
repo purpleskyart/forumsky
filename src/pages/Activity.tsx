@@ -3,7 +3,7 @@ import { listNotifications, type NotificationItem } from '@/api/notifications';
 import { getPosts, parseAtUri } from '@/api/feed';
 import { hrefForAppPath } from '@/lib/app-base-path';
 import { navigate, threadUrl, communityUrl, SPA_ANCHOR_SHIELD } from '@/lib/router';
-import { showToast, currentUser, isLoggedIn, authInitDone, sessionRestorePending } from '@/lib/store';
+import { showToast, currentUser, isLoggedIn, authInitDone, sessionRestorePending, showAuthDialog } from '@/lib/store';
 import { getSubscribedThreadRoots } from '@/lib/forumsky-local';
 import { formatRelativeTime, formatListDateTime } from '@/lib/i18n';
 import { Avatar } from '@/components/Avatar';

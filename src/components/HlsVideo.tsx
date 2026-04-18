@@ -6,6 +6,7 @@ type HlsVideoProps = {
   poster?: string;
   className?: string;
   'aria-label'?: string;
+  aspectRatio?: { width: number; height: number };
 };
 
 /** How much of the player must be visible before autoplay (feed-style). */

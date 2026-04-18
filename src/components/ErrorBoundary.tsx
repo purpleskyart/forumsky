@@ -26,7 +26,7 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   handleSignIn = () => {
-    showAuthDialog();
+    showAuthDialog.value = true;
   };
 
   isAuthError = () => {
