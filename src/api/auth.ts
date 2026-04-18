@@ -338,6 +338,7 @@ export async function signOutCurrentUser(): Promise<ProfileView | null> {
   }
   localStorage.removeItem(ACCOUNTS_KEY);
   localStorage.removeItem(ATPROTO_ACTIVE_SUB_KEY);
+  localStorage.removeItem('fsky_currentUser');
   return null;
 }
 
@@ -348,6 +349,7 @@ export function signOutAllSessions(): { success: boolean; error?: string } {
   setOAuthSession(null);
   localStorage.removeItem(ACCOUNTS_KEY);
   localStorage.removeItem(ATPROTO_ACTIVE_SUB_KEY);
+  localStorage.removeItem('fsky_currentUser');
   const cleanup = nukeAllOAuthDatabases();
   if (!cleanup.success) {
     return { success: false, error: cleanup.error };

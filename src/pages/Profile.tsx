@@ -26,9 +26,21 @@ export function Profile(props: ProfileProps) {
     typeof window !== 'undefined' ? parseProfileRoutePath(appPathname()) : {};
   const m = routeCtx.matches as Record<string, string | undefined> | null | undefined;
   const handle = props.handle ?? m?.handle ?? fromPath.handle;
+
+  // Read filter from URL query parameters
+  const initialFilter = (() => {
+    if (typeof window === 'undefined') return 'posts';
+    const params = new URLSearchParams(window.location.search);
+    const filterParam = params.get('filter');
+    if (filterParam === 'posts' || filterParam === 'replies' || filterParam === 'reposts' || filterParam === 'all') {
+      return filterParam;
+    }
+    return 'posts';
+  })();
+
   const [profile, setProfile] = useState<ProfileView | null>(null);
   const [feedItems, setFeedItems] = useState<FeedViewPost[]>([]);
-  const [filter, setFilter] = useState<'posts' | 'replies' | 'all'>('posts');
+  const [filter, setFilter] = useState<'posts' | 'replies' | 'reposts' | 'all'>(initialFilter);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
@@ -36,23 +48,67 @@ export function Profile(props: ProfileProps) {
   const [kbRowOutlineActive, setKbRowOutlineActive] = useState(false);
   const [followBusy, setFollowBusy] = useState(false);
   const [cursor, setCursor] = useState<string>('');
-  const posts = useMemo(() => feedItems.map(f => f.post), [feedItems]);
+  const posts = useMemo(() => {
+    let items = feedItems;
+    if (filter === 'posts') {
+      items = feedItems.filter(f => !f.reason);
+    } else if (filter === 'reposts') {
+      items = feedItems.filter(f => f.reason);
+    }
+    return items.map(f => f.post);
+  }, [feedItems, filter]);
   const [hasMore, setHasMore] = useState(true);
   const [profileAvatarFollowBusyDid, setProfileAvatarFollowBusyDid] = useState<string | null>(null);
   const postsRef = useRef<PostView[]>([]);
   const kbRowRef = useRef(0);
+  const kbRowUriRef = useRef<string | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   postsRef.current = posts;
   kbRowRef.current = kbRow;
+
+  // Keep track of the URI at current kbRow so we can restore position when filter changes
+  useEffect(() => {
+    const post = postsRef.current[kbRowRef.current];
+    kbRowUriRef.current = post?.uri ?? null;
+  }, [kbRow]);
+
+  useEffect(() => {
+    // When posts change (filter change), find the URI's new index
+    const prevUri = kbRowUriRef.current;
+    const currentPosts = postsRef.current;
+    if (prevUri) {
+      const newIndex = currentPosts.findIndex(p => p.uri === prevUri);
+      if (newIndex !== -1) {
+        setKbRow(newIndex);
+        return;
+      }
+    }
+    // Fallback: clamp to valid range
+    setKbRow(i => Math.min(i, Math.max(0, currentPosts.length - 1)));
+  }, [posts.length]);
 
   const me = currentUser.value;
 
   const getFilterParam = useCallback((f: typeof filter): string => {
     switch (f) {
       case 'replies': return 'posts_with_replies';
+      case 'reposts': return 'posts_with_media'; // Use posts_with_media to get everything including reposts
       case 'all': return 'posts_with_media'; // Use posts_with_media to get everything including reposts
       default: return 'posts_no_replies';
     }
+  }, []);
+
+  const handleFilterChange = useCallback((newFilter: typeof filter) => {
+    setFilter(newFilter);
+    // Update URL query parameter
+    const params = new URLSearchParams(window.location.search);
+    if (newFilter === 'posts') {
+      params.delete('filter');
+    } else {
+      params.set('filter', newFilter);
+    }
+    const newUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`;
+    window.history.replaceState({}, '', newUrl);
   }, []);
 
   const loadMore = useCallback(async () => {
@@ -151,11 +207,6 @@ export function Profile(props: ProfileProps) {
     return () => { cancelled = true; };
   }, [handle, me?.did, filter, getFilterParam]);
 
-  useEffect(() => {
-    setKbRow(i => Math.min(i, Math.max(0, posts.length - 1)));
-  }, [posts.length]);
-
-
   const handleProfileAvatarFollow = useCallback(async (authorDid: string) => {
     const meDid = currentUser.value?.did;
     if (!meDid) {
@@ -202,10 +253,12 @@ export function Profile(props: ProfileProps) {
         e.preventDefault();
         setKbRowOutlineActive(true);
         const max = Math.max(0, list.length - 1);
+        // Clamp current kbRow to valid range before calculating anchor
+        const safeCurrent = Math.min(max, Math.max(0, kbRowRef.current));
         const anchor = dominantVisibleListRowIndex(
           list.length,
           i => `profile-feed-kb-${i}`,
-          kbRowRef.current,
+          safeCurrent,
         );
         setKbRow(Math.min(max, Math.max(0, anchor + (down ? 1 : -1))));
         return;
@@ -225,11 +278,14 @@ export function Profile(props: ProfileProps) {
 
   useLayoutEffect(() => {
     if (!kbRowOutlineActive) return;
-    document.getElementById(`profile-feed-kb-${kbRow}`)?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'center',
-      inline: 'nearest',
-    });
+    const el = document.getElementById(`profile-feed-kb-${kbRow}`);
+    if (el) {
+      el.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'nearest',
+      });
+    }
   }, [kbRow, kbRowOutlineActive]);
 
   const handleFollow = async () => {
@@ -393,21 +449,28 @@ export function Profile(props: ProfileProps) {
             <button
               type="button"
               class={`btn btn-sm ${filter === 'posts' ? 'btn-primary' : 'btn-outline'}`}
-              onClick={() => setFilter('posts')}
+              onClick={() => handleFilterChange('posts')}
             >
               Posts
             </button>
             <button
               type="button"
               class={`btn btn-sm ${filter === 'replies' ? 'btn-primary' : 'btn-outline'}`}
-              onClick={() => setFilter('replies')}
+              onClick={() => handleFilterChange('replies')}
             >
-              Replies and Reposts
+              Replies
+            </button>
+            <button
+              type="button"
+              class={`btn btn-sm ${filter === 'reposts' ? 'btn-primary' : 'btn-outline'}`}
+              onClick={() => handleFilterChange('reposts')}
+            >
+              Reposts
             </button>
             <button
               type="button"
               class={`btn btn-sm ${filter === 'all' ? 'btn-primary' : 'btn-outline'}`}
-              onClick={() => setFilter('all')}
+              onClick={() => handleFilterChange('all')}
             >
               All
             </button>
@@ -422,19 +485,33 @@ export function Profile(props: ProfileProps) {
           <div class="empty"><p>No threads yet</p></div>
         ) : (
           <>
-            {feedItems.map((item) => (
-              <FollowingFeedRow
-                key={item.post.uri}
-                post={item.post}
-                feedReason={item.reason}
-                downvoteDisplayCount={0}
-                onDownvotePost={() => {}}
-                onAvatarFollow={handleProfileAvatarFollow}
-                avatarFollowBusyDid={profileAvatarFollowBusyDid}
-                followingAuthorDids={followingDids.value}
-                viewerDid={me?.did}
-              />
-            ))}
+            {(() => {
+              let items = feedItems;
+              if (filter === 'posts') {
+                items = feedItems.filter(f => !f.reason);
+              } else if (filter === 'reposts') {
+                items = feedItems.filter(f => f.reason);
+              }
+              return items.map((item, i) => (
+                <div
+                  key={item.post.uri}
+                  id={`profile-feed-kb-${i}`}
+                  class={kbRowOutlineActive && i === kbRow ? 'thread-row-kb-focus' : undefined}
+                >
+                  <FollowingFeedRow
+                    post={item.post}
+                    feedReason={item.reason}
+                    replyContext={item.reply}
+                    downvoteDisplayCount={0}
+                    onDownvotePost={() => {}}
+                    onAvatarFollow={handleProfileAvatarFollow}
+                    avatarFollowBusyDid={profileAvatarFollowBusyDid}
+                    followingAuthorDids={followingDids.value}
+                    viewerDid={me?.did}
+                  />
+                </div>
+              ));
+            })()}
             {hasMore && (
               <div ref={loadMoreRef} class="feed-load-more-wrap" style="padding: 16px; text-align: center;">
                 <button

@@ -207,6 +207,7 @@ export function Community({ tag: tagProp }: CommunityProps) {
   const feedDownvoteGenRef = useRef(0);
   const feedDownvoteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [feedAvatarFollowBusyDid, setFeedAvatarFollowBusyDid] = useState<string | null>(null);
+  const [hitMaxRounds, setHitMaxRounds] = useState(false);
 
   const loadGen = useRef(0);
   /** Distinguish remount/back-nav (keep feed visible) from tag/sort change (full reset). */
@@ -277,7 +278,7 @@ export function Community({ tag: tagProp }: CommunityProps) {
     prevBuffer: PostView[],
     apiCursor: string | undefined,
     signal?: AbortSignal,
-  ): Promise<{ page: PostView[]; buffer: PostView[]; nextCursor: string | undefined }> {
+  ): Promise<{ page: PostView[]; buffer: PostView[]; nextCursor: string | undefined; hitMaxRounds: boolean }> {
     const collected: PostView[] = [];
     const buf = [...prevBuffer];
     let cur = apiCursor;
@@ -302,7 +303,8 @@ export function Community({ tag: tagProp }: CommunityProps) {
       if (!res.cursor) break;
     }
 
-    return { page: collected, buffer: buf, nextCursor: cur };
+    const hitMaxRounds = rounds >= FILTER_MAX_ROUNDS && collected.length < THREADS_PER_PAGE;
+    return { page: collected, buffer: buf, nextCursor: cur, hitMaxRounds };
   }
 
   async function accumulateFilteredForReplies(
@@ -473,6 +475,7 @@ export function Community({ tag: tagProp }: CommunityProps) {
         setReplyPool([]);
         setReplyApiCursor(undefined);
         setMatchedBuffer([]);
+        setHitMaxRounds(false);
         seenCommunityUris.current.clear();
         matchedBufferRef.current = [];
         searchCursorRef.current = undefined;
@@ -574,13 +577,14 @@ export function Community({ tag: tagProp }: CommunityProps) {
         }
 
         if (sortMode === 'likes') {
-          const { page: pagePosts, buffer, nextCursor } = await pullFilteredRoots(tag, 'top', [], undefined, signal);
+          const { page: pagePosts, buffer, nextCursor, hitMaxRounds: hitMax } = await pullFilteredRoots(tag, 'top', [], undefined, signal);
           if (signal.aborted || gen !== loadGen.current) return;
           matchedBufferRef.current = buffer;
           searchCursorRef.current = nextCursor;
           setMatchedBuffer(buffer);
           setPosts(pagePosts);
           setCursor(nextCursor);
+          setHitMaxRounds(hitMax);
           setTotalHits(0);
           return;
         }
@@ -597,13 +601,14 @@ export function Community({ tag: tagProp }: CommunityProps) {
           return;
         }
 
-        const { page: pagePosts, buffer, nextCursor } = await pullFilteredRoots(tag, 'latest', [], undefined, signal);
+        const { page: pagePosts, buffer, nextCursor, hitMaxRounds: hitMax } = await pullFilteredRoots(tag, 'latest', [], undefined, signal);
         if (signal.aborted || gen !== loadGen.current) return;
         matchedBufferRef.current = buffer;
         searchCursorRef.current = nextCursor;
         setMatchedBuffer(buffer);
         setPosts(pagePosts);
         setCursor(nextCursor);
+        setHitMaxRounds(hitMax);
         setTotalHits(0);
       } catch (err) {
         if (signal.aborted || gen !== loadGen.current) return;
@@ -789,11 +794,13 @@ export function Community({ tag: tagProp }: CommunityProps) {
 
         const batches = Math.max(0, newPage - curPage);
         const chunks: PostView[] = [];
+        let hitMax = false;
         for (let s = 0; s < batches; s++) {
           const r = await pullFilteredRoots(tag!, sort, buf, cur);
           chunks.push(...r.page);
           buf = r.buffer;
           cur = r.nextCursor;
+          if (r.hitMaxRounds) hitMax = true;
         }
 
         matchedBufferRef.current = buf;
@@ -801,6 +808,7 @@ export function Community({ tag: tagProp }: CommunityProps) {
         setMatchedBuffer(buf);
         setPosts(prev => dedupeByUri([...prev, ...chunks]));
         setCursor(cur);
+        setHitMaxRounds(hitMax);
         setTotalHits(0);
         setPage(newPage);
         pageRef.current = newPage;
@@ -865,11 +873,29 @@ export function Community({ tag: tagProp }: CommunityProps) {
 
   const displayPostsRef = useRef<PostView[]>([]);
   const kbRowRef = useRef(0);
+  const kbRowUriRef = useRef<string | null>(null);
   displayPostsRef.current = displayPosts;
   kbRowRef.current = kbRow;
 
+  // Keep track of the URI at current kbRow so we can restore position when posts are filtered
   useEffect(() => {
-    setKbRow(i => Math.min(i, Math.max(0, displayPosts.length - 1)));
+    const post = displayPostsRef.current[kbRowRef.current];
+    kbRowUriRef.current = post?.uri ?? null;
+  }, [kbRow]);
+
+  useEffect(() => {
+    // When displayPosts changes (filtering/loading), find the URI's new index
+    const prevUri = kbRowUriRef.current;
+    const currentPosts = displayPostsRef.current;
+    if (prevUri) {
+      const newIndex = currentPosts.findIndex(p => p.uri === prevUri);
+      if (newIndex !== -1) {
+        setKbRow(newIndex);
+        return;
+      }
+    }
+    // Fallback: clamp to valid range
+    setKbRow(i => Math.min(i, Math.max(0, currentPosts.length - 1)));
   }, [displayPosts.length]);
 
   useEffect(() => {
@@ -985,10 +1011,12 @@ export function Community({ tag: tagProp }: CommunityProps) {
         e.preventDefault();
         setKbRowOutlineActive(true);
         const max = Math.max(0, list.length - 1);
+        // Clamp current kbRow to valid range before calculating anchor
+        const safeCurrent = Math.min(max, Math.max(0, kbRowRef.current));
         const anchor = dominantVisibleListRowIndex(
           list.length,
           i => `community-feed-kb-${i}`,
-          kbRowRef.current,
+          safeCurrent,
         );
         setKbRow(Math.min(max, Math.max(0, anchor + (down ? 1 : -1))));
         return;
@@ -1008,16 +1036,19 @@ export function Community({ tag: tagProp }: CommunityProps) {
 
   useLayoutEffect(() => {
     if (!kbRowOutlineActive) return;
-    document.getElementById(`community-feed-kb-${kbRow}`)?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'center',
-      inline: 'nearest',
-    });
+    const el = document.getElementById(`community-feed-kb-${kbRow}`);
+    if (el) {
+      el.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'nearest',
+      });
+    }
   }, [kbRow, kbRowOutlineActive]);
 
   const tagSearchSort =
     !isFollowing && (sortMode === 'recent' || sortMode === 'likes' || sortMode === 'author');
-  const tagSearchHasMore = matchedBuffer.length > 0 || Boolean(cursor);
+  const tagSearchHasMore = matchedBuffer.length > 0 || Boolean(cursor) || hitMaxRounds;
   const totalPages = isFollowing
     ? Math.max(1, Math.ceil(totalHits / THREADS_PER_PAGE))
     : sortMode === 'replies'
@@ -1137,9 +1168,15 @@ export function Community({ tag: tagProp }: CommunityProps) {
         ) : error ? (
           <div class="error-msg">
             <p>{error}</p>
-            <button class="btn btn-outline" style="margin-top:10px" onClick={() => window.location.reload()}>
-              Retry
-            </button>
+            {error === 'You must be signed in to do this' ? (
+              <button class="btn btn-primary" style="margin-top:10px" onClick={() => showAuthDialog.value = true}>
+                Sign In
+              </button>
+            ) : (
+              <button class="btn btn-outline" style="margin-top:10px" onClick={() => window.location.reload()}>
+                Retry
+              </button>
+            )}
           </div>
         ) : displayPosts.length === 0 ? (
           <div class="empty">

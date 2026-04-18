@@ -312,7 +312,8 @@ export function Thread(props: ThreadProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Scroll restoration disabled for thread page to prevent jumps when content updates
+  /** Restore scroll when thread loads (back/forward navigation) */
+  const prevLoadingForScrollRef = useRef(loading);
 
   useLayoutEffect(() => {
     if (!actor || !rkey) return;
@@ -320,6 +321,13 @@ export function Thread(props: ThreadProps) {
     setThread(null);
     setError('');
   }, [actor, rkey]);
+
+  useLayoutEffect(() => {
+    const wasLoading = prevLoadingForScrollRef.current;
+    prevLoadingForScrollRef.current = loading;
+    if (!wasLoading || loading) return;
+    restoreScrollNow();
+  }, [loading]);
 
   useEffect(() => {
     if (!actor || !rkey) return;
@@ -678,11 +686,23 @@ function ThreadView({
   const postByKeyboardNumber = useMemo(() => {
     const m = new Map<number, PostView>();
     m.set(1, rootPost);
-    visibleComments.forEach((c, i) => m.set(i + 2, c.post));
+    // Use threadIndex which has correct numbering from unfiltered comments
+    for (const [uri, postNum] of threadIndex.postNumberByUri) {
+      if (postNum !== 1) {
+        const pv = threadIndex.postByUri.get(uri);
+        if (pv) m.set(postNum, pv);
+      }
+    }
     return m;
-  }, [rootPost, visibleComments]);
+  }, [rootPost, threadIndex]);
 
-  const maxKbPostNum = Math.max(1, 1 + visibleComments.length);
+  const maxKbPostNum = useMemo(() => {
+    let max = 1;
+    for (const n of threadIndex.postNumberByUri.values()) {
+      if (n > max) max = n;
+    }
+    return max;
+  }, [threadIndex]);
 
   const persistCommentLayout = (mode: ThreadCommentLayoutMode) => {
     setCommentLayoutMode(mode);
@@ -984,6 +1004,8 @@ function ThreadView({
     if (composerDismissed) return false;
     if (quoteTarget && quoteTarget.post.uri === post.uri) return true;
     if (replyTarget === null) {
+      // In nested view, bottom composer handles "reply to thread end" - no inline composers
+      if (commentLayoutMode === 'nested') return false;
       if (lastCommentPost) {
         return post.uri === lastCommentPost.uri;
       }
@@ -1014,10 +1036,24 @@ function ThreadView({
       if (postNum === 1) {
         return forumPost.segments.map(s => s.record.text).join('\n\n');
       }
-      const c = visibleComments[postNum - 2];
-      return c ? c.segments.map(s => s.record.text).join('\n\n') : null;
+      // Find the comment with this post number in threadIndex
+      for (const [uri, n] of threadIndex.postNumberByUri) {
+        if (n === postNum) {
+          const pv = threadIndex.postByUri.get(uri);
+          // Check if this is a segmented post (forum comment)
+          if (pv?.record.text != null) {
+            // Need to find the full comment segments
+            const comment = comments.find(c => c.post.uri === uri);
+            if (comment) {
+              return comment.segments.map(s => s.record.text).join('\n\n');
+            }
+            return pv.record.text;
+          }
+        }
+      }
+      return null;
     },
-    [forumPost.segments, visibleComments],
+    [forumPost.segments, comments, threadIndex],
   );
 
   return (
@@ -1198,12 +1234,12 @@ function ThreadView({
         {commentLayoutMode === 'forum'
           ? (
             <div>
-              {visibleComments.map((comment, idx) => (
+              {visibleComments.map((comment) => (
                 <Fragment key={comment.post.uri}>
                   <PostBlock
                     segments={comment.segments}
                     root={comment.post}
-                    postNumber={idx + 2}
+                    postNumber={threadIndex.postNumberByUri.get(comment.post.uri) ?? 0}
                     threadRootUri={rootPost.uri}
                     threadIndex={threadIndex}
                     mergedTextForPostNumber={mergedTextForPostNumber}
@@ -1233,21 +1269,28 @@ function ThreadView({
                     threadCreatorDisplayName={rootPost.author.displayName || rootPost.author.handle}
                   />
                   {showComposerAfterPost(comment.post) && (
-                    <ThreadInlineComposer
-                      key={`${replyTarget?.parent.uri ?? 'r'}-${quoteTarget?.post.uri ?? 'q'}`}
-                      replyTo={replyToForComposer}
-                      quoteEmbed={quoteEmbedForComposer}
-                      replyTargetSummary={replyTargetSummary}
-                      composerFocusRequest={composerFocusRequest}
-                      draftRootUri={rootPost.uri}
-                      appendTextRequest={appendQuoteRequest}
-                      onDismiss={dismissComposer}
-                      onPosted={async () => {
-                        await refreshThread();
-                        setReplyTarget(null);
-                        setQuoteTarget(null);
-                      }}
-                    />
+                    (() => {
+                      const composer = (
+                        <ThreadInlineComposer
+                          key={`${replyTarget?.parent.uri ?? 'r'}-${quoteTarget?.post.uri ?? 'q'}`}
+                          replyTo={replyToForComposer}
+                          quoteEmbed={quoteEmbedForComposer}
+                          replyTargetSummary={replyTargetSummary}
+                          composerFocusRequest={composerFocusRequest}
+                          draftRootUri={rootPost.uri}
+                          appendTextRequest={appendQuoteRequest}
+                          onDismiss={dismissComposer}
+                          onPosted={async () => {
+                            await refreshThread();
+                            setReplyTarget(null);
+                            setQuoteTarget(null);
+                          }}
+                        />
+                      );
+                      return replyTarget ? (
+                        <div class="thread-composer-forum-indent">{composer}</div>
+                      ) : composer;
+                    })()
                   )}
                 </Fragment>
               ))}
@@ -1298,6 +1341,24 @@ function ThreadView({
                 </div>
               );
             })}
+
+        {/* Default reply box at bottom of thread in nested view (only when no active reply/quote) */}
+        {commentLayoutMode === 'nested' && !replyTarget && !quoteTarget && !composerDismissed && (
+          <ThreadInlineComposer
+            key="nested-bottom-composer"
+            replyTo={threadReplyTo}
+            replyTargetSummary={defaultReplySummary}
+            composerFocusRequest={composerFocusRequest}
+            draftRootUri={rootPost.uri}
+            appendTextRequest={appendQuoteRequest}
+            onDismiss={dismissComposer}
+            onPosted={async () => {
+              await refreshThread();
+              setReplyTarget(null);
+              setQuoteTarget(null);
+            }}
+          />
+        )}
       </div>
 
       <CrossDiscussionPanel rootPost={rootPost} />
@@ -1330,8 +1391,10 @@ function ThreadInlineComposer({
   onDismiss: () => void;
   onPosted: () => Promise<void>;
 }) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+
   return (
-    <div id="thread-composer-anchor" class="thread-composer-wrap thread-composer-inline">
+    <div ref={wrapRef} id="thread-composer-anchor" class="thread-composer-wrap thread-composer-inline">
       <Composer
         replyTo={replyTo}
         quoteEmbed={quoteEmbed}
@@ -1870,19 +1933,6 @@ function ReferencedPostPeek({
     return () => document.removeEventListener('pointerdown', onDoc, true);
   }, [authorPinned]);
 
-  useEffect(() => {
-    if (!unfurled) return;
-    const onDocPointerDown = (e: Event) => {
-      const t = e.target as Node;
-      if (peekDismissBoundaryRef.current?.contains(t)) return;
-      if (ariaKind === 'parent') {
-        if (authorBtnRef.current?.contains(t) || authorCardRef.current?.contains(t)) return;
-      }
-      setUnfurled(false);
-    };
-    document.addEventListener('pointerdown', onDocPointerDown, true);
-    return () => document.removeEventListener('pointerdown', onDocPointerDown, true);
-  }, [unfurled, ariaKind]);
 
   const runChildRefTranslate = useCallback(async () => {
     if (layout !== 'child' || !childRefTranslateOffer || !targetPost) return;
@@ -1924,8 +1974,12 @@ function ReferencedPostPeek({
 
   const onQuoteClick = useCallback((e: Event) => {
     e.preventDefault();
+    // On desktop, clicking a child reply (>>) should jump to the post, like the (number) button
+    if (layout === 'child' && !isTouchDevice && jumpPostNumber != null) {
+      scrollToThreadPost(jumpPostNumber);
+    }
     setUnfurled(v => !v);
-  }, []);
+  }, [layout, isTouchDevice, jumpPostNumber]);
 
   const clearExpandLeaveTimer = useCallback(() => {
     if (expandLeaveTimerRef.current != null) {
@@ -1934,13 +1988,6 @@ function ReferencedPostPeek({
     }
   }, []);
 
-  const scheduleCloseExpand = useCallback(() => {
-    clearExpandLeaveTimer();
-    expandLeaveTimerRef.current = setTimeout(() => {
-      setUnfurled(false);
-      expandLeaveTimerRef.current = null;
-    }, 50);
-  }, [clearExpandLeaveTimer]);
 
   const onQuoteHover = useCallback(() => {
     if (layout === 'child') {
@@ -1948,6 +1995,14 @@ function ReferencedPostPeek({
       setUnfurled(true);
     }
   }, [layout, clearExpandLeaveTimer]);
+
+  const scheduleCloseExpand = useCallback(() => {
+    clearExpandLeaveTimer();
+    expandLeaveTimerRef.current = setTimeout(() => {
+      setUnfurled(false);
+      expandLeaveTimerRef.current = null;
+    }, 200);
+  }, [clearExpandLeaveTimer]);
 
   const onQuoteLeave = useCallback(() => {
     if (layout === 'child') {
@@ -2218,10 +2273,7 @@ function ReferencedPostPeek({
     <div ref={peekDismissBoundaryRef} class="post-child-reply-item">
       <span class="post-child-reply-pair">{controlsRow}</span>
       {expandLayer && (
-        <div
-          onMouseEnter={clearExpandLeaveTimer}
-          onMouseLeave={scheduleCloseExpand}
-        >
+        <div onMouseEnter={clearExpandLeaveTimer} onMouseLeave={scheduleCloseExpand}>
           {expandLayer}
         </div>
       )}
@@ -3032,76 +3084,47 @@ function PostBlock({
               const segExternal = segMedia?.external ?? null;
               const segExtGif = segMedia?.externalGifSrc ?? null;
               const segMediaCount = segImages.length + segVideos.length;
+              const segMediaNodes = (
+                <Fragment>
+                  {segImages.map((img, i) =>
+                    isGifImage(img) ? (
+                      <NsfwMediaWrap key={i} isNsfw={segmentsNsfw} labels={segmentsLabels}>
+                        <GifImageFromEmbed
+                          img={img}
+                          className="post-content-media post-content-media--gif"
+                        />
+                      </NsfwMediaWrap>
+                    ) : (
+                      <NsfwMediaWrap key={i} isNsfw={segmentsNsfw} labels={segmentsLabels}>
+                        <PostContentImage
+                          src={img.fullsize || img.thumb}
+                          alt={img.alt ?? ''}
+                          aspectRatio={img.aspectRatio}
+                          allImages={segImages}
+                          currentIndex={i}
+                        />
+                      </NsfwMediaWrap>
+                    ),
+                  )}
+                  {segVideos.map((vid, i) => (
+                    <NsfwMediaWrap key={`${vid.playlist}-${i}`} isNsfw={segmentsNsfw} labels={segmentsLabels}>
+                      <HlsVideo
+                        playlist={vid.playlist}
+                        poster={vid.thumbnail}
+                        aspectRatio={vid.aspectRatio}
+                        className="post-content-media"
+                        aria-label={vid.alt || 'Video'}
+                      />
+                    </NsfwMediaWrap>
+                  ))}
+                </Fragment>
+              );
               return (
                 <div key={seg.uri}>
                   {content}
-                  {segMediaCount > 0 && (
-                    <NsfwMediaWrap isNsfw={segmentsNsfw} labels={segmentsLabels}>
-                      {segMediaCount > 1 ? (
-                        <div class="post-content-media-stack">
-                          {segImages.map((img, i) =>
-                            isGifImage(img) ? (
-                              <GifImageFromEmbed
-                                key={i}
-                                img={img}
-                                className="post-content-media post-content-media--gif"
-                              />
-                            ) : (
-                              <PostContentImage
-                                key={i}
-                                src={img.fullsize || img.thumb}
-                                alt={img.alt ?? ''}
-                                aspectRatio={img.aspectRatio}
-                                allImages={segImages}
-                                currentIndex={i}
-                              />
-                            ),
-                          )}
-                          {segVideos.map((vid, i) => (
-                            <HlsVideo
-                              key={`${vid.playlist}-${i}`}
-                              playlist={vid.playlist}
-                              poster={vid.thumbnail}
-                              aspectRatio={vid.aspectRatio}
-                              className="post-content-media"
-                              aria-label={vid.alt || 'Video'}
-                            />
-                          ))}
-                        </div>
-                      ) : (
-                        <Fragment>
-                          {segImages.map((img, i) =>
-                            isGifImage(img) ? (
-                              <GifImageFromEmbed
-                                key={i}
-                                img={img}
-                                className="post-content-media post-content-media--gif"
-                              />
-                            ) : (
-                              <PostContentImage
-                                key={i}
-                                src={img.fullsize || img.thumb}
-                                alt={img.alt ?? ''}
-                                aspectRatio={img.aspectRatio}
-                                allImages={segImages}
-                                currentIndex={i}
-                              />
-                            ),
-                          )}
-                          {segVideos.map((vid, i) => (
-                            <HlsVideo
-                              key={`${vid.playlist}-${i}`}
-                              playlist={vid.playlist}
-                              poster={vid.thumbnail}
-                              aspectRatio={vid.aspectRatio}
-                              className="post-content-media"
-                              aria-label={vid.alt || 'Video'}
-                            />
-                          ))}
-                        </Fragment>
-                      )}
-                    </NsfwMediaWrap>
-                  )}
+                  {segMediaCount > 0 ? (
+                    segMediaCount > 1 ? <div class="post-content-media-stack">{segMediaNodes}</div> : segMediaNodes
+                  ) : null}
                   {segExternal &&
                     (segExtGif ? (
                       <NsfwMediaWrap isNsfw={segmentsNsfw} labels={segmentsLabels}>

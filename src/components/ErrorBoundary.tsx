@@ -1,4 +1,5 @@
 import { Component } from 'preact';
+import { showAuthDialog } from '@/lib/store';
 
 interface Props {
   children: preact.ComponentChildren;
@@ -24,17 +25,37 @@ export class ErrorBoundary extends Component<Props, State> {
     this.setState({ hasError: false, error: null });
   };
 
+  handleSignIn = () => {
+    showAuthDialog();
+  };
+
+  isAuthError = () => {
+    const error = this.state.error;
+    if (!error) return false;
+    return error.message === 'You must be signed in to do this' ||
+           (error as any).errorType === 'AuthRequired';
+  };
+
   render() {
     if (this.state.hasError) {
+      const isAuth = this.isAuthError();
       return (
         <div class="panel" style={{ padding: '48px 24px', textAlign: 'center' }}>
-          <h2 style={{ marginBottom: '16px' }}>Something went wrong</h2>
+          <h2 style={{ marginBottom: '16px' }}>
+            {isAuth ? 'Sign in required' : 'Something went wrong'}
+          </h2>
           <p style={{ marginBottom: '16px', color: 'var(--text-secondary)' }}>
             {this.state.error?.message || 'An unexpected error occurred'}
           </p>
-          <button class="btn btn-primary" onClick={this.handleRetry}>
-            Try Again
-          </button>
+          {isAuth ? (
+            <button class="btn btn-primary" onClick={this.handleSignIn}>
+              Sign In
+            </button>
+          ) : (
+            <button class="btn btn-primary" onClick={this.handleRetry}>
+              Try Again
+            </button>
+          )}
         </div>
       );
     }

@@ -231,9 +231,15 @@ export function Activity() {
         {error ? (
           <div class="error-msg">
             <p>{error}</p>
-            <button class="btn btn-outline" style="margin-top:10px" onClick={() => setRetryCount(c => c + 1)}>
-              Retry
-            </button>
+            {error === 'You must be signed in to do this' ? (
+              <button class="btn btn-primary" style="margin-top:10px" onClick={() => showAuthDialog.value = true}>
+                Sign In
+              </button>
+            ) : (
+              <button class="btn btn-outline" style="margin-top:10px" onClick={() => setRetryCount(c => c + 1)}>
+                Retry
+              </button>
+            )}
           </div>
         ) : loading ? (
           <div class="activity-loading">

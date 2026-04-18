@@ -603,7 +603,7 @@
 .app-shell { display: flex; flex-direction: column; min-height: 100vh; }
 
 .main-wrap {
-  max-width: 1280px;
+  max-width: 1150px;
   margin: 0 auto;
   padding: 16px;
   width: 100%;
@@ -795,7 +795,7 @@
 .nsfw-media-blur-wrap {
   position: relative;
   display: block;
-  max-width: min(100%, 400px);
+  max-width: min(100%, 600px);
   border-radius: var(--radius);
   overflow: hidden;
   cursor: pointer;
@@ -1310,6 +1310,64 @@
   letter-spacing: 0.02em;
 }
 
+/* ========== Reply Preview ========== */
+.reply-preview {
+  display: block;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  border-left: 3px solid var(--accent);
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.reply-preview:hover {
+  background: var(--bg-surface);
+  border-color: var(--accent);
+}
+
+.reply-preview-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-size: 0.75rem;
+}
+
+.reply-preview-label {
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.reply-preview-author {
+  color: var(--accent);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.reply-preview-content {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.reply-preview-content a {
+  text-decoration: none;
+}
+
+.reply-preview-content a:hover {
+  text-decoration: none;
+}
+
+.reply-preview .post-external-card {
+  margin-top: 10px;
+}
+
 .pinned-loading {
   font-size: 0.72rem;
   color: var(--text-muted);
@@ -1811,8 +1869,8 @@
 }
 .following-feed-row-media {
   max-height: min(380px, 58vh) !important;
-  max-width: 400px !important;
-  object-fit: contain;
+  max-width: 600px !important;
+  object-fit: cover;
 }
 .following-feed-row-profile-avatar.avatar-wrap {
   display: block;
@@ -2122,7 +2180,7 @@
   gap: 0;
   align-items: stretch;
   background: var(--post-card-bg);
-  border-radius: var(--radius-lg);
+  border-radius: 0;
   /* visible so author sidebar can use position:sticky (hidden clips sticky) */
   overflow: visible;
 }
@@ -2136,7 +2194,7 @@
   padding: 14px 8px 16px 8px;
   text-align: center;
   background: var(--post-sidebar-bg);
-  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+  border-radius: 0;
   align-self: flex-start;
   position: sticky;
   top: calc(var(--thread-author-sticky-top) + env(safe-area-inset-top, 0px));
@@ -2835,6 +2893,9 @@ a.post-overflow-menu-item {
   font-size: 0.78rem;
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .post-quote-jump {
   background: none;
@@ -3141,16 +3202,16 @@ a.post-overflow-menu-item {
 .post-quoted-embed-media {
   margin-top: 10px;
   max-height: 300px !important;
-  max-width: 400px !important;
+  max-width: min(100%, 600px) !important;
 }
 .post-quoted-embed-media img {
   max-height: 300px !important;
-  max-width: 400px !important;
+  max-width: min(100%, 600px) !important;
   object-fit: contain;
 }
 .post-quoted-embed-external {
   margin-top: 10px;
-  max-width: 400px;
+  max-width: min(100%, 600px);
 }
 .post-quoted-embed-fallback {
   margin: 10px 0 4px;
@@ -3209,8 +3270,8 @@ a.post-overflow-menu-item {
   text-decoration: none;
 }
 .post-content .post-content-media {
-  max-width: 400px !important;
-  max-height: 500px !important;
+  max-width: min(100%, 600px) !important;
+  max-height: 800px !important;
   width: auto !important;
   height: auto !important;
   border-radius: var(--radius);
@@ -3220,7 +3281,7 @@ a.post-overflow-menu-item {
 }
 /* Global constraint for all images in post content */
 .post-content img {
-  max-width: 400px !important;
+  max-width: min(100%, 600px) !important;
   max-height: 300px !important;
   width: auto !important;
   height: auto !important;
@@ -3317,20 +3378,23 @@ a.post-overflow-menu-item {
   position: relative;
   display: block;
   width: 100%;
-  max-width: min(100%, 400px);
+  max-width: 100%;
   overflow: hidden;
   border-radius: var(--radius);
 }
 .post-content-media-stack .post-hls-video-wrap,
 .post-quoted-embed-stack .post-hls-video-wrap {
   max-width: 100%;
-  width: fit-content;
-  display: inline-block;
-}
-.post-hls-video-wrap video.post-content-media {
-  display: block;
   width: 100%;
+  display: block;
+}
+.post-hls-video-wrap video.post-content-media,
+.post-hls-video-wrap video.post-hls-video--compact {
+  display: block;
+  width: 100% !important;
+  max-width: 100% !important;
   height: auto;
+  max-height: min(600px, 70vh);
   object-fit: contain;
 }
 video.post-hls-video--has-overlay {
@@ -3402,17 +3466,17 @@ video.post-hls-video--has-overlay {
 }
 .post-content-media-stack video.post-content-media {
   display: block;
-  width: auto;
+  width: 100%;
   height: auto;
   max-width: 100%;
-  max-height: min(380px, 58vh);
+  max-height: min(600px, 70vh);
   object-fit: contain;
 }
 .post-content-media-stack .post-hls-video-wrap video.post-content-media {
   width: 100%;
   height: auto;
   max-width: 100%;
-  max-height: min(380px, 58vh);
+  max-height: min(600px, 70vh);
   object-fit: contain;
 }
 .post-content-media-stack .post-gif-wrap {
@@ -3434,7 +3498,7 @@ video.post-hls-video--has-overlay {
   max-width: 100%;
 }
 
-/* Beat .post-content .post-content-media { max-width: 400px } inside multi-media stack */
+/* Beat max-width constraint inside multi-media stack */
 .post-content .post-content-media-stack .post-content-media,
 .post-content .post-content-media-stack .post-gif-wrap {
   max-width: 100%;
@@ -3505,7 +3569,7 @@ video.post-hls-video--has-overlay {
   width: 100% !important;
   height: auto !important;
   max-height: 300px !important;
-  max-width: 400px !important;
+  max-width: min(100%, 600px) !important;
   margin-bottom: 4px;
   border-radius: var(--radius);
   display: block;
@@ -3528,7 +3592,7 @@ video.post-hls-video--has-overlay {
   background: transparent;
 }
 .post-external-link--native .post-external-thumb {
-  max-width: min(100%, 400px) !important;
+  max-width: min(100%, 600px) !important;
   max-height: 300px !important;
   margin-bottom: 6px;
   border-radius: 0;
@@ -4322,6 +4386,14 @@ button.post-ref-expand-translate-btn {
 .thread-composer-inline {
   width: 100%;
   min-width: 0;
+}
+/* Counteract nested indentation for composer inside nested chains */
+.thread-nested-chain-body .thread-composer-wrap {
+  margin-left: -12px;
+}
+/* Forum view: indent composer to match nested view appearance */
+.thread-composer-forum-indent {
+  margin-left: 18px; /* 6px (chain margin) + 12px (chain-body padding) */
 }
 
 .composer-single-reply-hint {
@@ -5272,7 +5344,7 @@ button.post-ref-expand-translate-btn {
   background: var(--bg-elevated);
   text-decoration: none;
   color: inherit;
-  max-width: min(100%, 400px);
+  max-width: min(100%, 600px);
   overflow: hidden;
 }
 .post-external-card:hover { border-color: var(--accent); }
@@ -5284,7 +5356,7 @@ button.post-ref-expand-translate-btn {
   width: 100% !important;
   height: auto !important;
   max-height: 300px !important;
-  max-width: 400px !important;
+  max-width: min(100%, 600px) !important;
   object-fit: contain;
 }
 .post-external-card-body {

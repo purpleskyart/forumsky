@@ -93,6 +93,7 @@ export function ThreadRow({
                       poster={preview.poster}
                       className="thread-thumb"
                       aria-label={preview.alt}
+                      aspectRatio={preview.aspectRatio}
                     />
                   ) : (
                     <img src={preview.url} alt="" class="thread-thumb" loading="lazy" decoding="async" />

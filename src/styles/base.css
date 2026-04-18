@@ -21,7 +21,7 @@ body {
 a { color: var(--link); text-decoration: none; }
 a:hover { color: var(--link-hover); text-decoration: underline; }
 
-img:not(.media-lightbox-img) { max-width: 100% !important; max-height: 500px !important; height: auto !important; display: block; object-fit: contain; }
+img:not(.media-lightbox-img) { max-width: 100% !important; max-height: 800px !important; height: auto !important; display: block; object-fit: contain; }
 
 button {
   font-family: inherit;

@@ -38,12 +38,19 @@ function AppLoadingSkeleton() {
 }
 
 function ErrorPanel({ message }: { message: string }) {
+  const isAuthError = message === 'You must be signed in to do this';
   return (
     <div class="error-panel" role="alert">
       <p>{message}</p>
-      <button class="btn btn-primary" onClick={() => window.location.reload()}>
-        Retry
-      </button>
+      {isAuthError ? (
+        <button class="btn btn-primary" onClick={() => showAuthDialog.value = true}>
+          Sign In
+        </button>
+      ) : (
+        <button class="btn btn-primary" onClick={() => window.location.reload()}>
+          Retry
+        </button>
+      )}
     </div>
   );
 }

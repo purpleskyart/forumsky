@@ -13,17 +13,17 @@ export function dominantVisibleThreadPostNumber(maxPost: number, fallback: numbe
   if (maxPost < 1) return fallback;
   const vh = typeof window !== 'undefined' ? window.innerHeight : 0;
   let bestN = fallback;
-  let bestArea = -1;
+  let bestArea = 0;
   for (let n = 1; n <= maxPost; n++) {
     const el = document.getElementById(`thread-post-${n}`);
     if (!el) continue;
     const area = visibleHeightInViewport(el, vh);
-    if (area > bestArea) {
+    if (area > 0 && area > bestArea) {
       bestArea = area;
       bestN = n;
     }
   }
-  return bestArea <= 0 ? fallback : bestN;
+  return bestArea > 0 ? bestN : fallback;
 }
 
 /** Feed / list rows with ids like `community-feed-kb-0` (0-based index). */
@@ -31,15 +31,15 @@ export function dominantVisibleListRowIndex(count: number, elementId: (i: number
   if (count <= 0) return fallback;
   const vh = typeof window !== 'undefined' ? window.innerHeight : 0;
   let bestIdx = fallback;
-  let bestArea = -1;
+  let bestArea = 0;
   for (let i = 0; i < count; i++) {
     const el = document.getElementById(elementId(i));
     if (!el) continue;
     const area = visibleHeightInViewport(el, vh);
-    if (area > bestArea) {
+    if (area > 0 && area > bestArea) {
       bestArea = area;
       bestIdx = i;
     }
   }
-  return bestArea <= 0 ? fallback : bestIdx;
+  return bestArea > 0 ? bestIdx : fallback;
 }

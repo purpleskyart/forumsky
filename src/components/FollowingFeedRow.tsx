@@ -41,6 +41,8 @@ export interface FollowingFeedRowProps {
   onHide?: () => void;
   showUnreadReplies?: boolean;
   feedReason?: FeedViewPost['reason'];
+  /** Reply context with parent post for displaying reply preview */
+  replyContext?: FeedViewPost['reply'];
   /** Most recent activity timestamp (repost or reply) */
   lastActivity?: string;
   /** Individual who performed the last activity */
@@ -65,6 +67,7 @@ export function FollowingFeedRow({
   onHide,
   showUnreadReplies,
   feedReason,
+  replyContext,
   lastActivity,
   lastActivityAuthor,
   blendSource,
@@ -104,6 +107,20 @@ export function FollowingFeedRow({
     [post],
   );
 
+  // Extract parent post media for reply preview
+  const parentPost = replyContext?.parent;
+  const parentImages = useMemo(() => parentPost ? getPostImages(parentPost) : [], [parentPost]);
+  const { videos: parentVideos } = useMemo(() => parentPost ? getQuotedPostAggregatedMedia(parentPost) : { videos: [] }, [parentPost]);
+  const parentMediaCount = parentImages.length + parentVideos.length;
+  const parentExternal = parentPost ? getPostExternal(parentPost) : null;
+  const parentExternalGifSrc =
+    parentExternal && isNativeExternalEmbed(parentExternal) ? getExternalGifPlaybackSources(parentExternal) : null;
+  const parentNsfwMedia = useMemo(() => parentPost ? postHasNsfwLabels(parentPost) : false, [parentPost]);
+  const parentNsfwLabels = useMemo(
+    () => parentPost ? [...(parentPost.labels ?? []), ...(parentPost.author?.labels ?? [])] : [],
+    [parentPost],
+  );
+
   const showAvatarFollowPlus = Boolean(
     onAvatarFollow &&
       viewerDid &&
@@ -121,37 +138,78 @@ export function FollowingFeedRow({
     if (href !== '#') navigate(href);
   };
 
+  // Render parent post media nodes
+  const parentMediaNodes = parentMediaCount > 0 ? (
+    <Fragment>
+      {parentImages.map((img, i) =>
+        isGifImage(img) ? (
+          <NsfwMediaWrap key={`parent-${i}`} isNsfw={parentNsfwMedia} labels={parentNsfwLabels}>
+            <GifImageFromEmbed
+              img={img}
+              className="post-content-media post-content-media--gif"
+            />
+          </NsfwMediaWrap>
+        ) : (
+          <NsfwMediaWrap key={`parent-${i}`} isNsfw={parentNsfwMedia} labels={parentNsfwLabels}>
+            <PostContentImage
+              className="post-content-media"
+              src={img.fullsize || img.thumb}
+              alt={img.alt ?? ''}
+              aspectRatio={img.aspectRatio}
+              allImages={parentImages}
+              currentIndex={i}
+            />
+          </NsfwMediaWrap>
+        ),
+      )}
+      {parentVideos.map((vid, i) => (
+        <NsfwMediaWrap key={`parent-vid-${vid.playlist}-${i}`} isNsfw={parentNsfwMedia} labels={parentNsfwLabels}>
+          <HlsVideo
+            playlist={vid.playlist}
+            poster={vid.thumbnail}
+            aspectRatio={vid.aspectRatio}
+            className="post-content-media"
+            aria-label={vid.alt || 'Video'}
+          />
+        </NsfwMediaWrap>
+      ))}
+    </Fragment>
+  ) : null;
+
   const mediaNodes =
     mediaCount > 0 ? (
       <Fragment>
         {allImages.map((img, i) =>
           isGifImage(img) ? (
-            <GifImageFromEmbed
-              key={i}
-              img={img}
-              className="post-content-media post-content-media--gif following-feed-row-media"
-            />
+            <NsfwMediaWrap key={i} isNsfw={nsfwMedia} labels={nsfwLabels}>
+              <GifImageFromEmbed
+                img={img}
+                className="post-content-media post-content-media--gif following-feed-row-media"
+              />
+            </NsfwMediaWrap>
           ) : (
-            <PostContentImage
-              key={i}
-              className="post-content-media following-feed-row-media"
-              src={img.fullsize || img.thumb}
-              alt={img.alt ?? ''}
-              aspectRatio={img.aspectRatio}
-              allImages={allImages}
-              currentIndex={i}
-            />
+            <NsfwMediaWrap key={i} isNsfw={nsfwMedia} labels={nsfwLabels}>
+              <PostContentImage
+                className="post-content-media following-feed-row-media"
+                src={img.fullsize || img.thumb}
+                alt={img.alt ?? ''}
+                aspectRatio={img.aspectRatio}
+                allImages={allImages}
+                currentIndex={i}
+              />
+            </NsfwMediaWrap>
           ),
         )}
         {allVideos.map((vid, i) => (
-          <HlsVideo
-            key={`${vid.playlist}-${i}`}
-            playlist={vid.playlist}
-            poster={vid.thumbnail}
-            aspectRatio={vid.aspectRatio}
-            className="post-content-media following-feed-row-media"
-            aria-label={vid.alt || 'Video'}
-          />
+          <NsfwMediaWrap key={`${vid.playlist}-${i}`} isNsfw={nsfwMedia} labels={nsfwLabels}>
+            <HlsVideo
+              playlist={vid.playlist}
+              poster={vid.thumbnail}
+              aspectRatio={vid.aspectRatio}
+              className="post-content-media following-feed-row-media"
+              aria-label={vid.alt || 'Video'}
+            />
+          </NsfwMediaWrap>
         ))}
       </Fragment>
     ) : null;
@@ -304,11 +362,74 @@ export function FollowingFeedRow({
         </div>
 
         <div class="post-content">
+          {replyContext?.parent && (
+            <a
+              href={href}
+              class="reply-preview"
+              {...SPA_ANCHOR_SHIELD}
+              onClick={(e: MouseEvent) => {
+                stopNav(e);
+                if (href !== '#') navigate(href);
+              }}
+            >
+              <div class="reply-preview-header">
+                <span class="reply-preview-label">Replying to</span>
+                <span class="reply-preview-author">@{replyContext.parent.author.handle}</span>
+              </div>
+              <div class="reply-preview-content">
+                {renderPostContent(replyContext.parent.record.text, replyContext.parent.record.facets)}
+                {parentMediaCount > 0 ? (
+                  parentMediaCount > 1 ? <div class="post-content-media-stack">{parentMediaNodes}</div> : parentMediaNodes
+                ) : null}
+                {parentExternal &&
+                  (parentExternalGifSrc ? (
+                    <NsfwMediaWrap isNsfw={parentNsfwMedia} labels={parentNsfwLabels}>
+                      <GifImage
+                        thumb={parentExternalGifSrc.thumb}
+                        fullsize={parentExternalGifSrc.fullsize}
+                        alt=""
+                        className="post-external-gif"
+                        aria-hidden="true"
+                      />
+                    </NsfwMediaWrap>
+                  ) : (
+                    <NsfwMediaWrap isNsfw={parentNsfwMedia}>
+                      <a
+                        href={parentExternal.uri}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="post-external-card"
+                        onClick={stopNav}
+                      >
+                        {parentExternal.thumb && (
+                          <div class="post-external-card-media">
+                            <img class="post-external-thumb" src={parentExternal.thumb} alt="" loading="lazy" aria-hidden="true" />
+                          </div>
+                        )}
+                        <div class="post-external-card-body">
+                          <div class="post-external-card-host">
+                            {(() => {
+                              try {
+                                return new URL(parentExternal.uri).hostname;
+                              } catch {
+                                return 'Link';
+                              }
+                            })()}
+                          </div>
+                          <div class="post-external-title">{parentExternal.title || parentExternal.uri}</div>
+                          {parentExternal.description ? (
+                            <div class="post-external-desc">{parentExternal.description}</div>
+                          ) : null}
+                        </div>
+                      </a>
+                    </NsfwMediaWrap>
+                  ))}
+              </div>
+            </a>
+          )}
           {renderPostContent(post.record.text, post.record.facets)}
           {mediaCount > 0 ? (
-            <NsfwMediaWrap isNsfw={nsfwMedia} labels={nsfwLabels}>
-              {mediaCount > 1 ? <div class="post-content-media-stack">{mediaNodes}</div> : mediaNodes}
-            </NsfwMediaWrap>
+            mediaCount > 1 ? <div class="post-content-media-stack">{mediaNodes}</div> : mediaNodes
           ) : null}
 
           {quotedEmbed?.kind === 'post' && <QuotedPostEmbedCard quoted={quotedEmbed.post} />}

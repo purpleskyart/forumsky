@@ -41,7 +41,11 @@ export function NsfwMediaWrap({
     return <>{children}</>;
   }
   if (mode === 'blur' && revealed) {
-    return <>{children}</>;
+    return (
+      <div class="nsfw-media-blur-wrap" style={{ overflow: 'visible' }}>
+        {children}
+      </div>
+    );
   }
 
   const labelText = nsfwLabelText(labels);

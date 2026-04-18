@@ -520,6 +520,7 @@ export interface ThreadPreviewThumb {
   extraCount: number;
   isVideo?: boolean;
   poster?: string;
+  aspectRatio?: { width: number; height: number };
 }
 
 /** First image, video, or external link thumb for thread list / saved-thread previews. */
@@ -542,6 +543,7 @@ export function threadPreviewThumb(post: PostView): ThreadPreviewThumb | null {
       extraCount: videos.length - 1,
       isVideo: true,
       poster: first.thumbnail,
+      aspectRatio: first.aspectRatio,
     };
   }
   const ext = getPostExternal(post);

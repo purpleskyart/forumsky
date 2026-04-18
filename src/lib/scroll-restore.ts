@@ -45,6 +45,8 @@ let ticking = false;
 let ignoreScrollPersistUntil = 0;
 /** Track scroll restoration timers for cleanup */
 let restoreTimerIds: number[] = [];
+/** Module load timestamp to block persistence during initial page load (for pages that don't call restoreScrollNow) */
+const moduleLoadTime = performance.now();
 
 /** Pause scroll persistence for a short duration (used during navigation to prevent RAF overwrites). */
 export function pauseScrollPersistence(durationMs = 100): void {
@@ -60,6 +62,8 @@ function flushScrollPosition(): void {
   ticking = false;
   if (typeof window === 'undefined') return;
   if (performance.now() < ignoreScrollPersistUntil) return;
+  // Block persistence during initial page load (500ms) for pages that don't call restoreScrollNow
+  if (performance.now() - moduleLoadTime < 500) return;
   writeSavedScroll(currentScrollStorageKey(), window.scrollY);
 }
 
@@ -105,7 +109,8 @@ export function restoreScrollNow(): void {
   const y = readSavedScroll(key);
   if (y == null) return;
 
-  ignoreScrollPersistUntil = performance.now() + 250;
+  // Block persistence longer initially to ensure page has settled
+  ignoreScrollPersistUntil = performance.now() + 500;
 
   // Clear any pending restoration timers
   restoreTimerIds.forEach(id => window.clearTimeout(id));
@@ -137,6 +142,9 @@ export function restoreScrollNow(): void {
     if (checkUserScroll()) return false;
     if (!canScrollTo(y)) return false;
     hasAttemptedRestore = true;
+    // Extend persistence block during each restoration attempt to prevent
+    // scroll jumps caused by layout changes from corrupting saved position
+    ignoreScrollPersistUntil = performance.now() + 250;
     window.scrollTo({ top: y, left: 0, behavior: 'auto' });
     return Math.abs(window.scrollY - y) < 50;
   };
@@ -210,14 +218,24 @@ export function patchHistoryScrollSave(): () => void {
     this: History,
     ...args: Parameters<History['pushState']>
   ): ReturnType<History['pushState']> {
-    writeSavedScroll(currentScrollStorageKey(), window.scrollY);
+    // Respect persistence block to prevent saving scroll during restoration
+    // Also block during initial page load (500ms) for pages that don't call restoreScrollNow
+    const now = performance.now();
+    if (now >= ignoreScrollPersistUntil && now - moduleLoadTime >= 500) {
+      writeSavedScroll(currentScrollStorageKey(), window.scrollY);
+    }
     return push(...args);
   };
   history.replaceState = function (
     this: History,
     ...args: Parameters<History['replaceState']>
   ): ReturnType<History['replaceState']> {
-    writeSavedScroll(currentScrollStorageKey(), window.scrollY);
+    // Respect persistence block to prevent saving scroll during restoration
+    // Also block during initial page load (500ms) for pages that don't call restoreScrollNow
+    const now = performance.now();
+    if (now >= ignoreScrollPersistUntil && now - moduleLoadTime >= 500) {
+      writeSavedScroll(currentScrollStorageKey(), window.scrollY);
+    }
     return rep(...args);
   };
   return () => {

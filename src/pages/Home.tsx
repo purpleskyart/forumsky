@@ -108,10 +108,12 @@ export function Home() {
         e.preventDefault();
         setKbRowOutlineActive(true);
         const max = Math.max(0, list.length - 1);
+        // Clamp current kbRow to valid range before calculating anchor
+        const safeCurrent = Math.min(max, Math.max(0, kbRowRef.current));
         const anchor = dominantVisibleListRowIndex(
           list.length,
           i => `home-community-kb-${i}`,
-          kbRowRef.current,
+          safeCurrent,
         );
         setKbRow(Math.min(max, Math.max(0, anchor + (down ? 1 : -1))));
         return;
@@ -129,11 +131,14 @@ export function Home() {
 
   useLayoutEffect(() => {
     if (!kbRowOutlineActive) return;
-    document.getElementById(`home-community-kb-${kbRow}`)?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'center',
-      inline: 'nearest',
-    });
+    const el = document.getElementById(`home-community-kb-${kbRow}`);
+    if (el) {
+      el.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'nearest',
+      });
+    }
   }, [kbRow, kbRowOutlineActive]);
 
   useEffect(() => {

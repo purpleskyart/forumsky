@@ -6,7 +6,6 @@ type HlsVideoProps = {
   poster?: string;
   className?: string;
   'aria-label'?: string;
-  aspectRatio?: { width: number; height: number };
 };
 
 /** How much of the player must be visible before autoplay (feed-style). */
@@ -23,8 +22,7 @@ export function HlsVideo({
   playlist, 
   poster, 
   className, 
-  'aria-label': ariaLabel,
-  aspectRatio 
+  'aria-label': ariaLabel
 }: HlsVideoProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -35,23 +33,12 @@ export function HlsVideo({
   const [fullscreenControlsEnabled, setFullscreenControlsEnabled] = useState(false);
   /** Controls visible in non-fullscreen mode (hover or tap) */
   const [showControls, setShowControls] = useState(false);
-  /** Locks layout to decoded dimensions so poster → play does not resize the box. */
-  const [aspectCss, setAspectCss] = useState<string | null>(
-    aspectRatio ? `${aspectRatio.width} / ${aspectRatio.height}` : '16 / 9'
-  );
   /** Track fullscreen state */
   const [isFullscreen, setIsFullscreen] = useState(false);
   /** Hover state for desktop */
   const [isHovered, setIsHovered] = useState(false);
   /** Video paused state - shows indicator when not playing */
   const [isPaused, setIsPaused] = useState(true);
-
-  // Update aspect ratio when prop changes, but keep existing value if video already loaded
-  useEffect(() => {
-    if (aspectRatio) {
-      setAspectCss(`${aspectRatio.width} / ${aspectRatio.height}`);
-    }
-  }, [aspectRatio?.width, aspectRatio?.height]);
 
   useHlsPlayer(videoRef, hlsRef, playlist, { muted: true, autoplay: false });
 
@@ -276,13 +263,6 @@ export function HlsVideo({
     }
   };
 
-  const onLoadedMetadata = (e: Event) => {
-    const el = e.currentTarget as HTMLVideoElement;
-    if (el.videoWidth > 0 && el.videoHeight > 0) {
-      setAspectCss(`${el.videoWidth} / ${el.videoHeight}`);
-    }
-  };
-
   // Determine if controls should be shown
   // In fullscreen: only if fullscreenControlsEnabled is true
   // Not in fullscreen: show on hover or if showControls is true
@@ -296,11 +276,6 @@ export function HlsVideo({
       ref={wrapRef}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
-      style={{
-        aspectRatio: aspectCss || undefined,
-        maxHeight: isFullscreen ? 'none' : 'min(380px, 58vh)',
-        maxWidth: isFullscreen ? 'none' : '400px',
-      }}
     >
       <video
         ref={videoRef}
@@ -310,9 +285,10 @@ export function HlsVideo({
         preload="metadata"
         poster={poster}
         aria-label={ariaLabel}
+        tabIndex={-1}
         style={{
           width: '100%',
-          height: '100%',
+          height: 'auto',
           backgroundColor: 'var(--bg-elevated)',
           objectFit: 'contain',
           transform: isFullscreen ? `translate(${panX}px, ${panY}px) scale(${zoom})` : 'none',
@@ -320,27 +296,11 @@ export function HlsVideo({
           transition: isZooming || isPanning ? 'none' : 'transform 0.2s ease-out',
           cursor: isFullscreen ? (fullscreenControlsEnabled ? 'default' : 'pointer') : 'pointer',
         }}
-        onLoadedMetadata={onLoadedMetadata}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
         onClick={handleVideoTap}
       />
-      {/* Tap overlay for non-fullscreen mode (shows when controls are visible so clicking controls works) */}
-      {!isFullscreen && (
-        <div
-          class="post-hls-video-click-overlay"
-          onClick={handleVideoTap}
-          style={{
-            position: 'absolute',
-            inset: 0,
-            cursor: 'pointer',
-            zIndex: 1,
-            // Allow clicks to pass through to controls when they're visible
-            pointerEvents: showControls || isHovered ? 'none' : 'auto',
-          }}
-        />
-      )}
       {/* Centered play button overlay - shows when video is paused so users know it's a video */}
       {isPaused && !isFullscreen && (
         <div
@@ -352,7 +312,7 @@ export function HlsVideo({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: 'rgba(0, 0, 0, 0.22)',
+            background: 'transparent',
             borderRadius: 'inherit',
             pointerEvents: 'none',
             zIndex: 3,
