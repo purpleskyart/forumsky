@@ -37,7 +37,7 @@ export function HlsVideo({
   const [showControls, setShowControls] = useState(false);
   /** Locks layout to decoded dimensions so poster → play does not resize the box. */
   const [aspectCss, setAspectCss] = useState<string | null>(
-    aspectRatio ? `${aspectRatio.width} / ${aspectRatio.height}` : null
+    aspectRatio ? `${aspectRatio.width} / ${aspectRatio.height}` : '16 / 9'
   );
   /** Track fullscreen state */
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -297,6 +297,7 @@ export function HlsVideo({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       style={{
+        aspectRatio: aspectCss || undefined,
         maxHeight: isFullscreen ? 'none' : 'min(380px, 58vh)',
         maxWidth: isFullscreen ? 'none' : '400px',
       }}
@@ -310,12 +311,9 @@ export function HlsVideo({
         poster={poster}
         aria-label={ariaLabel}
         style={{
-          aspectRatio: aspectCss || undefined,
+          width: '100%',
+          height: '100%',
           backgroundColor: 'var(--bg-elevated)',
-          maxHeight: isFullscreen ? 'none' : 'min(380px, 58vh)',
-          maxWidth: isFullscreen ? 'none' : '400px',
-          width: isFullscreen ? 'auto' : 'auto',
-          height: isFullscreen ? 'auto' : 'auto',
           objectFit: 'contain',
           transform: isFullscreen ? `translate(${panX}px, ${panY}px) scale(${zoom})` : 'none',
           transformOrigin: 'center center',

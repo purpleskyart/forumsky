@@ -4812,6 +4812,15 @@ button.post-ref-expand-translate-btn {
   :root {
     --thread-author-sticky-top: 0px;
   }
+  .post-content .post-content-media {
+    max-width: 100% !important;
+  }
+  .post-content-media-stack > img.post-content-media {
+    max-width: 100% !important;
+  }
+  .nsfw-media-blur-wrap {
+    max-width: 100% !important;
+  }
 }
 
 @media all and (display-mode: standalone) {
