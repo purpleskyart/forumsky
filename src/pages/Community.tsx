@@ -144,7 +144,7 @@ function FeedLoadMoreSection({
   }, [loadingMore]);
 
   return (
-    <div class="feed-load-more-wrap" ref={wrapRef}>
+    <div class="feed-load-more-wrap" ref={wrapRef} style="padding: 16px; text-align: center;">
       <button
         type="button"
         class="btn btn-outline feed-load-more-btn"
@@ -236,11 +236,18 @@ export function Community({ tag: tagProp }: CommunityProps) {
 
   /** Restore scroll when content loads */
   const prevLoadingForScrollRef = useRef(loading);
-  
+  /** Skip scroll restore when user was at bottom during load more (stay at new bottom) */
+  const skipRestoreFromBottomLoadRef = useRef(false);
+
   useLayoutEffect(() => {
     const wasLoading = prevLoadingForScrollRef.current;
     prevLoadingForScrollRef.current = loading;
     if (!wasLoading || loading) return;
+    // Skip restore if user was at bottom during load more (handled by loadingMore effect)
+    if (skipRestoreFromBottomLoadRef.current) {
+      skipRestoreFromBottomLoadRef.current = false;
+      return;
+    }
     restoreScrollNow();
   }, [loading]);
 
@@ -261,6 +268,10 @@ export function Community({ tag: tagProp }: CommunityProps) {
     // Save scroll state before loading more
     if (!wasLoadingMore && loadingMore) {
       wasAtBottomBeforeLoadMoreRef.current = window.scrollY + window.innerHeight >= document.body.scrollHeight - 100;
+      // Flag to skip the scroll restore effect since we're handling it here
+      if (wasAtBottomBeforeLoadMoreRef.current) {
+        skipRestoreFromBottomLoadRef.current = true;
+      }
     }
 
     if (wasLoadingMore && !loadingMore) {

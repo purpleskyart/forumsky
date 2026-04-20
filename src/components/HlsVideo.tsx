@@ -23,7 +23,8 @@ export function HlsVideo({
   playlist, 
   poster, 
   className, 
-  'aria-label': ariaLabel
+  'aria-label': ariaLabel,
+  aspectRatio,
 }: HlsVideoProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -206,12 +207,18 @@ export function HlsVideo({
     return Math.sqrt(dx * dx + dy * dy);
   };
 
+  const touchStartPosRef = useRef<{ x: number; y: number; time: number } | null>(null);
+
   const onTouchStart = (e: TouchEvent) => {
     const v = videoRef.current;
     if (!v || !isFullscreen) {
-      // Allow tap to enter fullscreen
+      // Track touch start for distinguishing tap from scroll
       if (e.touches.length === 1) {
-        handleVideoTap(e);
+        touchStartPosRef.current = {
+          x: e.touches[0].clientX,
+          y: e.touches[0].clientY,
+          time: Date.now(),
+        };
       }
       return;
     }
@@ -259,6 +266,28 @@ export function HlsVideo({
   const onTouchEnd = (e: TouchEvent) => {
     setIsZooming(false);
     setIsPanning(false);
+    
+    // Handle tap to fullscreen when not in fullscreen
+    const v = videoRef.current;
+    if (!v || !isFullscreen) {
+      const startPos = touchStartPosRef.current;
+      if (startPos && e.changedTouches.length === 1) {
+        const endX = e.changedTouches[0].clientX;
+        const endY = e.changedTouches[0].clientY;
+        const duration = Date.now() - startPos.time;
+        const distance = Math.sqrt(
+          Math.pow(endX - startPos.x, 2) + Math.pow(endY - startPos.y, 2)
+        );
+        
+        // Only trigger if short duration (< 300ms) and minimal movement (< 10px)
+        if (duration < 300 && distance < 10) {
+          handleVideoTap(e);
+        }
+      }
+      touchStartPosRef.current = null;
+      return;
+    }
+    
     if (e.touches.length === 0) {
       touchStartRef.current = null;
     }
@@ -277,6 +306,7 @@ export function HlsVideo({
       ref={wrapRef}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
+      style={aspectRatio ? { aspectRatio: `${aspectRatio.width} / ${aspectRatio.height}` } : undefined}
     >
       <video
         ref={videoRef}

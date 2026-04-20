@@ -145,11 +145,18 @@ export function Profile(props: ProfileProps) {
 
   /** Restore scroll when content loads */
   const prevLoadingRef = useRef(loading);
-  
+  /** Skip scroll restore when user was at bottom during load more (stay at new bottom) */
+  const skipRestoreFromBottomLoadRef = useRef(false);
+
   useLayoutEffect(() => {
     const wasLoading = prevLoadingRef.current;
     prevLoadingRef.current = loading;
     if (!wasLoading || loading) return;
+    // Skip restore if user was at bottom during load more (handled by loadingMore effect)
+    if (skipRestoreFromBottomLoadRef.current) {
+      skipRestoreFromBottomLoadRef.current = false;
+      return;
+    }
     restoreScrollNow();
   }, [loading]);
 
@@ -165,6 +172,10 @@ export function Profile(props: ProfileProps) {
     if (!wasLoadingMore && loadingMore) {
       scrollYBeforeLoadMoreRef.current = window.scrollY;
       wasAtBottomBeforeLoadMoreRef.current = window.scrollY + window.innerHeight >= document.body.scrollHeight - 100;
+      // Flag to skip the scroll restore effect since we're handling it here
+      if (wasAtBottomBeforeLoadMoreRef.current) {
+        skipRestoreFromBottomLoadRef.current = true;
+      }
     }
 
     if (wasLoadingMore && !loadingMore) {

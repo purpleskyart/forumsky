@@ -4789,7 +4789,7 @@ button.post-ref-expand-translate-btn {
     --thread-author-sticky-top: 0px;
   }
   .main-wrap {
-    padding-bottom: calc(74px + env(safe-area-inset-bottom, 12px)) !important;
+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 12px)) !important;
   }
 }
 
@@ -4798,7 +4798,7 @@ button.post-ref-expand-translate-btn {
     padding: 10px 6px 10px 0;
   }
   .toast {
-    bottom: calc(74px + env(safe-area-inset-bottom, 12px));
+    bottom: calc(64px + env(safe-area-inset-bottom, 12px));
   }
   .bottom-nav-item--post {
     display: none;
@@ -4905,12 +4905,12 @@ button.post-ref-expand-translate-btn {
   display: flex;
   justify-content: space-around;
   align-items: center;
-  height: 54px;
+  height: 44px;
   margin: 0 10px;
   padding: 0 4px;
   background: rgba(27, 27, 27, 0.85);
   backdrop-filter: blur(10px);
-  border-radius: 24px;
+  border-radius: 20px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
   transition: transform 0.3s ease, opacity 0.3s ease;
 }
