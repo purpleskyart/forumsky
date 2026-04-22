@@ -19,10 +19,10 @@ export function ScrollNavigation({ isNestedMode, topCommentCount }: ScrollNaviga
       const windowHeight = window.innerHeight;
       const documentHeight = document.documentElement.scrollHeight;
 
-      // Show button if not at top or bottom
+      // Show button if not at top OR not at bottom
       const isAtTop = scrollY < 50;
       const isAtBottom = scrollY + windowHeight >= documentHeight - 50;
-      setShowButton(!isAtTop && !isAtBottom);
+      setShowButton(!isAtTop || !isAtBottom);
 
       // Determine scroll direction
       if (scrollY > lastScrollY.current) {

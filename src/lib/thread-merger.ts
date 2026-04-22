@@ -322,9 +322,13 @@ function collectCommenterSelfReplies(
 export function extractFirstHashtag(post: PostView): string | null {
   const segments = parseRichText(post.record.text, post.record.facets);
   for (const seg of segments) {
-    if (seg.type === 'tag' && seg.tag) return seg.tag;
+    if (seg.type === 'tag' && seg.tag && seg.text.startsWith('!')) return seg.tag;
   }
-  if (post.record.tags?.length) return post.record.tags[0];
+  if (post.record.tags?.length) {
+    for (const tag of post.record.tags) {
+      if (tag.startsWith('!')) return tag;
+    }
+  }
   const m = /!([a-zA-Z0-9_]+)/.exec(post.record.text);
   return m ? m[1] : null;
 }

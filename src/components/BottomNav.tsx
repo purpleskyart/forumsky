@@ -142,7 +142,7 @@ export function BottomNav() {
                     <Avatar
                       src={user.avatar}
                       alt={user.displayName || user.handle}
-                      size={28}
+                      size={26}
                       className={isUserActive ? 'avatar--active' : ''}
                     />
                   ) : (

@@ -504,9 +504,15 @@ function ThreadView({
         root: { uri: rootPost.uri, cid: rootPost.cid },
         parent: { uri: rootPost.uri, cid: rootPost.cid },
         summary: `Thread root · @${rootPost.author.handle} · post (1)`,
+        record: rootPost.record as { text?: string; embed?: unknown } | undefined,
+        author: {
+          handle: rootPost.author.handle,
+          displayName: rootPost.author.displayName,
+          avatar: rootPost.author.avatar,
+        },
       };
     }
-  }, [showGlobalComposer.value, rootPost.uri, rootPost.cid, rootPost.author.handle]);
+  }, [showGlobalComposer.value, rootPost.uri, rootPost.cid, rootPost.author.handle, rootPost.record, rootPost.author.displayName, rootPost.author.avatar]);
   const hiddenLocal = new Set(localHiddenList);
   const rootMuted =
     mutedDids.value.has(rootPost.author.did) || blockedDids.value.has(rootPost.author.did);
@@ -1990,21 +1996,22 @@ function ReferencedPostPeek({
     childRefCachedTranslation,
   ]);
 
-  const onQuoteClick = useCallback((e: Event) => {
-    e.preventDefault();
-    // On desktop, clicking a child reply (>>) should jump to the post, like the (number) button
-    if (layout === 'child' && !isTouchDevice && jumpPostNumber != null) {
-      scrollToThreadPost(jumpPostNumber);
-    }
-    setUnfurled(v => !v);
-  }, [layout, isTouchDevice, jumpPostNumber]);
-
   const clearExpandLeaveTimer = useCallback(() => {
     if (expandLeaveTimerRef.current != null) {
       clearTimeout(expandLeaveTimerRef.current);
       expandLeaveTimerRef.current = null;
     }
   }, []);
+
+  const onQuoteClick = useCallback((e: Event) => {
+    e.preventDefault();
+    clearExpandLeaveTimer();
+    // On desktop, clicking a child reply (>>) should jump to the post, like the (number) button
+    if (layout === 'child' && !isTouchDevice && jumpPostNumber != null) {
+      scrollToThreadPost(jumpPostNumber);
+    }
+    setUnfurled(v => !v);
+  }, [layout, isTouchDevice, jumpPostNumber, clearExpandLeaveTimer]);
 
 
   const onQuoteHover = useCallback(() => {

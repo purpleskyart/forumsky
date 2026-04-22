@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'preact/hooks';
 import { currentUser, isLoggedIn, showToast, showAuthDialog } from '@/lib/store';
-import { buildComposerFacets } from '@/lib/richtext';
+import { buildComposerFacets, renderPostContent } from '@/lib/richtext';
+import { Avatar } from '@/components/Avatar';
 import { fetchLinkPreview } from '@/api/link-preview';
 import { setComposerNavigationDirty } from '@/lib/navigation-guard';
 import type { StrongRef, ProfileView } from '@/api/types';
@@ -35,6 +36,9 @@ interface ComposerProps {
   replyTo?: {
     root: StrongRef;
     parent: StrongRef;
+    /** Optional: the post record being replied to, for displaying preview */
+    record?: { text?: string; embed?: unknown };
+    author?: { handle: string; displayName?: string; avatar?: string };
   };
   /** Embed this post (quote repost); mutually exclusive with thread reply in typical use */
   quoteEmbed?: StrongRef;
@@ -735,6 +739,28 @@ export function Composer({
             Up to {THREAD_TITLE_PREVIEW_MAX_CHARS} characters (same as list previews). On Bluesky this is plain text at
             the top of the first post, then a blank line, then the body below.
           </p>
+        </div>
+      )}
+
+      {/* Reply target preview - shows the post being replied to */}
+      {replyTo?.record?.text && (
+        <div class="composer-reply-target-preview" role="region" aria-label="Replying to">
+          <div class="composer-reply-target-header">
+            <span class="composer-reply-target-label">Replying to</span>
+            {replyTo.author && (
+              <span class="composer-reply-target-author">
+                <Avatar src={replyTo.author.avatar} alt={replyTo.author.displayName || replyTo.author.handle} size={16} />
+                <span class="composer-reply-target-handle">
+                  {replyTo.author.displayName || `@${replyTo.author.handle}`}
+                </span>
+              </span>
+            )}
+          </div>
+          <div class="composer-reply-target-content">
+            {replyTo.record.text?.split('\n').map((line, i) => (
+              <p key={i} class="composer-reply-target-line">{line}</p>
+            ))}
+          </div>
         </div>
       )}
 

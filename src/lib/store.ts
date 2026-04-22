@@ -107,7 +107,17 @@ export function applyNsfwMediaMode(mode: NsfwMediaMode) {
 
 export const showGlobalComposer = signal(false);
 export const globalComposerCommunity = signal<string | undefined>(undefined);
-export const globalComposerReplyTo = signal<{ root: { uri: string; cid: string }; parent: { uri: string; cid: string }; summary: string } | undefined>(undefined);
+export const globalComposerReplyTo = signal<
+  | {
+      root: { uri: string; cid: string };
+      parent: { uri: string; cid: string };
+      summary: string;
+      /** Optional: the post record being replied to, for displaying preview */
+      record?: { text?: string; embed?: unknown };
+      author?: { handle: string; displayName?: string; avatar?: string };
+    }
+  | undefined
+>(undefined);
 
 export const isOnline = signal(typeof navigator !== 'undefined' ? navigator.onLine : true);
 
