@@ -5,14 +5,30 @@ import type { ProfileView, OAuthSession } from './types';
 import { getProfile, resolveHandle } from './actor';
 import { OAUTH_INIT_TIMEOUT_MS, AUTH_TIMEOUT_MS } from '@/lib/constants';
 
+// Suppress background OAuth token-refresh errors from reaching React's error boundary.
+// The @atproto/oauth-client-browser fires these as unhandled promise rejections after
+// restore() has already returned, so they can't be caught with try/catch.
+if (typeof window !== 'undefined') {
+  window.addEventListener('unhandledrejection', (e) => {
+    const msg = e.reason instanceof Error ? e.reason.message : String(e.reason ?? '');
+    if (/TokenRefreshError|session was deleted|token.*refresh|refresh.*token/i.test(msg)) {
+      e.preventDefault();
+      console.warn('[ForumSky] OAuth token refresh failed:', msg);
+    }
+  });
+}
+
 type BrowserOAuthClient = InstanceType<typeof import('@atproto/oauth-client-browser').BrowserOAuthClient>;
 
 let browserClient: BrowserOAuthClient | null = null;
 let currentSession: { did: string; handle: string } | null = null;
+let authErrorCount = 0;
 
 const ACCOUNTS_KEY = 'forumsky:account-dids';
 const ACCOUNT_PROFILES_CACHE_KEY = 'forumsky:account-profiles-cache';
 const ATPROTO_ACTIVE_SUB_KEY = '@@atproto/oauth-client-browser(sub)';
+const SESSION_STORAGE_KEY = 'forumsky:session';
+const OAUTH_FAILURE_COUNT_KEY = 'forumsky:oauth-failure-count';
 
 /** AppView service auth — required for app.bsky.feed.getTimeline (among others). @see https://atproto.com/guides/scopes */
 const SCOPE_BSKY_APPVIEW_TIMELINE =
@@ -96,6 +112,55 @@ function getStoredAccountDids(): string[] {
   }
 }
 
+function getStoredSession(): { did: string; handle: string } | null {
+  try {
+    const raw = localStorage.getItem(SESSION_STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as { did: string; handle: string };
+  } catch {
+    return null;
+  }
+}
+
+function setStoredSession(session: { did: string; handle: string } | null) {
+  try {
+    if (session) {
+      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+    } else {
+      localStorage.removeItem(SESSION_STORAGE_KEY);
+    }
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+function incrementOAuthFailure(did: string): boolean {
+  try {
+    const key = `${OAUTH_FAILURE_COUNT_KEY}-${did}`;
+    const current = parseInt(localStorage.getItem(key) || '0', 10);
+    const updated = current + 1;
+    localStorage.setItem(key, updated.toString());
+    // Remove account after 3 consecutive failures
+    return updated >= 3;
+  } catch {
+    return false;
+  }
+}
+
+function resetOAuthFailure(did: string) {
+  try {
+    const key = `${OAUTH_FAILURE_COUNT_KEY}-${did}`;
+    localStorage.removeItem(key);
+  } catch {
+    // Ignore
+  }
+}
+
+export function reportAuthError() {
+  authErrorCount++;
+  console.warn(`[ForumSky] Auth error count: ${authErrorCount}`);
+}
+
 /** True if this device has ever signed in (used to avoid flashing the guest home before OAuth init). */
 export function hasStoredForumskyAccounts(): boolean {
   return getStoredAccountDids().length > 0;
@@ -165,13 +230,80 @@ function nukeAllOAuthDatabases(): { success: boolean; error?: string } {
 
 export async function initAuth(): Promise<ProfileView | null> {
   try {
+    const storedDids = getStoredAccountDids();
+    const storedSession = getStoredSession();
+    const preferredDid = storedSession?.did || storedDids[0];
+
+    // Try localStorage FIRST before hitting IndexedDB/OAuth - localStorage is more reliable on mobile
+    // and survives PWA updates better than IndexedDB
+    if (preferredDid && storedSession?.did === preferredDid) {
+      try {
+        // Try to use the stored session immediately
+        const profile = await getProfile(preferredDid);
+        currentSession = { did: preferredDid, handle: profile.handle || preferredDid };
+        setOAuthSession({ did: preferredDid, sub: preferredDid } as OAuthSession);
+        rememberAccountDid(preferredDid);
+        resetOAuthFailure(preferredDid);
+        // Silently try to restore OAuth in background to refresh tokens if needed
+        const client = await getClient();
+        client.init().then((result) => {
+          if (result?.session) {
+            setupSession(result.session).catch(() => {
+              // Background refresh failed, but we still have the localStorage session
+            });
+          }
+        }).catch(() => {
+          // Background refresh failed, but we still have the localStorage session
+        });
+        return profile;
+      } catch {
+        // localStorage session invalid, fall through to OAuth restore
+      }
+    }
+
     const client = await getClient();
     const timeoutPromise = new Promise<null>(resolve => setTimeout(() => resolve(null), OAUTH_INIT_TIMEOUT_MS));
     const result = await Promise.race([client.init(), timeoutPromise]);
 
     if (result?.session) {
-      return await setupSession(result.session);
+      const profile = await setupSession(result.session);
+      resetOAuthFailure(profile.did);
+      return profile;
     }
+
+    // OAuth restore failed — try localStorage fallback with retry
+    if (preferredDid) {
+      // Retry once after a short delay (IndexedDB may need time after PWA update)
+      await new Promise(resolve => setTimeout(resolve, 500));
+      try {
+        const retryResult = await Promise.race([client.init(), timeoutPromise]);
+        if (retryResult?.session) {
+          const profile = await setupSession(retryResult.session);
+          resetOAuthFailure(profile.did);
+          return profile;
+        }
+      } catch {
+        // Retry failed, continue to fallback
+      }
+
+      // Final fallback: try localStorage session
+      if (storedSession?.did === preferredDid) {
+        try {
+          const profile = await getProfile(preferredDid);
+          currentSession = { did: preferredDid, handle: profile.handle || preferredDid };
+          setOAuthSession({ did: preferredDid, sub: preferredDid } as OAuthSession);
+          rememberAccountDid(preferredDid);
+          return profile;
+        } catch {
+          // All restore attempts failed
+          const shouldRemove = incrementOAuthFailure(preferredDid);
+          if (shouldRemove) {
+            removeAccountDid(preferredDid);
+          }
+        }
+      }
+    }
+
     return null;
   } catch (err) {
     if (import.meta.env.DEV) console.warn('[ForumSky] OAuth init:', err);
@@ -228,6 +360,7 @@ async function setupSession(session: OAuthSession): Promise<ProfileView> {
         const retryProfile = await getProfile(did);
         if (retryProfile.handle) {
           currentSession = { did, handle: retryProfile.handle };
+          setStoredSession(currentSession);
         }
       } catch {
         // Silent retry failure - user already has fallback profile
@@ -236,6 +369,7 @@ async function setupSession(session: OAuthSession): Promise<ProfileView> {
   }
 
   rememberAccountDid(profile.did);
+  setStoredSession(currentSession);
 
   return profile;
 }
@@ -292,7 +426,9 @@ export async function listStoredAccountProfiles(): Promise<ProfileView[]> {
 export async function switchToAccount(did: string): Promise<ProfileView> {
   const client = await getClient();
   const session = await client.restore(did, true);
-  return setupSession(session);
+  const profile = await setupSession(session);
+  resetOAuthFailure(did);
+  return profile;
 }
 
 /**
@@ -304,12 +440,14 @@ export async function signOutCurrentUser(): Promise<ProfileView | null> {
   if (!did) {
     setOAuthSession(null);
     currentSession = null;
+    setStoredSession(null);
     return null;
   }
 
   const client = await getClient();
   const others = getStoredAccountDids().filter(d => d !== did);
   removeAccountDid(did);
+  setStoredSession(null);
 
   if (others.length > 0) {
     // Revoke the session BEFORE switching to the other account,
@@ -331,6 +469,7 @@ export async function signOutCurrentUser(): Promise<ProfileView | null> {
 
   currentSession = null;
   setOAuthSession(null);
+  setStoredSession(null);
   browserClient = null;
   const cleanup = nukeAllOAuthDatabases();
   if (!cleanup.success && import.meta.env.DEV) {
@@ -347,6 +486,7 @@ export function signOutAllSessions(): { success: boolean; error?: string } {
   currentSession = null;
   browserClient = null;
   setOAuthSession(null);
+  setStoredSession(null);
   localStorage.removeItem(ACCOUNTS_KEY);
   localStorage.removeItem(ATPROTO_ACTIVE_SUB_KEY);
   localStorage.removeItem('fsky_currentUser');

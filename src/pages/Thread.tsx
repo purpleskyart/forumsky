@@ -2015,11 +2015,11 @@ function ReferencedPostPeek({
 
 
   const onQuoteHover = useCallback(() => {
-    if (layout === 'child') {
+    if (layout === 'child' && !isTouchDevice) {
       clearExpandLeaveTimer();
       setUnfurled(true);
     }
-  }, [layout, clearExpandLeaveTimer]);
+  }, [layout, isTouchDevice, clearExpandLeaveTimer]);
 
   const scheduleCloseExpand = useCallback(() => {
     clearExpandLeaveTimer();
@@ -2030,10 +2030,10 @@ function ReferencedPostPeek({
   }, [clearExpandLeaveTimer]);
 
   const onQuoteLeave = useCallback(() => {
-    if (layout === 'child') {
+    if (layout === 'child' && !isTouchDevice) {
       scheduleCloseExpand();
     }
-  }, [layout, scheduleCloseExpand]);
+  }, [layout, isTouchDevice, scheduleCloseExpand]);
 
   const onJumpClick = useCallback(
     (e: Event) => {
