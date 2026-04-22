@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
 import { Avatar } from '@/components/Avatar';
-import { showAuthDialog, showSignUpDialog, currentUser, isLoggedIn, showToast, sessionRestorePending, showGlobalComposer } from '@/lib/store';
+import { showAuthDialog, showSignUpDialog, currentUser, isLoggedIn, showToast, sessionRestorePending, showGlobalComposer, globalComposerCommunity, globalComposerReplyTo, currentRoute } from '@/lib/store';
 import { hrefForAppPath } from '@/lib/app-base-path';
 import { navigate, communityUrl, searchUrl, SPA_ANCHOR_SHIELD, threadUrl, profileUrl } from '@/lib/router';
 import { UserMenuPanel } from '@/components/UserMenuPanel';
@@ -352,7 +352,23 @@ export function Header() {
                   <button
                     type="button"
                     class="btn btn-primary btn-sm header-new-post-btn"
-                    onClick={() => { showGlobalComposer.value = true; }}
+                    onClick={() => {
+                      const route = currentRoute.value;
+                      // Check if we're in a community page
+                      const communityMatch = route.path.match(/^\/c\/([^\/]+)$/);
+                      if (communityMatch) {
+                        globalComposerCommunity.value = decodeURIComponent(communityMatch[1]);
+                        globalComposerReplyTo.value = undefined;
+                      } else if (route.path.startsWith('/t/')) {
+                        // In a thread - the ThreadView component will set the reply context
+                        // when it detects showGlobalComposer becoming true
+                        globalComposerCommunity.value = undefined;
+                      } else {
+                        globalComposerCommunity.value = undefined;
+                        globalComposerReplyTo.value = undefined;
+                      }
+                      showGlobalComposer.value = true;
+                    }}
                   >
                     New Post
                   </button>

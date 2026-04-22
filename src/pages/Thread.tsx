@@ -83,7 +83,7 @@ import {
 } from '@/lib/router';
 import { formatThreadTitlePreviewLine } from '@/lib/thread-title';
 import { t } from '@/lib/i18n';
-import { isLoggedIn, showAuthDialog, currentUser, showToast, mutedDids, blockedDids, followingDids } from '@/lib/store';
+import { isLoggedIn, showAuthDialog, currentUser, showToast, mutedDids, blockedDids, followingDids, showGlobalComposer, globalComposerReplyTo, globalComposerCommunity } from '@/lib/store';
 import { blockActor, muteActor } from '@/api/graph';
 import { refreshGraphPolicy } from '@/lib/graph-policy';
 import {
@@ -495,6 +495,18 @@ function ThreadView({
 
   const { forumPost, comments } = thread;
   const rootPost = forumPost.root;
+
+  // When global composer is opened from this thread, set reply context to thread root
+  useEffect(() => {
+    if (showGlobalComposer.value && !globalComposerReplyTo.value && !globalComposerCommunity.value) {
+      // Set reply to thread root when global composer is opened from a thread
+      globalComposerReplyTo.value = {
+        root: { uri: rootPost.uri, cid: rootPost.cid },
+        parent: { uri: rootPost.uri, cid: rootPost.cid },
+        summary: `Thread root · @${rootPost.author.handle} · post (1)`,
+      };
+    }
+  }, [showGlobalComposer.value, rootPost.uri, rootPost.cid, rootPost.author.handle]);
   const hiddenLocal = new Set(localHiddenList);
   const rootMuted =
     mutedDids.value.has(rootPost.author.did) || blockedDids.value.has(rootPost.author.did);

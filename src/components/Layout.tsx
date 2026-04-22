@@ -27,7 +27,7 @@ function isEditableTarget(t: EventTarget | null): boolean {
 
 import { PullToRefresh } from './PullToRefresh';
 import { Composer } from './Composer';
-import { showGlobalComposer } from '@/lib/store';
+import { showGlobalComposer, globalComposerCommunity, globalComposerReplyTo } from '@/lib/store';
 
 function AppLoadingSkeleton() {
   return (
@@ -153,7 +153,13 @@ export function Layout({ children }: LayoutProps) {
         <div class="global-composer-overlay">
           <div class="global-composer-inner">
             <div class="global-composer-header">
-              <h3>New Post</h3>
+              <h3>
+                {globalComposerReplyTo.value
+                  ? 'Reply to Thread'
+                  : globalComposerCommunity.value
+                    ? `New Thread in !${globalComposerCommunity.value}`
+                    : 'New Post'}
+              </h3>
               <button
                 class="btn btn-icon"
                 onClick={() => {
@@ -176,11 +182,16 @@ export function Layout({ children }: LayoutProps) {
             <Composer
               onPost={() => {
                 showGlobalComposer.value = false;
+                globalComposerReplyTo.value = undefined;
               }}
               onCancel={() => {
                 showGlobalComposer.value = false;
+                globalComposerReplyTo.value = undefined;
               }}
               draftKey="global-composer"
+              community={globalComposerCommunity.value}
+              replyTo={globalComposerReplyTo.value}
+              replyTargetSummary={globalComposerReplyTo.value?.summary}
             />
           </div>
         </div>

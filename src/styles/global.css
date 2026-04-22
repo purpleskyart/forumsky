@@ -6421,7 +6421,7 @@ button.post-ref-expand-translate-btn {
 /* ========== Scroll Navigation ========== */
 .scroll-navigation {
   position: fixed;
-  bottom: 80px;
+  bottom: 110px;
   right: 16px;
   z-index: 2500;
   display: flex;
@@ -6479,7 +6479,7 @@ button.post-ref-expand-translate-btn {
 
 @media (max-width: 720px) {
   .scroll-navigation {
-    bottom: 70px;
+    bottom: 120px;
     right: 12px;
   }
   

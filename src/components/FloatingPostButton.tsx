@@ -1,4 +1,4 @@
-import { isLoggedIn, showAuthDialog, showGlobalComposer } from '@/lib/store';
+import { isLoggedIn, showAuthDialog, showGlobalComposer, globalComposerCommunity, globalComposerReplyTo, currentRoute } from '@/lib/store';
 
 export function FloatingPostButton() {
   const loggedIn = isLoggedIn.value;
@@ -7,6 +7,19 @@ export function FloatingPostButton() {
     if (!loggedIn) {
       showAuthDialog.value = true;
       return;
+    }
+    const route = currentRoute.value;
+    // Check if we're in a community page
+    const communityMatch = route.path.match(/^\/c\/([^\/]+)$/);
+    if (communityMatch) {
+      globalComposerCommunity.value = decodeURIComponent(communityMatch[1]);
+      globalComposerReplyTo.value = undefined;
+    } else if (route.path.startsWith('/t/')) {
+      // In a thread - the Thread component will set the reply context
+      globalComposerCommunity.value = undefined;
+    } else {
+      globalComposerCommunity.value = undefined;
+      globalComposerReplyTo.value = undefined;
     }
     showGlobalComposer.value = true;
   };
