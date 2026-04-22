@@ -1198,7 +1198,7 @@ function ThreadView({
         {ariaLiveReplies}
       </div>
 
-      <div class="thread-post-stack" ref={threadStackRef}>
+      <div class="thread-post-stack panel panel-following-feed-list" ref={threadStackRef}>
         <PostBlock
           segments={forumPost.segments}
           root={forumPost.root}

@@ -32,20 +32,6 @@ export function UserMenuPanel({ onClose, className = '' }: { onClose: () => void
   return (
     <div id="header-user-menu-panel" class={`header-user-menu-panel ${className}`} role="menu">
       <a
-        href={hrefForAppPath(`/u/${user.handle}`)}
-        role="menuitem"
-        class="header-user-menu-head"
-        {...SPA_ANCHOR_SHIELD}
-        onClick={(e: Event) => {
-          e.preventDefault();
-          onClose();
-          navigate(`/u/${user.handle}`);
-        }}
-      >
-        <div class="header-user-menu-name">{user.displayName || user.handle}</div>
-        <div class="header-user-menu-handle">@{user.handle}</div>
-      </a>
-      <a
         href={hrefForAppPath('/saved')}
         role="menuitem"
         class="header-user-menu-item"

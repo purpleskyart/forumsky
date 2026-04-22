@@ -106,6 +106,7 @@ export function HlsVideo({
   const [isPanning, setIsPanning] = useState(false);
   const touchStartRef = useRef<{ x: number; y: number; distance: number } | null>(null);
   const lastTapTimeRef = useRef(0);
+  const lastTouchEndTimeRef = useRef(0);
 
   // Track fullscreen changes
   useEffect(() => {
@@ -183,6 +184,18 @@ export function HlsVideo({
       setFullscreenControlsEnabled(prev => !prev);
     }
   }, [isFullscreen, enterFullscreen]);
+
+  // Handle click for desktop (avoid double-firing on mobile after touch)
+  const handleClick = useCallback((e: MouseEvent) => {
+    // Prevent click from firing if touch event occurred recently (mobile)
+    const timeSinceTouchEnd = Date.now() - lastTouchEndTimeRef.current;
+    if (timeSinceTouchEnd < 500) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    handleVideoTap(e);
+  }, [handleVideoTap]);
 
   // Handle escape key to exit fullscreen
   useEffect(() => {
@@ -281,7 +294,9 @@ export function HlsVideo({
         
         // Only trigger if short duration (< 300ms) and minimal movement (< 10px)
         if (duration < 300 && distance < 10) {
+          e.preventDefault();
           handleVideoTap(e);
+          lastTouchEndTimeRef.current = Date.now();
         }
       }
       touchStartPosRef.current = null;
@@ -332,7 +347,7 @@ export function HlsVideo({
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
-        onClick={handleVideoTap}
+        onClick={handleClick}
       />
       {/* Centered play button overlay - shows when video is paused so users know it's a video */}
       {isPaused && !isFullscreen && (
