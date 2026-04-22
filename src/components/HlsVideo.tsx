@@ -306,7 +306,9 @@ export function HlsVideo({
       ref={wrapRef}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
-      style={aspectRatio ? { aspectRatio: `${aspectRatio.width} / ${aspectRatio.height}` } : undefined}
+      style={{
+        aspectRatio: aspectRatio ? `${aspectRatio.width} / ${aspectRatio.height}` : '16 / 9',
+      }}
     >
       <video
         ref={videoRef}
