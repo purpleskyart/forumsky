@@ -1856,6 +1856,9 @@ function ReferencedPostPeek({
     if (left + maxW > window.innerWidth - margin) {
       left = Math.max(margin, window.innerWidth - maxW - margin);
     }
+    if (left < margin) {
+      left = margin;
+    }
     setTooltipPos({ top, left, placement });
   }, []);
 
@@ -1923,6 +1926,9 @@ function ReferencedPostPeek({
     }
     if (left + cw > window.innerWidth - margin) {
       left = Math.max(margin, window.innerWidth - cw - margin);
+    }
+    if (left < margin) {
+      left = margin;
     }
     setAuthorCardPos({ top, left });
   }, []);
