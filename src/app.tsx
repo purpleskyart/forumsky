@@ -46,7 +46,8 @@ function RedirectFollowedUrlsToHome() {
 }
 
 function onRouterChange(_args: RouterOnChangeArgs) {
-  // Route change handler - scroll restoration is handled by individual pages
+  // Restore scroll position when route changes
+  scheduleScrollRestore();
 }
 
 export function App() {

@@ -4905,6 +4905,11 @@ button.post-ref-expand-translate-btn {
     max-width: 100% !important;
     height: auto !important;
   }
+  /* Prevent horizontal overflow on mobile while keeping overflow-y visible for sticky author card */
+  .post-body {
+    overflow-x: hidden;
+    overflow-y: visible;
+  }
 }
 
 @media all and (display-mode: standalone) {
